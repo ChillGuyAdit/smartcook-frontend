@@ -11,7 +11,42 @@ class signup extends StatefulWidget {
 }
 
 class _signupState extends State<signup> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  TextEditingController _kontrolUsername = TextEditingController();
+  TextEditingController _kontrolEmail = TextEditingController();
+  TextEditingController _kontrolPassword = TextEditingController();
+
+  FocusNode _focusNode1 = FocusNode();
+  FocusNode _focusNode2 = FocusNode();
+  FocusNode _focusNode3 = FocusNode();
+
+  @override
+  void dispose() {
+    _kontrolUsername.dispose();
+    _kontrolEmail.dispose();
+    _kontrolPassword.dispose();
+    _focusNode1.dispose();
+    _focusNode2.dispose();
+    _focusNode3.dispose();
+    super.dispose();
+  }
+
   bool _obscuretext = true;
+
+  void _submitData() {
+    if (_formKey.currentState!.validate()) {
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, anim1, anim2) => homepage(),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,6 +90,7 @@ class _signupState extends State<signup> {
                       ),
                       SizedBox(height: 39),
                       Form(
+                        key: _formKey,
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -86,17 +122,7 @@ class _signupState extends State<signup> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            PageRouteBuilder(
-                              pageBuilder: (context, anim1, anim2) =>
-                                  homepage(),
-                              transitionDuration: Duration.zero,
-                              reverseTransitionDuration: Duration.zero,
-                            ),
-                          );
-                        },
+                        onPressed: _submitData,
                       ),
                     ],
                   ),
@@ -159,7 +185,19 @@ class _signupState extends State<signup> {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 31),
       child: TextFormField(
+        controller: _kontrolUsername,
+        focusNode: _focusNode1,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        onFieldSubmitted: (v) {
+          FocusScope.of(context).requestFocus(_focusNode2);
+        },
+        validator: (value) {
+          if (value == null || value.isEmpty) return "Wajib isi bray";
+          if (value.length < 3) return "Minimal 3 karakter";
+          return null;
+        },
         decoration: InputDecoration(
+          errorStyle: TextStyle(height: 0, fontSize: 10),
           filled: true,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
@@ -178,7 +216,26 @@ class _signupState extends State<signup> {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 31),
       child: TextFormField(
+        controller: _kontrolEmail,
+        focusNode: _focusNode2,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        onFieldSubmitted: (v) {
+          FocusScope.of(context).requestFocus(_focusNode3);
+        },
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return "Wajib isi bray";
+          } else if (!value.contains("@")) {
+            return "Harus ada simbol '@'";
+          } else if (!value.contains("gmail")) {
+            return "Harus pake gmail";
+          } else if (!value.contains(".com")) {
+            return "Harus diakhiri .com";
+          }
+          return null;
+        },
         decoration: InputDecoration(
+          errorStyle: TextStyle(height: 0, fontSize: 10),
           filled: true,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
@@ -197,8 +254,25 @@ class _signupState extends State<signup> {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 31),
       child: TextFormField(
+        controller: _kontrolPassword,
+        focusNode: _focusNode3,
         obscureText: _obscuretext,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        onFieldSubmitted: (v) => _submitData(),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return "Wajib isi bray";
+          } else if (value.length < 8) {
+            return "Minimal 8 karakter";
+          } else if (!RegExp(r'(?=.*[A-Z])').hasMatch(value)) {
+            return "Butuh 1 huruf kapital";
+          } else if (!RegExp(r'(?=.*[0-9])').hasMatch(value)) {
+            return "Butuh 1 angka";
+          }
+          return null;
+        },
         decoration: InputDecoration(
+          errorStyle: TextStyle(height: 0, fontSize: 10),
           filled: true,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),

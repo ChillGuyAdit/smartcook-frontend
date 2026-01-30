@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/helper/color.dart';
-// Ganti path ini sesuai dengan lokasi file signup lu bray
 import 'package:smartcook/auth/signup.dart';
 
 class splashscreen extends StatefulWidget {

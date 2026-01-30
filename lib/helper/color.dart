@@ -18,4 +18,5 @@ class AppColor {
   final Color hintTextColor = Color(0xFF8E98A8);
   final Color abuabuAgaGelap = Color(0xFF333333);
   final Color putih = Color(0xFFFFFFFF);
+  final Color abuabu = Color(0xFFD9D9D9);
 }

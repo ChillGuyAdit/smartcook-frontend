@@ -12,7 +12,32 @@ class signin extends StatefulWidget {
 }
 
 class _signinState extends State<signin> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  TextEditingController _kontrolEmail = TextEditingController();
+  TextEditingController _kontrolPassword = TextEditingController();
+  FocusNode _focusNode1 = FocusNode();
+  FocusNode _focusNode2 = FocusNode();
+
+  @override
+  void dispose() {
+    _kontrolEmail.dispose();
+    _kontrolPassword.dispose();
+    _focusNode1.dispose();
+    _focusNode2.dispose();
+    super.dispose();
+  }
+
   bool _obscuretext = true;
+
+  void _submitData() {
+    if (_formKey.currentState!.validate()) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => homepage()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -26,9 +51,9 @@ class _signinState extends State<signin> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(height: 80),
+                SizedBox(height: 60),
                 Container(
-                  height: 360,
+                  height: 400,
                   width: 362,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.only(
@@ -55,6 +80,7 @@ class _signinState extends State<signin> {
                         ),
                       ),
                       Form(
+                        key: _formKey,
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -82,7 +108,7 @@ class _signinState extends State<signin> {
                               );
                             },
                             child: Text(
-                              'Forgot Passowrd?',
+                              'Lupa Password?',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: AppColor().hintTextColor,
@@ -93,14 +119,6 @@ class _signinState extends State<signin> {
                       ),
                       SizedBox(height: 17),
                       ElevatedButton(
-                        child: Text(
-                          'SignIn',
-                          style: TextStyle(
-                            color: AppColor().putih,
-                            fontWeight: .bold,
-                            fontSize: 20,
-                          ),
-                        ),
                         style: ElevatedButton.styleFrom(
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -111,12 +129,15 @@ class _signinState extends State<signin> {
                             vertical: 10,
                           ),
                         ),
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => homepage()),
-                          );
-                        },
+                        onPressed: _submitData,
+                        child: Text(
+                          'SignIn',
+                          style: TextStyle(
+                            color: AppColor().putih,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -179,7 +200,25 @@ class _signinState extends State<signin> {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 31),
       child: TextFormField(
+        controller: _kontrolEmail,
+        focusNode: _focusNode1,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        onFieldSubmitted: (v) =>
+            FocusScope.of(context).requestFocus(_focusNode2),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return "Wajib isi bray";
+          } else if (!value.contains("@")) {
+            return "Harus ada simbol '@'";
+          } else if (!value.contains("gmail")) {
+            return "Harus pake gmail";
+          } else if (!value.contains(".com")) {
+            return "Harus diakhiri .com";
+          }
+          return null;
+        },
         decoration: InputDecoration(
+          errorStyle: TextStyle(height: 0, fontSize: 10),
           filled: true,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
@@ -198,8 +237,21 @@ class _signinState extends State<signin> {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 31),
       child: TextFormField(
+        controller: _kontrolPassword,
+        focusNode: _focusNode2,
         obscureText: _obscuretext,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        onFieldSubmitted: (v) => _submitData(),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return "Wajib isi bray";
+          } else if (value.length < 8) {
+            return "Minimal 8 karakter";
+          }
+          return null;
+        },
         decoration: InputDecoration(
+          errorStyle: TextStyle(height: 0, fontSize: 10),
           filled: true,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),

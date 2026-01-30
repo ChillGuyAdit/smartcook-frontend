@@ -16,6 +16,8 @@ dependencies:
 
  
   cupertino_icons: ^1.0.8
+  google_sign_in: ^7.2.0
+  sign_in_with_apple: ^7.0.1
 
 dev_dependencies:
   flutter_test:
@@ -36,6 +38,9 @@ flutter:
     - image/google.png
     - image/apple.png
     - image/password.png
+    - image/mail.png
+    - image/gembok.png
+    - image/suksesImage.png
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
