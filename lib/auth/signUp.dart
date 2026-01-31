@@ -5,6 +5,7 @@ import 'package:smartcook/page/homepage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 // Import AuthService agar bisa digunakan untuk login Google
 import 'package:smartcook/service/auth_service.dart';
+import 'package:smartcook/view/onboarding/mainBoarding.dart';
 
 class signup extends StatefulWidget {
   signup({super.key});
@@ -16,7 +17,7 @@ class signup extends StatefulWidget {
 class _signupState extends State<signup> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  // Inisialisasi AuthService untuk memanggil fungsi signinWithGoogle
+  // Inisialisasi AuthService fungsi signinWithGoogle
   final AuthService _authService = AuthService();
 
   TextEditingController _kontrolUsername = TextEditingController();
@@ -338,7 +339,7 @@ class _signupState extends State<signup> {
             if (userCredential != null) {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => homepage()),
+                MaterialPageRoute(builder: (context) => onboarding()),
               );
             }
           },

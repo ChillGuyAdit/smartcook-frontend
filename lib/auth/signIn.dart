@@ -3,6 +3,9 @@ import 'package:smartcook/auth/forgotpassword.dart';
 import 'package:smartcook/auth/signUp.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/page/homepage.dart';
+import 'package:smartcook/service/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smartcook/view/onboarding/mainBoarding.dart';
 
 class signin extends StatefulWidget {
   const signin({super.key});
@@ -13,6 +16,10 @@ class signin extends StatefulWidget {
 
 class _signinState extends State<signin> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  // Inisialisasi AuthService fungsi signinWithGoogle
+  final AuthService _authService = AuthService();
+
   TextEditingController _kontrolEmail = TextEditingController();
   TextEditingController _kontrolPassword = TextEditingController();
   FocusNode _focusNode1 = FocusNode();
@@ -297,7 +304,26 @@ class _signinState extends State<signin> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Image(image: AssetImage('image/google.png')),
+        /* DOKUMENTASI GOOGLE SIGN IN:
+           1. Image Google dibungkus InkWell (onTap aja nanti).
+           2. pas diklik nanti, manggilin fungsi signinWithGoogle dari AuthService.
+           3.'await' buat proses login yang bersifat asinkron (butuh waktu).
+           4. Jika variabel 'userCredential' tidak null (login sukses), user otomatis diarahkan ke onBoardingnya.
+           5. pushReplacement digunakan agar user tidak bisa kembali ke halaman signup menggunakan tombol back.
+        */
+        InkWell(
+          onTap: () async {
+            UserCredential? userCredential =
+                await _authService.signinWithGoogle();
+            if (userCredential != null) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => onboarding()),
+              );
+            }
+          },
+          child: Image(image: AssetImage('image/google.png')),
+        ),
         SizedBox(width: 43),
         Image(image: AssetImage('image/apple.png')),
       ],
