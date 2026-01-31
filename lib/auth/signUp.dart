@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:smartcook/auth/signIn.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/page/homepage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+// Import AuthService agar bisa digunakan untuk login Google
+import 'package:smartcook/service/auth_service.dart';
 
 class signup extends StatefulWidget {
-  const signup({super.key});
+  signup({super.key});
 
   @override
   State<signup> createState() => _signupState();
@@ -12,6 +15,9 @@ class signup extends StatefulWidget {
 
 class _signupState extends State<signup> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  // Inisialisasi AuthService untuk memanggil fungsi signinWithGoogle
+  final AuthService _authService = AuthService();
 
   TextEditingController _kontrolUsername = TextEditingController();
   TextEditingController _kontrolEmail = TextEditingController();
@@ -56,7 +62,7 @@ class _signupState extends State<signup> {
         height: double.infinity,
         child: Center(
           child: SingleChildScrollView(
-            physics: const NeverScrollableScrollPhysics(),
+            physics: NeverScrollableScrollPhysics(),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -65,7 +71,7 @@ class _signupState extends State<signup> {
                   height: 420,
                   width: 362,
                   decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(
+                    borderRadius: BorderRadius.only(
                       topRight: Radius.circular(74),
                       bottomLeft: Radius.circular(56),
                     ),
@@ -224,7 +230,7 @@ class _signupState extends State<signup> {
         },
         validator: (value) {
           if (value == null || value.isEmpty) {
-            return "Wajib isi bray";
+            return "Wajib diisi!";
           } else if (!value.contains("@")) {
             return "Harus ada simbol '@'";
           } else if (!value.contains("gmail")) {
@@ -318,7 +324,26 @@ class _signupState extends State<signup> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Image(image: AssetImage('image/google.png')),
+        /* DOKUMENTASI GOOGLE SIGN IN:
+           1. Image Google dibungkus InkWell (onTap aja nanti).
+           2. pas diklik nanti, manggilin fungsi signinWithGoogle dari AuthService.
+           3.'await' buat proses login yang bersifat asinkron (butuh waktu).
+           4. Jika variabel 'userCredential' tidak null (login sukses), user otomatis diarahkan ke onBoardingnya.
+           5. pushReplacement digunakan agar user tidak bisa kembali ke halaman signup menggunakan tombol back.
+        */
+        InkWell(
+          onTap: () async {
+            UserCredential? userCredential =
+                await _authService.signinWithGoogle();
+            if (userCredential != null) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => homepage()),
+              );
+            }
+          },
+          child: Image(image: AssetImage('image/google.png')),
+        ),
         SizedBox(width: 43),
         Image(image: AssetImage('image/apple.png')),
       ],

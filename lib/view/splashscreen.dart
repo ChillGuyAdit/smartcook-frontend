@@ -67,7 +67,7 @@ class _splashscreenState extends State<splashscreen> {
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
-            pageBuilder: (context, anim1, anim2) => const signup(),
+            pageBuilder: (context, anim1, anim2) => signup(),
             transitionDuration: Duration.zero,
             reverseTransitionDuration: Duration.zero,
           ),
