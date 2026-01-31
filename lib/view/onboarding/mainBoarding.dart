@@ -36,7 +36,7 @@ class _onboardingState extends State<onboarding> {
           ],
         ),
         Container(
-          alignment: const Alignment(0, 0.8),
+          alignment: const Alignment(0, 0.65),
           child: SmoothPageIndicator(
             controller: _pageController,
             count: 3,

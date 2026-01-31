@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:smartcook/helper/color.dart';
 
@@ -11,6 +13,7 @@ class onboarding1 extends StatefulWidget {
 class _onboarding1State extends State<onboarding1> {
   @override
   Widget build(BuildContext context) {
+    final screenheight = MediaQuery.of(context).size.height;
     return Scaffold(
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -45,6 +48,9 @@ class _onboarding1State extends State<onboarding1> {
                         " bakal kasih tahu\n apa yang harus kamu masak hari ini\n secara otomatis."),
               ],
             ),
+          ),
+          SizedBox(
+            height: screenheight * 0.15,
           )
         ],
       ),

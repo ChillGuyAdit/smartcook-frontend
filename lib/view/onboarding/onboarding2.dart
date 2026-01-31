@@ -11,6 +11,7 @@ class onboarding2 extends StatefulWidget {
 class _onboarding2State extends State<onboarding2> {
   @override
   Widget build(BuildContext context) {
+    final screenheight = MediaQuery.of(context).size.height;
     return Scaffold(
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -35,6 +36,9 @@ class _onboarding2State extends State<onboarding2> {
             style: TextStyle(
               fontSize: 20,
             ),
+          ),
+          SizedBox(
+            height: screenheight * 0.15,
           )
         ],
       ),
