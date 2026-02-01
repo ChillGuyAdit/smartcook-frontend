@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/helper/color.dart';
+import 'package:smartcook/view/onboarding/form.dart';
 
 class onboarding3 extends StatefulWidget {
   const onboarding3({super.key});
@@ -63,7 +64,8 @@ class _onboarding3State extends State<onboarding3> {
                       vertical: screenheight * 0.01),
                   backgroundColor: AppColor().utama),
               onPressed: () {
-                // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ))
+                Navigator.pushReplacement(
+                    context, MaterialPageRoute(builder: (context) => form()));
               },
               child: Text(
                 'Lets Cook',

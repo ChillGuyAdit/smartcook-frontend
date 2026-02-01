@@ -46,6 +46,20 @@ flutter:
     - image/ob1.png
     - image/ob2.png
     - image/ob3.png
+    - image/urutan1.png
+    - image/urutan2.png
+    - image/urutan3.png
+    - image/personalInformation.png
+    - image/jenisKelaminCowo.png
+    - image/jenisKelaminCewe.png
+    - image/style1.png
+    - image/style2.png
+    - image/style3.png
+    - image/style4.png 
+    - image/style5.png
+    - image/style6.png
+    - image/style7.png
+    - image/style8.png
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
