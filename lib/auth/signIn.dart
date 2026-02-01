@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:smartcook/auth/forgotpassword.dart';
 import 'package:smartcook/auth/signUp.dart';
 import 'package:smartcook/helper/color.dart';
-import 'package:smartcook/page/homepage.dart';
 import 'package:smartcook/service/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smartcook/view/onboarding/mainBoarding.dart';
@@ -16,8 +15,6 @@ class signin extends StatefulWidget {
 
 class _signinState extends State<signin> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-  // Inisialisasi AuthService fungsi signinWithGoogle
   final AuthService _authService = AuthService();
 
   TextEditingController _kontrolEmail = TextEditingController();
@@ -40,165 +37,159 @@ class _signinState extends State<signin> {
     if (_formKey.currentState!.validate()) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => homepage()),
+        MaterialPageRoute(builder: (context) => onboarding()),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenheight = MediaQuery.of(context).size.height;
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: Container(
-        height: double.infinity,
-        width: double.infinity,
-        child: Center(
-          child: SingleChildScrollView(
-            physics: NeverScrollableScrollPhysics(),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(height: 60),
-                Container(
-                  height: 400,
-                  width: 362,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(56),
-                      topRight: Radius.circular(74),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  SizedBox(height: 100),
+                  Container(
+                    height: 400,
+                    width: 362,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(56),
+                        topRight: Radius.circular(74),
+                      ),
+                      color: AppColor().hijauPucat,
                     ),
-                    color: AppColor().hijauPucat,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.only(left: 30),
-                        child: Align(
-                          alignment: Alignment.topLeft,
-                          child: Text(
-                            'SignIn',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 35,
-                              color: AppColor().hintTextColor,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Form(
-                        key: _formKey,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(height: 46),
-                            email(),
-                            SizedBox(height: 10),
-                            password(),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.only(right: 35),
-                        child: Align(
-                          alignment: Alignment.bottomRight,
-                          child: TextButton(
-                            style: TextButton.styleFrom(
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => forgotpassowrd(),
-                                ),
-                              );
-                            },
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.only(left: 30),
+                          child: Align(
+                            alignment: Alignment.topLeft,
                             child: Text(
-                              'Lupa Password?',
+                              'SignIn',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 35,
                                 color: AppColor().hintTextColor,
                               ),
                             ),
                           ),
                         ),
+                        Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              SizedBox(height: 46),
+                              email(),
+                              SizedBox(height: 10),
+                              password(),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.only(right: 35),
+                          child: Align(
+                            alignment: Alignment.bottomRight,
+                            child: TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => forgotpassowrd(),
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                'Lupa Password?',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColor().hintTextColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 17),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            backgroundColor: AppColor().utama,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 95,
+                              vertical: 10,
+                            ),
+                          ),
+                          onPressed: _submitData,
+                          child: Text(
+                            'SignIn',
+                            style: TextStyle(
+                              color: AppColor().putih,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 50),
+                  bagianOr(),
+                  SizedBox(height: 40),
+                  auth(),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.only(bottom: screenheight * 0.01),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Belum punya akun ?', style: TextStyle(fontSize: 15)),
+                SizedBox(width: 6),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                  ),
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, anim1, anim2) => signup(),
+                        transitionDuration: Duration.zero,
                       ),
-                      SizedBox(height: 17),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          backgroundColor: AppColor().utama,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 95,
-                            vertical: 10,
-                          ),
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Text(
+                        'SignUp',
+                        style: TextStyle(
+                          color: AppColor().utama,
+                          fontSize: 15,
                         ),
-                        onPressed: _submitData,
-                        child: Text(
-                          'SignIn',
-                          style: TextStyle(
-                            color: AppColor().putih,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                          ),
-                        ),
+                      ),
+                      Image.asset(
+                        'image/starLogo.png',
+                        height: 27.51,
+                        width: 27,
                       ),
                     ],
                   ),
                 ),
-                SizedBox(height: 93),
-                bagianOr(),
-                SizedBox(height: 85),
-                auth(),
-                SizedBox(height: 154),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Belum punya akun ?', style: TextStyle(fontSize: 15)),
-                    SizedBox(width: 6),
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                      ),
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          PageRouteBuilder(
-                            pageBuilder: (context, anim1, anim2) => signup(),
-                            transitionDuration: Duration.zero,
-                            reverseTransitionDuration: Duration.zero,
-                          ),
-                        );
-                      },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'SignUp',
-                            style: TextStyle(
-                              color: AppColor().utama,
-                              fontSize: 15,
-                            ),
-                          ),
-                          Image.asset(
-                            'image/starLogo.png',
-                            height: 27.51,
-                            width: 27,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -213,14 +204,11 @@ class _signinState extends State<signin> {
         onFieldSubmitted: (v) =>
             FocusScope.of(context).requestFocus(_focusNode2),
         validator: (value) {
-          if (value == null || value.isEmpty) {
-            return "Wajib isi bray";
-          } else if (!value.contains("@")) {
-            return "Harus ada simbol '@'";
-          } else if (!value.contains("gmail")) {
-            return "Harus pake gmail";
-          } else if (!value.contains(".com")) {
-            return "Harus diakhiri .com";
+          if (value == null || value.isEmpty) return "Wajib isi bray";
+          if (!value.contains("@") ||
+              !value.contains("gmail") ||
+              !value.contains(".com")) {
+            return "Email ngga valid bray";
           }
           return null;
         },
@@ -250,11 +238,8 @@ class _signinState extends State<signin> {
         autovalidateMode: AutovalidateMode.onUserInteraction,
         onFieldSubmitted: (v) => _submitData(),
         validator: (value) {
-          if (value == null || value.isEmpty) {
-            return "Wajib isi bray";
-          } else if (value.length < 8) {
-            return "Minimal 8 karakter";
-          }
+          if (value == null || value.isEmpty) return "Wajib isi bray";
+          if (value.length < 8) return "Minimal 8 karakter";
           return null;
         },
         decoration: InputDecoration(
@@ -271,11 +256,7 @@ class _signinState extends State<signin> {
               _obscuretext ? Icons.visibility_off : Icons.visibility,
               color: AppColor().hintTextColor,
             ),
-            onPressed: () {
-              setState(() {
-                _obscuretext = !_obscuretext;
-              });
-            },
+            onPressed: () => setState(() => _obscuretext = !_obscuretext),
           ),
           hintText: 'Masukkan Password',
           hintStyle: TextStyle(color: AppColor().hintTextColor),
@@ -288,14 +269,12 @@ class _signinState extends State<signin> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Container(height: 1, width: 120, color: AppColor().hintTextColor),
+        Container(height: 1, width: 100, color: AppColor().hintTextColor),
         SizedBox(width: 10),
-        Text(
-          'Or',
-          style: TextStyle(color: AppColor().hintTextColor, fontSize: 20),
-        ),
+        Text('Or',
+            style: TextStyle(color: AppColor().hintTextColor, fontSize: 18)),
         SizedBox(width: 10),
-        Container(height: 1, width: 120, color: AppColor().hintTextColor),
+        Container(height: 1, width: 100, color: AppColor().hintTextColor),
       ],
     );
   }
@@ -304,13 +283,6 @@ class _signinState extends State<signin> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        /* DOKUMENTASI GOOGLE SIGN IN:
-           1. Image Google dibungkus InkWell (onTap aja nanti).
-           2. pas diklik nanti, manggilin fungsi signinWithGoogle dari AuthService.
-           3.'await' buat proses login yang bersifat asinkron (butuh waktu).
-           4. Jika variabel 'userCredential' tidak null (login sukses), user otomatis diarahkan ke onBoardingnya.
-           5. pushReplacement digunakan agar user tidak bisa kembali ke halaman signup menggunakan tombol back.
-        */
         InkWell(
           onTap: () async {
             UserCredential? userCredential =
@@ -322,10 +294,10 @@ class _signinState extends State<signin> {
               );
             }
           },
-          child: Image(image: AssetImage('image/google.png')),
+          child: Image.asset('image/google.png'),
         ),
-        SizedBox(width: 43),
-        Image(image: AssetImage('image/apple.png')),
+        SizedBox(width: 40),
+        Image.asset('image/apple.png'),
       ],
     );
   }

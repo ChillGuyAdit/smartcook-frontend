@@ -46,7 +46,7 @@ class _signupState extends State<signup> {
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-          pageBuilder: (context, anim1, anim2) => homepage(),
+          pageBuilder: (context, anim1, anim2) => onboarding(),
           transitionDuration: Duration.zero,
           reverseTransitionDuration: Duration.zero,
         ),

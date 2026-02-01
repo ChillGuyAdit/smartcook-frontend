@@ -60,6 +60,11 @@ flutter:
     - image/style6.png
     - image/style7.png
     - image/style8.png
+    - image/equip1.png
+    - image/equip2.png
+    - image/equip3.png
+    - image/equip4.png
+    - image/equip5.png
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

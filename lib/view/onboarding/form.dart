@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smartcook/helper/color.dart';
+import 'package:smartcook/page/homepage.dart';
 
 class form extends StatefulWidget {
   const form({super.key});
@@ -64,16 +65,19 @@ class _formState extends State<form> {
                 padding: EdgeInsets.symmetric(vertical: 15),
               ),
               onPressed: () {
-                setState(() {
-                  if (_index < 2) {
+                if (_index < 2) {
+                  setState(() {
                     _index++;
-                  } else {
-                    // Logic confirm
-                  }
-                });
+                  });
+                } else {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => homepage()),
+                  );
+                }
               },
               child: Text(
-                _index == 2 ? 'Confirm' : 'Lanjut',
+                _index == 2 ? 'Save And Confirm' : 'Lanjut',
                 style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -230,14 +234,22 @@ class _formState extends State<form> {
                 spacing: 12,
                 runSpacing: 12,
                 children: [
-                  itemGrid(styleTerpilih, 'Quick', 'image/style1.png', sw),
-                  itemGrid(styleTerpilih, 'Healthy', 'image/style2.png', sw),
-                  itemGrid(styleTerpilih, 'Budget', 'image/style3.png', sw),
-                  itemGrid(styleTerpilih, 'Indo', 'image/style4.png', sw),
-                  itemGrid(styleTerpilih, 'Western', 'image/style5.png', sw),
-                  itemGrid(styleTerpilih, 'Chef', 'image/style6.png', sw),
-                  itemGrid(styleTerpilih, 'Plant', 'image/style7.png', sw),
-                  itemGrid(styleTerpilih, 'Balanced', 'image/style8.png', sw),
+                  itemGridStyle(
+                      styleTerpilih, 'Quick & Easy', 'image/style1.png', sw),
+                  itemGridStyle(
+                      styleTerpilih, 'Healty & Clean', 'image/style2.png', sw),
+                  itemGridStyle(
+                      styleTerpilih, 'Budget Friendly', 'image/style3.png', sw),
+                  itemGridStyle(styleTerpilih, 'Indonesian Comfort',
+                      'image/style4.png', sw),
+                  itemGridStyle(
+                      styleTerpilih, 'Western Vibes', 'image/style5.png', sw),
+                  itemGridStyle(
+                      styleTerpilih, 'Pro Chef', 'image/style6.png', sw),
+                  itemGridStyle(
+                      styleTerpilih, 'Plant Based', 'image/style7.png', sw),
+                  itemGridStyle(styleTerpilih, 'Balanced Nutrition',
+                      'image/style8.png', sw),
                 ],
               ),
             ),
@@ -262,28 +274,25 @@ class _formState extends State<form> {
             ),
             SizedBox(height: 6),
             Text(
-              'Beri tahu kami alat masakmu agar resep yang kami berikan bisa kamu buat',
+              'Pilih berbagai macam alat yang ada di dalam dapurmu agar kami bisa kasih resep yang cocok',
               style: TextStyle(fontSize: 15),
             ),
             SizedBox(height: 30),
             Center(
               child: Wrap(
-                spacing: 12,
-                runSpacing: 12,
+                spacing: 15,
+                runSpacing: 25,
                 children: [
-                  itemGrid(equipmentTerpilih, 'Kompor', 'image/equip1.png', sw),
-                  itemGrid(equipmentTerpilih, 'Oven', 'image/equip2.png', sw),
-                  itemGrid(
-                      equipmentTerpilih, 'Microwave', 'image/equip3.png', sw),
-                  itemGrid(
-                      equipmentTerpilih, 'Air Fryer', 'image/equip4.png', sw),
-                  itemGrid(
-                      equipmentTerpilih, 'Blender', 'image/equip5.png', sw),
-                  itemGrid(equipmentTerpilih, 'Mixer', 'image/equip6.png', sw),
-                  itemGrid(
-                      equipmentTerpilih, 'Rice Cooker', 'image/equip7.png', sw),
-                  itemGrid(
-                      equipmentTerpilih, 'Toaster', 'image/equip8.png', sw),
+                  itemGridEquip(equipmentTerpilih, 'Kompor', 'image/equip1.png',
+                      sw, false),
+                  itemGridEquip(equipmentTerpilih, 'Rice Cooker',
+                      'image/equip2.png', sw, false),
+                  itemGridEquip(equipmentTerpilih, 'Oven / Microwave',
+                      'image/equip3.png', sw, false),
+                  itemGridEquip(equipmentTerpilih, 'Air Fryer',
+                      'image/equip4.png', sw, false),
+                  itemGridEquip(equipmentTerpilih, 'Blender',
+                      'image/equip5.png', sw, true),
                 ],
               ),
             ),
@@ -294,15 +303,12 @@ class _formState extends State<form> {
     );
   }
 
-  Widget itemGrid(
+  Widget itemGridStyle(
       List<String> list, String label, String imagePath, double sw) {
     bool isSelected = list.contains(label);
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          isSelected ? list.remove(label) : list.add(label);
-        });
-      },
+      onTap: () =>
+          setState(() => isSelected ? list.remove(label) : list.add(label)),
       child: Stack(
         children: [
           Container(
@@ -315,9 +321,7 @@ class _formState extends State<form> {
                 width: 4,
               ),
               image: DecorationImage(
-                image: AssetImage(imagePath),
-                fit: BoxFit.cover,
-              ),
+                  image: AssetImage(imagePath), fit: BoxFit.cover),
             ),
           ),
           if (isSelected)
@@ -327,17 +331,53 @@ class _formState extends State<form> {
               child: Container(
                 padding: EdgeInsets.all(2),
                 decoration: BoxDecoration(
-                  color: AppColor().warnaIcon2,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.check,
-                  color: Colors.white,
-                  size: 18,
-                ),
+                    color: AppColor().warnaIcon2, shape: BoxShape.circle),
+                child: Icon(Icons.check, color: Colors.white, size: 18),
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget itemGridEquip(List<String> list, String label, String imagePath,
+      double sw, bool isWide) {
+    bool isSelected = list.contains(label);
+    return GestureDetector(
+      onTap: () =>
+          setState(() => isSelected ? list.remove(label) : list.add(label)),
+      child: Container(
+        width: isWide ? (sw * 0.84 + 15) : sw * 0.42,
+        height: sw * 0.42,
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.amber : Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 15,
+              spreadRadius: 1,
+              offset: Offset(0, 10),
+            )
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(imagePath,
+                height: 60, color: isSelected ? Colors.white : Colors.amber),
+            SizedBox(height: 10),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : AppColor().fontEquipColor,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

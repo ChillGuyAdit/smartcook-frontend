@@ -20,4 +20,5 @@ class AppColor {
   final Color putih = Color(0xFFFFFFFF);
   final Color abuabu = Color(0xFFD9D9D9);
   final Color KuningCerah = Color(0xFFF6EDB0);
+  final Color fontEquipColor = Color(0xFF2D5A27);
 }
