@@ -3,7 +3,6 @@ import 'package:smartcook/auth/signIn.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/page/homepage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// Import AuthService agar bisa digunakan untuk login Google
 import 'package:smartcook/service/auth_service.dart';
 import 'package:smartcook/view/onboarding/mainBoarding.dart';
 
@@ -16,8 +15,6 @@ class signup extends StatefulWidget {
 
 class _signupState extends State<signup> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-  // Inisialisasi AuthService fungsi signinWithGoogle
   final AuthService _authService = AuthService();
 
   TextEditingController _kontrolUsername = TextEditingController();
@@ -27,6 +24,8 @@ class _signupState extends State<signup> {
   FocusNode _focusNode1 = FocusNode();
   FocusNode _focusNode2 = FocusNode();
   FocusNode _focusNode3 = FocusNode();
+
+  bool _obscuretext = true;
 
   @override
   void dispose() {
@@ -38,8 +37,6 @@ class _signupState extends State<signup> {
     _focusNode3.dispose();
     super.dispose();
   }
-
-  bool _obscuretext = true;
 
   void _submitData() {
     if (_formKey.currentState!.validate()) {
@@ -56,25 +53,31 @@ class _signupState extends State<signup> {
 
   @override
   Widget build(BuildContext context) {
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+
+    double baseWidth = 430;
+    double scale = screenWidth / baseWidth;
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Container(
-        width: double.infinity,
-        height: double.infinity,
+        width: screenWidth,
+        height: screenHeight,
         child: Center(
           child: SingleChildScrollView(
             physics: NeverScrollableScrollPhysics(),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(height: 75),
+                SizedBox(height: 60 * scale),
                 Container(
-                  height: 420,
-                  width: 362,
+                  height: 460 * scale,
+                  width: 380 * scale,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.only(
-                      topRight: Radius.circular(74),
-                      bottomLeft: Radius.circular(56),
+                      topRight: Radius.circular(80 * scale),
+                      bottomLeft: Radius.circular(60 * scale),
                     ),
                     color: AppColor().hijauPucat,
                   ),
@@ -82,42 +85,50 @@ class _signupState extends State<signup> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Padding(
-                        padding: EdgeInsets.only(left: 30),
+                        padding: EdgeInsets.only(left: 35 * scale),
                         child: Align(
                           alignment: Alignment.topLeft,
                           child: Text(
                             "Sign Up",
                             style: TextStyle(
                               color: AppColor().hintTextColor,
-                              fontSize: 35,
+                              fontSize: 38 * scale,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                       ),
-                      SizedBox(height: 39),
+                      SizedBox(height: 30 * scale),
                       Form(
                         key: _formKey,
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            username(),
-                            SizedBox(height: 11),
-                            email(),
-                            SizedBox(height: 11),
-                            password(),
+                            inputField(
+                                _kontrolUsername,
+                                _focusNode1,
+                                _focusNode2,
+                                Icons.person,
+                                'Masukkan Namamu',
+                                scale,
+                                false),
+                            SizedBox(height: 15 * scale),
+                            inputField(_kontrolEmail, _focusNode2, _focusNode3,
+                                Icons.mail, 'Masukkan Emailmu', scale, false),
+                            SizedBox(height: 15 * scale),
+                            inputField(_kontrolPassword, _focusNode3, null,
+                                Icons.lock, 'Masukkan Password', scale, true),
                           ],
                         ),
                       ),
-                      SizedBox(height: 33),
+                      SizedBox(height: 35 * scale),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12 * scale),
                           ),
                           padding: EdgeInsets.symmetric(
-                            horizontal: 90,
-                            vertical: 12,
+                            horizontal: 100 * scale,
+                            vertical: 15 * scale,
                           ),
                           backgroundColor: AppColor().utama,
                         ),
@@ -125,7 +136,7 @@ class _signupState extends State<signup> {
                           'Sign Up',
                           style: TextStyle(
                             color: AppColor().putih,
-                            fontSize: 20,
+                            fontSize: 22 * scale,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -134,21 +145,76 @@ class _signupState extends State<signup> {
                     ],
                   ),
                 ),
-                SizedBox(height: 83),
-                bagianOr(),
-                SizedBox(height: 76),
-                auth(),
-                SizedBox(height: 113),
+                SizedBox(height: 60 * scale),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Sudah punya akun ?', style: TextStyle(fontSize: 15)),
-                    SizedBox(width: 6),
+                    Container(
+                        height: 1.5,
+                        width: 130 * scale,
+                        color: AppColor().hintTextColor),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10 * scale),
+                      child: Text('Or',
+                          style: TextStyle(
+                              color: AppColor().hintTextColor,
+                              fontSize: 22 * scale)),
+                    ),
+                    Container(
+                        height: 1.5,
+                        width: 130 * scale,
+                        color: AppColor().hintTextColor),
+                  ],
+                ),
+                SizedBox(height: 50 * scale),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    /* DOKUMENTASI GOOGLE SIGN IN:
+                       1. Image Google dibungkus InkWell (onTap aja nanti).
+                       2. pas diklik nanti, manggilin fungsi signinWithGoogle dari AuthService.
+                       3.'await' buat proses login yang bersifat asinkron (butuh waktu).
+                       4. Jika variabel 'userCredential' tidak null (login sukses), user otomatis diarahkan ke onBoardingnya.
+                       5. pushReplacement digunakan agar user tidak bisa kembali ke halaman signup menggunakan tombol back.
+                    */
+                    InkWell(
+                      onTap: () async {
+                        UserCredential? userCredential =
+                            await _authService.signinWithGoogle();
+                        if (userCredential != null) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => onboarding()),
+                          );
+                        }
+                      },
+                      child: Image(
+                        image: AssetImage('image/google.png'),
+                        width: 65 * scale,
+                        height: 65 * scale,
+                      ),
+                    ),
+                    SizedBox(width: 50 * scale),
+                    Image(
+                      image: AssetImage('image/apple.png'),
+                      width: 65 * scale,
+                      height: 65 * scale,
+                    ),
+                  ],
+                ),
+                SizedBox(height: 80 * scale),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Sudah punya akun ?',
+                        style: TextStyle(fontSize: 17 * scale)),
+                    SizedBox(width: 8 * scale),
                     TextButton(
                       style: TextButton.styleFrom(
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         padding: EdgeInsets.zero,
                         minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       onPressed: () {
                         Navigator.pushReplacement(
@@ -161,19 +227,19 @@ class _signupState extends State<signup> {
                         );
                       },
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
                             'Signin',
                             style: TextStyle(
                               color: AppColor().utama,
-                              fontSize: 15,
+                              fontSize: 17 * scale,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                           Image.asset(
                             'image/starLogo.png',
-                            height: 27.51,
-                            width: 27,
+                            height: 30 * scale,
+                            width: 30 * scale,
                           ),
                         ],
                       ),
@@ -188,166 +254,56 @@ class _signupState extends State<signup> {
     );
   }
 
-  Widget username() {
+  Widget inputField(
+      TextEditingController controller,
+      FocusNode node,
+      FocusNode? nextNode,
+      IconData icon,
+      String hint,
+      double scale,
+      bool isPassword) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 31),
+      padding: EdgeInsets.symmetric(horizontal: 35 * scale),
       child: TextFormField(
-        controller: _kontrolUsername,
-        focusNode: _focusNode1,
+        controller: controller,
+        focusNode: node,
+        obscureText: isPassword ? _obscuretext : false,
         autovalidateMode: AutovalidateMode.onUserInteraction,
         onFieldSubmitted: (v) {
-          FocusScope.of(context).requestFocus(_focusNode2);
+          if (nextNode != null) {
+            FocusScope.of(context).requestFocus(nextNode);
+          } else {
+            _submitData();
+          }
         },
         validator: (value) {
           if (value == null || value.isEmpty) return "Wajib isi bray";
-          if (value.length < 3) return "Minimal 3 karakter";
           return null;
         },
         decoration: InputDecoration(
-          errorStyle: TextStyle(height: 0, fontSize: 10),
+          errorStyle: TextStyle(height: 0, fontSize: 12 * scale),
           filled: true,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(18 * scale),
             borderSide: BorderSide.none,
           ),
           fillColor: Color(0xFFFFFFFF),
-          prefixIcon: Icon(Icons.person, color: AppColor().hintTextColor),
-          hintText: 'Masukkan Namamu',
-          hintStyle: TextStyle(color: AppColor().hintTextColor),
+          prefixIcon:
+              Icon(icon, color: AppColor().hintTextColor, size: 26 * scale),
+          suffixIcon: isPassword
+              ? IconButton(
+                  icon: Icon(
+                      _obscuretext ? Icons.visibility_off : Icons.visibility,
+                      color: AppColor().hintTextColor,
+                      size: 26 * scale),
+                  onPressed: () => setState(() => _obscuretext = !_obscuretext),
+                )
+              : null,
+          hintText: hint,
+          hintStyle:
+              TextStyle(color: AppColor().hintTextColor, fontSize: 16 * scale),
         ),
       ),
-    );
-  }
-
-  Widget email() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 31),
-      child: TextFormField(
-        controller: _kontrolEmail,
-        focusNode: _focusNode2,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        onFieldSubmitted: (v) {
-          FocusScope.of(context).requestFocus(_focusNode3);
-        },
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return "Wajib diisi!";
-          } else if (!value.contains("@")) {
-            return "Harus ada simbol '@'";
-          } else if (!value.contains("gmail")) {
-            return "Harus pake gmail";
-          } else if (!value.contains(".com")) {
-            return "Harus diakhiri .com";
-          }
-          return null;
-        },
-        decoration: InputDecoration(
-          errorStyle: TextStyle(height: 0, fontSize: 10),
-          filled: true,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide.none,
-          ),
-          fillColor: Color(0xFFFFFFFF),
-          prefixIcon: Icon(Icons.mail, color: AppColor().hintTextColor),
-          hintText: 'Masukkan Emailmu',
-          hintStyle: TextStyle(color: AppColor().hintTextColor),
-        ),
-      ),
-    );
-  }
-
-  Widget password() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 31),
-      child: TextFormField(
-        controller: _kontrolPassword,
-        focusNode: _focusNode3,
-        obscureText: _obscuretext,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        onFieldSubmitted: (v) => _submitData(),
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return "Wajib isi bray";
-          } else if (value.length < 8) {
-            return "Minimal 8 karakter";
-          } else if (!RegExp(r'(?=.*[A-Z])').hasMatch(value)) {
-            return "Butuh 1 huruf kapital";
-          } else if (!RegExp(r'(?=.*[0-9])').hasMatch(value)) {
-            return "Butuh 1 angka";
-          }
-          return null;
-        },
-        decoration: InputDecoration(
-          errorStyle: TextStyle(height: 0, fontSize: 10),
-          filled: true,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide.none,
-          ),
-          fillColor: Color(0xFFFFFFFF),
-          prefixIcon: Icon(Icons.lock, color: AppColor().hintTextColor),
-          suffixIcon: IconButton(
-            icon: Icon(
-              _obscuretext ? Icons.visibility_off : Icons.visibility,
-              color: AppColor().hintTextColor,
-            ),
-            onPressed: () {
-              setState(() {
-                _obscuretext = !_obscuretext;
-              });
-            },
-          ),
-          hintText: 'Masukkan Password',
-          hintStyle: TextStyle(color: AppColor().hintTextColor),
-        ),
-      ),
-    );
-  }
-
-  Widget bagianOr() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(height: 1, width: 120, color: AppColor().hintTextColor),
-        SizedBox(width: 10),
-        Text(
-          'Or',
-          style: TextStyle(color: AppColor().hintTextColor, fontSize: 20),
-        ),
-        SizedBox(width: 10),
-        Container(height: 1, width: 120, color: AppColor().hintTextColor),
-      ],
-    );
-  }
-
-  Widget auth() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        /* DOKUMENTASI GOOGLE SIGN IN:
-           1. Image Google dibungkus InkWell (onTap aja nanti).
-           2. pas diklik nanti, manggilin fungsi signinWithGoogle dari AuthService.
-           3.'await' buat proses login yang bersifat asinkron (butuh waktu).
-           4. Jika variabel 'userCredential' tidak null (login sukses), user otomatis diarahkan ke onBoardingnya.
-           5. pushReplacement digunakan agar user tidak bisa kembali ke halaman signup menggunakan tombol back.
-        */
-        InkWell(
-          onTap: () async {
-            UserCredential? userCredential =
-                await _authService.signinWithGoogle();
-            if (userCredential != null) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => onboarding()),
-              );
-            }
-          },
-          child: Image(image: AssetImage('image/google.png')),
-        ),
-        SizedBox(width: 43),
-        Image(image: AssetImage('image/apple.png')),
-      ],
     );
   }
 }

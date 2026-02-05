@@ -37,6 +37,16 @@ end
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
+    # Menjalankan pengaturan default dari Flutter
     flutter_additional_macos_build_settings(target)
+    
+    # Menghilangkan warning MACOSX_DEPLOYMENT_TARGET untuk library pihak ketiga
+    target.build_configurations.each do |config|
+      current_target = config.build_settings['MACOSX_DEPLOYMENT_TARGET'].to_f
+      # Jika target di bawah 10.13, kita paksa ke 10.15 sesuai platform utama kamu
+      if current_target > 0 && current_target < 10.13
+        config.build_settings['MACOSX_DEPLOYMENT_TARGET'] = '10.15'
+      end
+    end
   end
 end
