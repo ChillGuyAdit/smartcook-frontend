@@ -42,8 +42,8 @@ class _splashscreenState extends State<splashscreen> {
     Future.delayed(Duration(milliseconds: 2000), () {
       if (mounted) {
         setState(() {
-          _posisiLogo = Alignment(-0.9, 0);
-          _posisiTeks = Alignment(1.1, 0);
+          _posisiLogo = Alignment(-0.65, 0);
+          _posisiTeks = Alignment(0.48, 0);
         });
       }
     });
@@ -53,7 +53,7 @@ class _splashscreenState extends State<splashscreen> {
     });
 
     Future.delayed(Duration(milliseconds: 2800), () {
-      if (mounted) setState(() => _posisiTiraiKiri = 1.2);
+      if (mounted) setState(() => _posisiTiraiKiri = 250);
     });
 
     Future.delayed(Duration(milliseconds: 3800), () {
@@ -86,9 +86,6 @@ class _splashscreenState extends State<splashscreen> {
     double baseWidth = 430;
     double scale = screenWidth / baseWidth;
 
-    double logoSize = 95 * scale;
-    double boxTeksWidth = 280 * scale;
-
     return Scaffold(
       body: Stack(
         children: [
@@ -107,72 +104,57 @@ class _splashscreenState extends State<splashscreen> {
               ),
             ),
           ),
-          Center(
+          AnimatedOpacity(
+            duration: Duration(milliseconds: 400),
+            opacity: _opacityTeks,
+            child: AnimatedAlign(
+              alignment: _posisiTeks,
+              duration: Duration(milliseconds: 600),
+              curve: Curves.easeInOut,
+              child: SizedBox(
+                width: 200 * scale,
+                height: 50 * scale,
+                child: Stack(
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Smart Cook",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 32 * scale,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    AnimatedPositioned(
+                      duration: Duration(milliseconds: 600),
+                      curve: Curves.easeInOut,
+                      left: _posisiTiraiKiri * scale,
+                      top: 0,
+                      bottom: 0,
+                      child: Container(
+                          width: 200 * scale, color: AppColor().utama),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          AnimatedAlign(
+            key: ValueKey('logo_utama'),
+            alignment: _posisiLogo,
+            duration: Duration(milliseconds: 700),
+            curve: Curves.easeInOutBack,
             child: Container(
-              width: screenWidth * 0.95,
-              height: 120 * scale,
-              child: Stack(
-                children: [
-                  AnimatedAlign(
-                    alignment: _posisiTeks,
-                    duration: Duration(milliseconds: 600),
-                    curve: Curves.easeInOut,
-                    child: AnimatedOpacity(
-                      duration: Duration(milliseconds: 400),
-                      opacity: _opacityTeks,
-                      child: SizedBox(
-                        width: boxTeksWidth,
-                        height: 70 * scale,
-                        child: Stack(
-                          children: [
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                "Smart Cook",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 38 * scale,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.8,
-                                ),
-                              ),
-                            ),
-                            AnimatedPositioned(
-                              duration: Duration(milliseconds: 800),
-                              curve: Curves.easeInOut,
-                              left: _posisiTiraiKiri * boxTeksWidth,
-                              top: 0,
-                              bottom: 0,
-                              child: Container(
-                                width: boxTeksWidth + 50,
-                                color: AppColor().utama,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  AnimatedAlign(
-                    key: ValueKey('logo_utama'),
-                    alignment: _posisiLogo,
-                    duration: Duration(milliseconds: 700),
-                    curve: Curves.easeInOutBack,
-                    child: Container(
-                      height: logoSize,
-                      width: logoSize,
-                      decoration: BoxDecoration(
-                        image: DecorationImage(
-                          image: AssetImage('image/mainLogo.jpg'),
-                          fit: BoxFit.cover,
-                        ),
-                        borderRadius: BorderRadius.circular(100 * scale),
-                        border:
-                            Border.all(color: Colors.white, width: 2.5 * scale),
-                      ),
-                    ),
-                  ),
-                ],
+              height: 70 * scale,
+              width: 70 * scale,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('image/mainLogo.jpg'),
+                  fit: BoxFit.contain,
+                ),
+                borderRadius: BorderRadius.circular(50 * scale),
               ),
             ),
           ),
