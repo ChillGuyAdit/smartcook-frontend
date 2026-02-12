@@ -35,14 +35,22 @@ class _forgotpassowrdState extends State<forgotpassowrd> {
 
   @override
   Widget build(BuildContext context) {
+    final screenheight = MediaQuery.of(context).size.height;
+    final screenwidth = MediaQuery.of(context).size.width;
+
+    double basewidth = 430;
+    double scale = screenwidth / basewidth;
     return Scaffold(
+      backgroundColor: AppColor().putih,
       appBar: AppBar(
+        backgroundColor: AppColor().putih,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SingleChildScrollView(
+        physics: NeverScrollableScrollPhysics(),
         child: Form(
           key: _formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -63,7 +71,7 @@ class _forgotpassowrdState extends State<forgotpassowrd> {
               Text(
                 "Jangan khawatir! Masukkan alamat email Anda. Dan kami akan\nmemberikan instruksi untuk mengatur ulang password",
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12),
+                style: TextStyle(fontSize: 12 * scale),
               ),
               SizedBox(height: 32),
               Padding(
@@ -108,7 +116,8 @@ class _forgotpassowrdState extends State<forgotpassowrd> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   backgroundColor: AppColor().utama,
-                  padding: EdgeInsets.symmetric(horizontal: 140, vertical: 10),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 135 * scale, vertical: 12 * scale),
                 ),
                 child: _isLoading
                     ? SizedBox(
@@ -124,7 +133,7 @@ class _forgotpassowrdState extends State<forgotpassowrd> {
                         style: TextStyle(
                           color: AppColor().putih,
                           fontWeight: FontWeight.bold,
-                          fontSize: 25,
+                          fontSize: 30 * scale,
                         ),
                       ),
               ),

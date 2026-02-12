@@ -35,6 +35,11 @@ class _mailpasswordState extends State<mailpassword> {
 
   @override
   Widget build(BuildContext context) {
+    final screenheight = MediaQuery.of(context).size.height;
+    final screenwidth = MediaQuery.of(context).size.width;
+
+    double basewidth = 430;
+    double scale = screenwidth / basewidth;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(

@@ -145,7 +145,7 @@ class _signupState extends State<signup> {
                     ],
                   ),
                 ),
-                SizedBox(height: 60 * scale),
+                SizedBox(height: 80 * scale),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -158,7 +158,7 @@ class _signupState extends State<signup> {
                       child: Text('Or',
                           style: TextStyle(
                               color: AppColor().hintTextColor,
-                              fontSize: 22 * scale)),
+                              fontSize: 20 * scale)),
                     ),
                     Container(
                         height: 1.5,
@@ -166,7 +166,7 @@ class _signupState extends State<signup> {
                         color: AppColor().hintTextColor),
                   ],
                 ),
-                SizedBox(height: 50 * scale),
+                SizedBox(height: 70 * scale),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -191,15 +191,15 @@ class _signupState extends State<signup> {
                       },
                       child: Image(
                         image: AssetImage('image/google.png'),
-                        width: 65 * scale,
-                        height: 65 * scale,
+                        width: 100 * scale,
+                        height: 100 * scale,
                       ),
                     ),
                     SizedBox(width: 50 * scale),
                     Image(
                       image: AssetImage('image/apple.png'),
-                      width: 65 * scale,
-                      height: 65 * scale,
+                      width: 100 * scale,
+                      height: 100 * scale,
                     ),
                   ],
                 ),
@@ -246,6 +246,9 @@ class _signupState extends State<signup> {
                     ),
                   ],
                 ),
+                SizedBox(
+                  height: 20 * scale,
+                )
               ],
             ),
           ),

@@ -45,18 +45,23 @@ class _signinState extends State<signin> {
   @override
   Widget build(BuildContext context) {
     final screenheight = MediaQuery.of(context).size.height;
+    final screenwidth = MediaQuery.of(context).size.width;
+
+    double basewidth = 430;
+    double scale = screenwidth / basewidth;
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Column(
         children: [
           Expanded(
             child: SingleChildScrollView(
+              physics: NeverScrollableScrollPhysics(),
               child: Column(
                 children: [
                   SizedBox(height: 100),
                   Container(
-                    height: 400,
-                    width: 362,
+                    height: 420 * scale,
+                    width: 380 * scale,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.only(
                         bottomLeft: Radius.circular(56),
@@ -75,7 +80,7 @@ class _signinState extends State<signin> {
                               'SignIn',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 35,
+                                fontSize: 38 * scale,
                                 color: AppColor().hintTextColor,
                               ),
                             ),
@@ -85,9 +90,9 @@ class _signinState extends State<signin> {
                           key: _formKey,
                           child: Column(
                             children: [
-                              SizedBox(height: 46),
+                              SizedBox(height: 30 * scale),
                               email(),
-                              SizedBox(height: 10),
+                              SizedBox(height: 15 * scale),
                               password(),
                             ],
                           ),
@@ -115,16 +120,15 @@ class _signinState extends State<signin> {
                             ),
                           ),
                         ),
-                        SizedBox(height: 17),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12 * scale),
                             ),
                             backgroundColor: AppColor().utama,
                             padding: EdgeInsets.symmetric(
-                              horizontal: 95,
-                              vertical: 10,
+                              horizontal: 100 * scale,
+                              vertical: 15 * scale,
                             ),
                           ),
                           onPressed: _submitData,
@@ -133,17 +137,20 @@ class _signinState extends State<signin> {
                             style: TextStyle(
                               color: AppColor().putih,
                               fontWeight: FontWeight.bold,
-                              fontSize: 20,
+                              fontSize: 22 * scale,
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(height: 50),
+                  SizedBox(height: 100 * scale),
                   bagianOr(),
-                  SizedBox(height: 40),
+                  SizedBox(height: 70 * scale),
                   auth(),
+                  SizedBox(
+                    height: 100 * scale,
+                  )
                 ],
               ),
             ),
@@ -153,7 +160,8 @@ class _signinState extends State<signin> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Belum punya akun ?', style: TextStyle(fontSize: 15)),
+                Text('Belum punya akun ?',
+                    style: TextStyle(fontSize: 17 * scale)),
                 SizedBox(width: 6),
                 TextButton(
                   style: TextButton.styleFrom(
@@ -175,13 +183,13 @@ class _signinState extends State<signin> {
                         'SignUp',
                         style: TextStyle(
                           color: AppColor().utama,
-                          fontSize: 15,
+                          fontSize: 17 * scale,
                         ),
                       ),
                       Image.asset(
                         'image/starLogo.png',
-                        height: 27.51,
-                        width: 27,
+                        height: 30 * scale,
+                        width: 30 * scale,
                       ),
                     ],
                   ),
@@ -195,6 +203,11 @@ class _signinState extends State<signin> {
   }
 
   Widget email() {
+    final screenheight = MediaQuery.of(context).size.height;
+    final screenwidth = MediaQuery.of(context).size.width;
+
+    double basewidth = 430;
+    double scale = screenwidth / basewidth;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 31),
       child: TextFormField(
@@ -229,6 +242,11 @@ class _signinState extends State<signin> {
   }
 
   Widget password() {
+    final screenheight = MediaQuery.of(context).size.height;
+    final screenwidth = MediaQuery.of(context).size.width;
+
+    double basewidth = 430;
+    double scale = screenwidth / basewidth;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 31),
       child: TextFormField(
@@ -266,20 +284,33 @@ class _signinState extends State<signin> {
   }
 
   Widget bagianOr() {
+    final screenheight = MediaQuery.of(context).size.height;
+    final screenwidth = MediaQuery.of(context).size.width;
+
+    double basewidth = 430;
+    double scale = screenwidth / basewidth;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Container(height: 1, width: 100, color: AppColor().hintTextColor),
+        Container(
+            height: 1, width: 130 * scale, color: AppColor().hintTextColor),
         SizedBox(width: 10),
         Text('Or',
-            style: TextStyle(color: AppColor().hintTextColor, fontSize: 18)),
+            style: TextStyle(
+                color: AppColor().hintTextColor, fontSize: 20 * scale)),
         SizedBox(width: 10),
-        Container(height: 1, width: 100, color: AppColor().hintTextColor),
+        Container(
+            height: 1, width: 130 * scale, color: AppColor().hintTextColor),
       ],
     );
   }
 
   Widget auth() {
+    final screenheight = MediaQuery.of(context).size.height;
+    final screenwidth = MediaQuery.of(context).size.width;
+
+    double basewidth = 430;
+    double scale = screenwidth / basewidth;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -294,10 +325,18 @@ class _signinState extends State<signin> {
               );
             }
           },
-          child: Image.asset('image/google.png'),
+          child: Image(
+            image: AssetImage('image/google.png'),
+            height: 100 * scale,
+            width: 100 * scale,
+          ),
         ),
         SizedBox(width: 40),
-        Image.asset('image/apple.png'),
+        Image(
+          image: AssetImage('image/apple.png'),
+          height: 100 * scale,
+          width: 100 * scale,
+        )
       ],
     );
   }

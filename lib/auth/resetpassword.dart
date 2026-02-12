@@ -10,7 +10,42 @@ class resetpassword extends StatefulWidget {
 }
 
 class _resetpasswordState extends State<resetpassword> {
+  // Key untuk Form
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  // Controller untuk membandingkan password
+  final TextEditingController _passController = TextEditingController();
+  final TextEditingController _confirmPassController = TextEditingController();
+
   bool _obscuretext = true;
+  bool _obscuretextConfirm = true;
+
+  @override
+  void dispose() {
+    _passController.dispose();
+    _confirmPassController.dispose();
+    super.dispose();
+  }
+
+  void _submitReset() {
+    // Memicu validasi di semua TextFormField dalam Form
+    if (_formKey.currentState!.validate()) {
+      Navigator.push(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              animasisukses(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+          transitionDuration: Duration(milliseconds: 500),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +74,7 @@ class _resetpasswordState extends State<resetpassword> {
             ),
             SizedBox(height: 35),
             Form(
+              key: _formKey, // Pasang key di sini bray
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -50,7 +86,7 @@ class _resetpasswordState extends State<resetpassword> {
                     ),
                   ),
                   SizedBox(height: 7),
-                  password(),
+                  passwordField(),
                   SizedBox(height: 25),
                   Padding(
                     padding: EdgeInsets.only(left: 35),
@@ -63,7 +99,7 @@ class _resetpasswordState extends State<resetpassword> {
                     ),
                   ),
                   SizedBox(height: 7),
-                  confirmPassword(),
+                  confirmPasswordField(),
                   SizedBox(height: 30),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
@@ -76,6 +112,7 @@ class _resetpasswordState extends State<resetpassword> {
                         vertical: 12,
                       ),
                     ),
+                    onPressed: _submitReset,
                     child: Text(
                       'Reset Password',
                       style: TextStyle(
@@ -84,25 +121,6 @@ class _resetpasswordState extends State<resetpassword> {
                         fontSize: 25,
                       ),
                     ),
-                    onPressed: () {
-                      // Navigasi pake Fade Animation bray
-                      Navigator.push(
-                        context,
-                        PageRouteBuilder(
-                          pageBuilder:
-                              (context, animation, secondaryAnimation) =>
-                                  animasisukses(),
-                          transitionsBuilder:
-                              (context, animation, secondaryAnimation, child) {
-                                return FadeTransition(
-                                  opacity: animation,
-                                  child: child,
-                                );
-                              },
-                          transitionDuration: Duration(milliseconds: 500),
-                        ),
-                      );
-                    },
                   ),
                   SizedBox(height: 20),
                 ],
@@ -114,11 +132,22 @@ class _resetpasswordState extends State<resetpassword> {
     );
   }
 
-  Widget password() {
+  Widget passwordField() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 25),
       child: TextFormField(
+        controller: _passController,
         obscureText: _obscuretext,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return "Password wajib isi bray";
+          }
+          if (value.length < 8) {
+            return "Password minimal 8 karakter";
+          }
+          return null;
+        },
         decoration: InputDecoration(
           contentPadding: EdgeInsets.symmetric(vertical: 23),
           border: OutlineInputBorder(
@@ -145,11 +174,22 @@ class _resetpasswordState extends State<resetpassword> {
     );
   }
 
-  Widget confirmPassword() {
+  Widget confirmPasswordField() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 25),
       child: TextFormField(
-        obscureText: _obscuretext,
+        controller: _confirmPassController,
+        obscureText: _obscuretextConfirm,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return "Konfirmasi password dulu bray";
+          }
+          if (value != _passController.text) {
+            return "Password ngga sama, cek lagi bray";
+          }
+          return null;
+        },
         decoration: InputDecoration(
           contentPadding: EdgeInsets.symmetric(vertical: 23),
           border: OutlineInputBorder(
@@ -157,17 +197,17 @@ class _resetpasswordState extends State<resetpassword> {
             borderSide: BorderSide.none,
           ),
           fillColor: AppColor().abuabu,
-          hintText: 'Enter your password',
+          hintText: 'Re-enter your password',
           filled: true,
           prefixIcon: Icon(Icons.lock, color: AppColor().hintTextColor),
           suffixIcon: IconButton(
             icon: Icon(
-              _obscuretext ? Icons.visibility_off : Icons.visibility,
+              _obscuretextConfirm ? Icons.visibility_off : Icons.visibility,
               color: AppColor().hintTextColor,
             ),
             onPressed: () {
               setState(() {
-                _obscuretext = !_obscuretext;
+                _obscuretextConfirm = !_obscuretextConfirm;
               });
             },
           ),

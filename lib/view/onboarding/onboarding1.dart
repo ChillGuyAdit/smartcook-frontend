@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:smartcook/helper/color.dart';
 
@@ -14,6 +12,10 @@ class _onboarding1State extends State<onboarding1> {
   @override
   Widget build(BuildContext context) {
     final screenheight = MediaQuery.of(context).size.height;
+    final screenwidth = MediaQuery.of(context).size.width;
+
+    double basewidth = 430;
+    double scale = screenwidth / basewidth;
     return Scaffold(
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -24,15 +26,15 @@ class _onboarding1State extends State<onboarding1> {
           ),
           Text(
             'Masak Lebih Praktis',
-            style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 32 * scale, fontWeight: FontWeight.bold),
           ),
           SizedBox(
-            height: 10,
+            height: 13 * scale,
           ),
           RichText(
             textAlign: TextAlign.center,
             text: TextSpan(
-              style: TextStyle(fontSize: 20, color: Colors.black),
+              style: TextStyle(fontSize: 20 * scale, color: Colors.black),
               children: [
                 TextSpan(
                     text: "Si asisten pintar yang tahu semua isi kulkasmu."),

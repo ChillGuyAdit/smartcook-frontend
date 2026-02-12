@@ -14,6 +14,9 @@ class _onboarding3State extends State<onboarding3> {
   Widget build(BuildContext context) {
     final screenheight = MediaQuery.of(context).size.height;
     final screenwidth = MediaQuery.of(context).size.width;
+
+    double basewidth = 430;
+    double scale = screenwidth / basewidth;
     return Scaffold(
         body: Stack(
       children: [
@@ -26,24 +29,24 @@ class _onboarding3State extends State<onboarding3> {
             ),
             RichText(
               text: TextSpan(
-                  style: TextStyle(fontSize: 30, color: Colors.black),
+                  style: TextStyle(fontSize: 32 * scale, color: Colors.black),
                   children: [
                     TextSpan(
                       text: 'Smartcook',
                       style: TextStyle(
                           color: AppColor().warnaIcon2,
-                          fontSize: 30,
+                          fontSize: 32 * scale,
                           fontWeight: FontWeight.bold),
                     ),
                     TextSpan(text: ' Jaga Kulkasmu')
                   ]),
             ),
             SizedBox(
-              height: 15,
+              height: 18 * scale,
             ),
             Text(
               'Dari stok pasar sampai ke meja makan,\n SmartyCook pastiin nggak ada bahan\n makanan yang terbuang sia-sia. Masak\n lebih terjadwal, hidup lebih maksimal.',
-              style: TextStyle(fontSize: 20),
+              style: TextStyle(fontSize: 20 * scale),
               textAlign: TextAlign.center,
             ),
             SizedBox(
@@ -70,7 +73,7 @@ class _onboarding3State extends State<onboarding3> {
               child: Text(
                 'Lets Cook',
                 style: TextStyle(
-                    fontSize: 25,
+                    fontSize: 30 * scale,
                     fontWeight: FontWeight.bold,
                     color: AppColor().putih),
               ),

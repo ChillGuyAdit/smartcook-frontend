@@ -12,6 +12,11 @@ class sukses extends StatefulWidget {
 class _suksesState extends State<sukses> {
   @override
   Widget build(BuildContext context) {
+    final screenheight = MediaQuery.of(context).size.height;
+    final screenwidth = MediaQuery.of(context).size.width;
+
+    double basewidth = 430;
+    double scale = screenwidth / basewidth;
     return Scaffold(
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -23,15 +28,15 @@ class _suksesState extends State<sukses> {
           SizedBox(height: 22),
           Text(
             'Sukses!',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 35 * scale),
           ),
-          SizedBox(height: 20),
+          SizedBox(height: 20 * scale),
           Text(
             'Selamat Anda berhasil mengganti password baru Anda\nKlik lanjutkan untuk masuk',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 15),
+            style: TextStyle(fontSize: 14 * scale),
           ),
-          SizedBox(height: 20),
+          SizedBox(height: 25 * scale),
           ElevatedButton(
             onPressed: () {
               Navigator.pushReplacement(
@@ -42,7 +47,7 @@ class _suksesState extends State<sukses> {
             child: Text(
               'Lanjutkan',
               style: TextStyle(
-                fontSize: 25,
+                fontSize: 27.5 * scale,
                 fontWeight: FontWeight.bold,
                 color: AppColor().putih,
               ),
