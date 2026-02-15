@@ -25,7 +25,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  
+  url_launcher: ^6.3.1
   flutter_lints: ^6.0.0
 
 
@@ -35,36 +35,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - image/mainLogo.jpg
-    - image/starLogo.png
-    - image/google.png
-    - image/apple.png
-    - image/password.png
-    - image/mail.png
-    - image/gembok.png
-    - image/suksesImage.png
-    - image/ob1.png
-    - image/ob2.png
-    - image/ob3.png
-    - image/urutan1.png
-    - image/urutan2.png
-    - image/urutan3.png
-    - image/personalInformation.png
-    - image/jenisKelaminCowo.png
-    - image/jenisKelaminCewe.png
-    - image/style1.png
-    - image/style2.png
-    - image/style3.png
-    - image/style4.png 
-    - image/style5.png
-    - image/style6.png
-    - image/style7.png
-    - image/style8.png
-    - image/equip1.png
-    - image/equip2.png
-    - image/equip3.png
-    - image/equip4.png
-    - image/equip5.png
+    - image/
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
