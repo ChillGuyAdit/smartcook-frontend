@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/auth/resetpassword.dart';
+import 'package:smartcook/service/api_service.dart';
 
 class mailpassword extends StatefulWidget {
-  const mailpassword({super.key});
+  final String email;
+  const mailpassword({super.key, required this.email});
 
   @override
   State<mailpassword> createState() => _mailpasswordState();
@@ -13,24 +15,43 @@ class mailpassword extends StatefulWidget {
 class _mailpasswordState extends State<mailpassword> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  final List<TextEditingController> _otpControllers = List.generate(4, (_) => TextEditingController());
+
+  @override
+  void dispose() {
+    for (final c in _otpControllers) c.dispose();
+    super.dispose();
+  }
 
   void _validateAndSubmit() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      await Future.delayed(Duration(milliseconds: 500));
-
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => resetpassword()),
-        ).then((_) {
-          if (mounted) setState(() => _isLoading = false);
-        });
-      }
+    if (!_formKey.currentState!.validate()) return;
+    final otp = _otpControllers.map((c) => c.text).join();
+    if (otp.length != 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Masukkan 4 digit kode OTP')),
+      );
+      return;
     }
+    setState(() => _isLoading = true);
+    final res = await ApiService.post(
+      '/api/auth/verify-otp',
+      body: {'email': widget.email, 'otp': otp},
+      useAuth: false,
+    );
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    if (!res.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res.message ?? 'Kode OTP tidak valid')),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => resetpassword(email: widget.email, otp: otp),
+      ),
+    );
   }
 
   @override
@@ -72,7 +93,7 @@ class _mailpasswordState extends State<mailpassword> {
                   style: TextStyle(fontSize: 12),
                   children: [
                     TextSpan(
-                      text: "smartcook@gmail.com",
+                      text: widget.email,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
@@ -89,10 +110,10 @@ class _mailpasswordState extends State<mailpassword> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _otpBox(context, true, false),
-                    _otpBox(context, false, false),
-                    _otpBox(context, false, false),
-                    _otpBox(context, false, true),
+                    _otpBox(context, 0, true, false),
+                    _otpBox(context, 1, false, false),
+                    _otpBox(context, 2, false, false),
+                    _otpBox(context, 3, false, true),
                   ],
                 ),
               ),
@@ -131,11 +152,12 @@ class _mailpasswordState extends State<mailpassword> {
     );
   }
 
-  Widget _otpBox(BuildContext context, bool first, bool last) {
+  Widget _otpBox(BuildContext context, int index, bool first, bool last) {
     return SizedBox(
       width: 70,
       height: 70,
       child: TextFormField(
+        controller: _otpControllers[index],
         enabled: !_isLoading,
         onChanged: (value) {
           if (value.length == 1 && !last) {
@@ -146,9 +168,7 @@ class _mailpasswordState extends State<mailpassword> {
           }
         },
         validator: (value) {
-          if (value == null || value.isEmpty) {
-            return "";
-          }
+          if (value == null || value.isEmpty) return "";
           return null;
         },
         textAlign: TextAlign.center,

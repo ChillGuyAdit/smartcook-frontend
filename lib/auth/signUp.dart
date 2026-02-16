@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/auth/signIn.dart';
 import 'package:smartcook/helper/color.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smartcook/page/homepage.dart';
+import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/auth_service.dart';
+import 'package:smartcook/service/token_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smartcook/view/onboarding/mainBoarding.dart';
+import 'package:flutter/foundation.dart';
 
 class signup extends StatefulWidget {
   const signup({super.key});
@@ -25,6 +29,7 @@ class _signupState extends State<signup> {
   final FocusNode _focusNode3 = FocusNode();
 
   bool _obscuretext = true;
+  bool _loading = false;
 
   @override
   void dispose() {
@@ -37,15 +42,99 @@ class _signupState extends State<signup> {
     super.dispose();
   }
 
-  void _submitData() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, anim1, anim2) => onboarding(),
-          transitionDuration: Duration.zero,
-          reverseTransitionDuration: Duration.zero,
-        ),
+  Future<void> _submitData() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _loading = true);
+    try {
+      final res = await ApiService.post(
+        '/api/auth/register',
+        body: {
+          'name': _kontrolUsername.text.trim(),
+          'email': _kontrolEmail.text.trim(),
+          'password': _kontrolPassword.text,
+        },
+        useAuth: false,
+      );
+      if (!mounted) return;
+      setState(() => _loading = false);
+      debugPrint('Register response: success=${res.success}, statusCode=${res.statusCode}');
+      debugPrint('Register response data: ${res.data}');
+      debugPrint('Register response message: ${res.message}');
+      
+      if (!res.success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(res.message ?? 'Registrasi gagal')),
+          );
+        }
+        return;
+      }
+      
+      final data = res.data;
+      debugPrint('Data type: ${data.runtimeType}');
+      debugPrint('Data content: $data');
+      
+      if (data == null || data is! Map<String, dynamic>) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Format respons tidak valid. Tipe: ${data.runtimeType}, Data: ${data?.toString() ?? 'null'}')),
+          );
+        }
+        return;
+      }
+      final token = data['token'] as String?;
+      final user = data['user'] as Map<String, dynamic>?;
+      if (token == null || token.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Token tidak ditemukan')),
+        );
+        return;
+      }
+      try {
+        await TokenService.saveToken(token);
+        if (user != null) await TokenService.saveUser(user);
+      } catch (e) {
+        debugPrint('Error saving token: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal menyimpan token: ${e.toString()}')),
+          );
+        }
+        return;
+      }
+      
+      final onboardingCompleted = user?['onboarding_completed'] == true;
+      if (!mounted) return;
+      
+      try {
+        if (onboardingCompleted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const homepage()),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            PageRouteBuilder(
+              pageBuilder: (context, anim1, anim2) => const onboarding(),
+              transitionDuration: Duration.zero,
+              reverseTransitionDuration: Duration.zero,
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Error navigating: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal navigasi: ${e.toString()}')),
+          );
+        }
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Error in _submitData: $e');
+      debugPrint('Stack trace: $stackTrace');
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Terjadi kesalahan: ${e.toString()}')),
       );
     }
   }
@@ -131,8 +220,17 @@ class _signupState extends State<signup> {
                           ),
                           backgroundColor: AppColor().utama,
                         ),
-                        onPressed: _submitData,
-                        child: Text(
+                        onPressed: _loading ? null : _submitData,
+                        child: _loading
+                            ? SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColor().putih,
+                                ),
+                              )
+                            : Text(
                           'Sign Up',
                           style: TextStyle(
                             color: AppColor().putih,
@@ -178,13 +276,72 @@ class _signupState extends State<signup> {
                     */
                     InkWell(
                       onTap: () async {
-                        UserCredential? userCredential =
-                            await _authService.signinWithGoogle();
-                        if (userCredential != null) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => onboarding()),
+                        if (_loading) return;
+                        try {
+                          UserCredential? userCredential =
+                              await _authService.signinWithGoogle();
+                          if (userCredential == null) return;
+                          final idToken = await userCredential.user?.getIdToken();
+                          if (idToken == null || idToken.isEmpty) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Gagal mendapatkan token Google')),
+                              );
+                            }
+                            return;
+                          }
+                          setState(() => _loading = true);
+                          final res = await ApiService.post(
+                            '/api/auth/google',
+                            body: {'id_token': idToken},
+                            useAuth: false,
+                          );
+                          if (!mounted) return;
+                          setState(() => _loading = false);
+                          if (!res.success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text(res.message ?? 'Login Google gagal')),
+                            );
+                            return;
+                          }
+                          final data = res.data;
+                          if (data == null || data is! Map<String, dynamic>) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Format respons tidak valid')),
+                            );
+                            return;
+                          }
+                          final token = data['token'] as String?;
+                          final user = data['user'] as Map<String, dynamic>?;
+                          if (token == null || token.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Token tidak ditemukan')),
+                            );
+                            return;
+                          }
+                          await TokenService.saveToken(token);
+                          if (user != null) await TokenService.saveUser(user);
+                          final onboardingCompleted =
+                              user?['onboarding_completed'] == true;
+                          if (!mounted) return;
+                          if (onboardingCompleted) {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                  builder: (context) => const homepage()),
+                            );
+                          } else {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                  builder: (context) => const onboarding()),
+                            );
+                          }
+                        } catch (e) {
+                          if (!mounted) return;
+                          setState(() => _loading = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Terjadi kesalahan: ${e.toString()}')),
                           );
                         }
                       },
@@ -273,7 +430,7 @@ class _signupState extends State<signup> {
         autovalidateMode: AutovalidateMode.onUserInteraction,
         onFieldSubmitted: (v) {
           if (nextNode != null) {
-            FocusScope.of(context).requestFocus(nextNode);
+            FocusScope.of(context).requestFocus(nextNode!);
           } else {
             _submitData();
           }

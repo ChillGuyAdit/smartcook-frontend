@@ -4,11 +4,11 @@ import 'category.dart';
 import 'kulkas.dart';
 import 'masakan.dart';
 import 'tambahkan_bahan.dart';
-// Import halaman baru
 import 'search_page.dart';
 import 'bot_page.dart';
 import 'save_page.dart';
 import 'profile_page.dart';
+import 'package:smartcook/service/api_service.dart';
 
 class homepage extends StatefulWidget {
   const homepage({super.key});
@@ -19,8 +19,61 @@ class homepage extends StatefulWidget {
 
 class _homepageState extends State<homepage> {
   int _selectedIndex = 0;
-  // Variabel baru untuk melacak waktu makan yang dipilih
-  String _selectedMealTime = "Breakfast";
+  String _selectedMealTime = "breakfast";
+  String _userName = 'Smarty';
+  List<Map<String, dynamic>> _favorites = [];
+  List<Map<String, dynamic>> _fridgePreview = [];
+  List<Map<String, dynamic>> _recommendations = [];
+  Map<String, List<Map<String, dynamic>>> _byMeal = {};
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _loading = true);
+    final profileRes = await ApiService.get('/api/user/profile');
+    final favRes = await ApiService.get('/api/favorites', queryParameters: {'limit': '4'});
+    final fridgeRes = await ApiService.get('/api/fridge');
+    final recRes = await ApiService.get('/api/recipes/recommendations', queryParameters: {'limit': '5'});
+    final breakfastRes = await ApiService.get('/api/recipes/by-meal/breakfast');
+    final lunchRes = await ApiService.get('/api/recipes/by-meal/lunch');
+    final dinnerRes = await ApiService.get('/api/recipes/by-meal/dinner');
+    if (!mounted) return;
+    final profile = profileRes.data as Map<String, dynamic>?;
+    if (profile != null && profile['name'] != null) _userName = profile['name'].toString();
+    _favorites = _parseRecipeList(favRes.data);
+    _fridgePreview = _parseFridgeList(fridgeRes.data);
+    _recommendations = _parseRecipeList(recRes.data);
+    _byMeal['breakfast'] = _parseRecipeList(breakfastRes.data);
+    _byMeal['lunch'] = _parseRecipeList(lunchRes.data);
+    _byMeal['dinner'] = _parseRecipeList(dinnerRes.data);
+    setState(() => _loading = false);
+  }
+
+  List<Map<String, dynamic>> _parseRecipeList(dynamic data) {
+    if (data == null) return [];
+    if (data is List) {
+      return data.map((e) {
+        if (e is Map<String, dynamic>) {
+          final recipe = e['recipe'] ?? e;
+          if (recipe is Map<String, dynamic>) return recipe;
+          return <String, dynamic>{};
+        }
+        return <String, dynamic>{};
+      }).where((e) => e.isNotEmpty && e['_id'] != null).toList();
+    }
+    return [];
+  }
+
+  List<Map<String, dynamic>> _parseFridgeList(dynamic data) {
+    if (data == null) return [];
+    if (data is List) return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    return [];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +83,9 @@ class _homepageState extends State<homepage> {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: _selectedIndex == 0
-          ? _buildHomeContent(screenWidth, cardWidth)
+          ? _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _buildHomeContent(screenWidth, cardWidth)
           : _buildOtherPages(),
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _selectedIndex,
@@ -80,11 +135,11 @@ class _homepageState extends State<homepage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          children: const [
-                            Text("Hallo, Smarty! ",
-                                style: TextStyle(
+                          children: [
+                            Text("Hallo, $_userName! ",
+                                style: const TextStyle(
                                     fontSize: 14, color: Colors.black54)),
-                            Icon(Icons.auto_awesome,
+                            const Icon(Icons.auto_awesome,
                                 color: Colors.amber, size: 16),
                           ],
                         ),
@@ -282,14 +337,19 @@ class _homepageState extends State<homepage> {
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text("1. Kentang (5)",
-                                  style: TextStyle(
-                                      color: Colors.white, fontSize: 13)),
-                              SizedBox(height: 4),
-                              Text("2. Wortel (10)",
-                                  style: TextStyle(
-                                      color: Colors.white, fontSize: 13)),
+                            children: [
+                              for (int i = 0; i < _fridgePreview.take(2).length; i++) ...[
+                                if (i > 0) const SizedBox(height: 4),
+                                Text(
+                                  "${i + 1}. ${_fridgePreview[i]['ingredient_name'] ?? 'Bahan'} (${_fridgePreview[i]['quantity'] ?? '-'})",
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 13),
+                                ),
+                              ],
+                              if (_fridgePreview.isEmpty)
+                                const Text("Belum ada bahan",
+                                    style: TextStyle(
+                                        color: Colors.white70, fontSize: 13)),
                             ],
                           ),
                         ),
@@ -299,7 +359,7 @@ class _homepageState extends State<homepage> {
                               context,
                               MaterialPageRoute(
                                   builder: (context) => const KulkasPage()),
-                            );
+                            ).then((_) => _loadData());
                           },
                           child: const Text(
                             "Lihat Semua >",
@@ -330,11 +390,11 @@ class _homepageState extends State<homepage> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _buildModeFoodItem(
-                    Icons.wb_twilight_rounded, "Breakfast", Colors.orange),
+                    Icons.wb_twilight_rounded, "Breakfast", "breakfast", Colors.orange),
                 _buildModeFoodItem(
-                    Icons.wb_sunny_rounded, "Lunch", Colors.green),
+                    Icons.wb_sunny_rounded, "Lunch", "lunch", Colors.green),
                 _buildModeFoodItem(
-                    Icons.nights_stay_rounded, "Dinner", Colors.indigo),
+                    Icons.nights_stay_rounded, "Dinner", "dinner", Colors.indigo),
               ],
             ),
 
@@ -379,7 +439,7 @@ class _homepageState extends State<homepage> {
                 mainAxisSpacing: 12,
                 childAspectRatio: 1.35,
               ),
-              itemCount: 4,
+              itemCount: _favorites.length,
               itemBuilder: (context, index) {
                 List<Color> cardColors = [
                   const Color(0xFF2A9D8F),
@@ -387,24 +447,28 @@ class _homepageState extends State<homepage> {
                   const Color(0xFFD4A373),
                   const Color(0xFF6A994E),
                 ];
-
-                String title = index % 2 == 1 ? "Jagung Rebus" : "Spinach Soup";
-                String imagePath =
-                    index % 2 == 1 ? 'image/corn.png' : 'image/soup.png';
-
+                final r = _favorites[index];
+                final title = r['title']?.toString() ?? 'Resep';
+                final imageUrl = r['image_url']?.toString();
+                final cal = r['nutrition_info'] is Map
+                    ? (r['nutrition_info'] as Map)['calories']?.toString() ?? '0'
+                    : '0';
+                final prep = r['prep_time'] ?? 0;
+                final cook = r['cook_time'] ?? 0;
+                final timeStr = '${prep + cook}m';
                 return _buildSaveForYouCard(
                     title: title,
-                    imagePath: imagePath,
+                    imagePath: imageUrl != null ? '' : 'image/soup.png',
+                    imageUrl: imageUrl,
                     color: cardColors[index % 4],
+                    calories: '${cal} Kal',
+                    time: timeStr,
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => MasakanPage(
-                            title: title,
-                            imagePath: imagePath,
-                            calories: "210 Kal",
-                            time: "10-15m",
+                            recipeId: r['_id']?.toString(),
                           ),
                         ),
                       );
@@ -421,76 +485,58 @@ class _homepageState extends State<homepage> {
                     color: Colors.black87)),
             const SizedBox(height: 15),
 
-            _buildBigRecommendationCard(onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MasakanPage(
-                    title: "Jagung Sayur Kentang Bowl",
-                    imagePath: 'image/jagung_bowl.png',
-                    calories: "220 Kal",
-                    time: "10 menit",
-                  ),
+            ...(_recommendations.map((r) {
+              final id = r['_id']?.toString();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: _buildBigRecommendationCard(
+                  title: r['title']?.toString() ?? 'Resep',
+                  imageUrl: r['image_url']?.toString(),
+                  subtitle: r['description']?.toString(),
+                  calories: r['nutrition_info'] is Map
+                      ? (r['nutrition_info'] as Map)['calories']?.toString()
+                      : null,
+                  time: (r['prep_time'] ?? 0) + (r['cook_time'] ?? 0),
+                  onTap: id == null
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => MasakanPage(recipeId: id),
+                            ),
+                          );
+                        },
                 ),
               );
-            }),
-            const SizedBox(height: 20),
-            _buildBigRecommendationCard(onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MasakanPage(
-                    title: "Jagung Sayur Kentang Bowl",
-                    imagePath: 'image/jagung_bowl.png',
-                    calories: "220 Kal",
-                    time: "10 menit",
-                  ),
-                ),
-              );
-            }),
+            })),
           ],
         ),
       ),
     );
   }
 
-  // --- NEW: DYNAMIC MEAL TIME SECTION ---
   Widget _buildMealTimeDynamicSection() {
     Color activeColor;
     IconData activeIcon;
-    List<Map<String, String>> currentList;
-
-    // Logika penentuan warna, icon, dan data list (Tetap sesuai code awal Anda)
     switch (_selectedMealTime) {
-      case "Lunch":
+      case "lunch":
         activeColor = Colors.orange.shade700;
         activeIcon = Icons.wb_sunny_rounded;
-        currentList = [
-          {"title": "Nasi Goreng Spesial", "img": "image/soup.png"},
-          {"title": "Ayam Bakar Madu", "img": "image/corn.png"},
-        ];
         break;
-      case "Dinner":
+      case "dinner":
         activeColor = Colors.indigo.shade900;
         activeIcon = Icons.nights_stay_rounded;
-        currentList = [
-          {"title": "Sop Ayam Hangat", "img": "image/soup.png"},
-          {"title": "Steak Tempe", "img": "image/corn.png"},
-        ];
         break;
-      default: // Breakfast
+      default:
         activeColor = Colors.amber.shade600;
         activeIcon = Icons.wb_twilight_rounded;
-        currentList = [
-          {"title": "Oatmeal Buah", "img": "image/soup.png"},
-          {"title": "Roti Gandum Telur", "img": "image/corn.png"},
-        ];
     }
+    final currentList = _byMeal[_selectedMealTime] ?? [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Efek Animasi Icon di Tengah
         Center(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 500),
@@ -517,42 +563,41 @@ class _homepageState extends State<homepage> {
           ),
         ),
         const SizedBox(height: 20),
-
-        // List Card Makanan Horizontal
         SizedBox(
           height: 130,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            // Clip.none agar card "tembus" ke samping dan shadow tidak terpotong
             clipBehavior: Clip.none,
-            // Padding horizontal 20 agar card pertama tidak menempel ke pinggir layar
             padding: const EdgeInsets.symmetric(horizontal: 0),
             itemCount: currentList.length,
             itemBuilder: (context, index) {
+              final r = currentList[index];
+              final id = r['_id']?.toString();
+              final title = r['title']?.toString() ?? 'Resep';
+              final imageUrl = r['image_url']?.toString();
+              final prep = r['prep_time'] ?? 0;
+              final cook = r['cook_time'] ?? 0;
               return Padding(
                 padding: const EdgeInsets.only(right: 16),
                 child: SizedBox(
-                  width:
-                      210, // Lebar disesuaikan sedikit agar proporsional dengan tinggi baru
+                  width: 210,
                   child: _buildSaveForYouCard(
-                    title: currentList[index]["title"]!,
-                    imagePath: currentList[index]["img"]!,
+                    title: title,
+                    imagePath: imageUrl == null ? 'image/soup.png' : '',
+                    imageUrl: imageUrl,
                     color: activeColor,
-                    // Jika widget card Anda mendukung kustomisasi gaya teks/ikon:
-                    // Gunakan warna putih pekat (Colors.white) untuk elemen kalori/waktu
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => MasakanPage(
-                            title: currentList[index]["title"]!,
-                            imagePath: currentList[index]["img"]!,
-                            calories: "180 Kal",
-                            time: "15m",
-                          ),
-                        ),
-                      );
-                    },
+                    calories: null,
+                    time: '${prep + cook}m',
+                    onTap: id == null
+                        ? null
+                        : () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => MasakanPage(recipeId: id),
+                              ),
+                            );
+                          },
                   ),
                 ),
               );
@@ -565,12 +610,12 @@ class _homepageState extends State<homepage> {
 
   // --- WIDGET BUILDERS ---
 
-  Widget _buildModeFoodItem(IconData icon, String label, Color iconColor) {
-    bool isSelected = _selectedMealTime == label;
+  Widget _buildModeFoodItem(IconData icon, String label, String mealKey, Color iconColor) {
+    bool isSelected = _selectedMealTime == mealKey;
     return GestureDetector(
       onTap: () {
         setState(() {
-          _selectedMealTime = label;
+          _selectedMealTime = mealKey;
         });
       },
       child: Column(
@@ -609,9 +654,12 @@ class _homepageState extends State<homepage> {
   Widget _buildSaveForYouCard({
     required String title,
     required String imagePath,
+    String? imageUrl,
     required Color color,
     double imageRight = 0,
     double imageBottom = 5,
+    String? calories,
+    String? time,
     VoidCallback? onTap,
   }) {
     return GestureDetector(
@@ -637,9 +685,8 @@ class _homepageState extends State<homepage> {
                 children: [
                   Text(
                     title,
-                    maxLines: 1, // Membatasi hanya 1 baris
-                    overflow: TextOverflow
-                        .ellipsis, // Menambahkan "..." jika teks kepotong
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -647,30 +694,30 @@ class _homepageState extends State<homepage> {
                   ),
                   const SizedBox(height: 8),
                   Row(
-                    children: const [
-                      Icon(Icons.access_time_rounded,
-                          color: Colors.white, size: 12), // Warna putih pekat
-                      SizedBox(width: 4),
+                    children: [
+                      const Icon(Icons.access_time_rounded,
+                          color: Colors.white, size: 12),
+                      const SizedBox(width: 4),
                       Text(
-                        "10-15m",
-                        style: TextStyle(
-                            color: Colors.white, // Warna putih pekat
-                            fontWeight: FontWeight.w600, // Teks lebih tebal
+                        time ?? "10-15m",
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
                             fontSize: 11),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Row(
-                    children: const [
-                      Icon(Icons.local_fire_department_rounded,
-                          color: Colors.white, size: 12), // Warna putih pekat
-                      SizedBox(width: 4),
+                    children: [
+                      const Icon(Icons.local_fire_department_rounded,
+                          color: Colors.white, size: 12),
+                      const SizedBox(width: 4),
                       Text(
-                        "210 Kal",
-                        style: TextStyle(
-                            color: Colors.white, // Warna putih pekat
-                            fontWeight: FontWeight.w600, // Teks lebih tebal
+                        calories ?? "210 Kal",
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
                             fontSize: 11),
                       ),
                     ],
@@ -691,7 +738,9 @@ class _homepageState extends State<homepage> {
             Positioned(
               right: imageRight,
               bottom: imageBottom,
-              child: Image.asset(imagePath, width: 75),
+              child: imageUrl != null && imageUrl.isNotEmpty
+                  ? Image.network(imageUrl, width: 75, height: 75, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.restaurant, color: Colors.white54, size: 40))
+                  : Image.asset(imagePath.isNotEmpty ? imagePath : 'image/soup.png', width: 75),
             )
           ],
         ),
@@ -699,7 +748,14 @@ class _homepageState extends State<homepage> {
     );
   }
 
-  Widget _buildBigRecommendationCard({VoidCallback? onTap}) {
+  Widget _buildBigRecommendationCard({
+    String? title,
+    String? imageUrl,
+    String? subtitle,
+    String? calories,
+    int? time,
+    VoidCallback? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -723,12 +779,24 @@ class _homepageState extends State<homepage> {
                   const BorderRadius.vertical(top: Radius.circular(20)),
               child: Stack(
                 children: [
-                  Image.asset(
-                    'image/jagung_bowl.png',
-                    height: 180,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
+                  imageUrl != null && imageUrl.isNotEmpty
+                      ? Image.network(
+                          imageUrl,
+                          height: 180,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            height: 180,
+                            color: Colors.grey.shade200,
+                            child: const Icon(Icons.restaurant, size: 48),
+                          ),
+                        )
+                      : Image.asset(
+                          'image/jagung_bowl.png',
+                          height: 180,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
                   Positioned(
                     top: 12,
                     left: 12,
@@ -761,43 +829,32 @@ class _homepageState extends State<homepage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Jagung Sayur Kentang Bowl",
-                      style: TextStyle(
+                  Text(title ?? "Resep",
+                      style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87)),
                   const SizedBox(height: 4),
-                  const Text(
-                    "Cocok Untuk Diet, Diabetes, rendah gula, tinggi serat",
-                    style: TextStyle(fontSize: 13, color: Colors.black54),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _buildTag("Aman Untuk Diabetes", const Color(0xFFE8F5E9),
-                          const Color(0xFF2E7D32)),
-                      _buildTag("Bebas Kacang", const Color(0xFFFFF3E0),
-                          const Color(0xFFE65100)),
-                      _buildTag("Pakai Blender", const Color(0xFFE3F2FD),
-                          const Color(0xFF1565C0)),
-                    ],
+                  Text(
+                    subtitle ?? "",
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13, color: Colors.black54),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
                       const Icon(Icons.local_fire_department_rounded,
                           size: 18, color: Colors.orange),
-                      const Text(" 220 Kal",
-                          style: TextStyle(
+                      Text(" ${calories ?? '0'} Kal",
+                          style: const TextStyle(
                               color: Colors.black54,
                               fontWeight: FontWeight.w500)),
                       const SizedBox(width: 15),
                       const Icon(Icons.access_time_rounded,
                           size: 18, color: Colors.blueGrey),
-                      const Text(" 10 menit",
-                          style: TextStyle(
+                      Text(" ${time ?? 0} menit",
+                          style: const TextStyle(
                               color: Colors.black54,
                               fontWeight: FontWeight.w500)),
                       const Spacer(),

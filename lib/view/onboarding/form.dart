@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/page/homepage.dart';
+import 'package:smartcook/service/api_service.dart';
 
 class form extends StatefulWidget {
   const form({super.key});
@@ -11,6 +12,8 @@ class form extends StatefulWidget {
 
 class _formState extends State<form> {
   int _index = 0;
+  final TextEditingController _nameController = TextEditingController();
+  bool _loading = false;
 
   String? usiaTerpilih;
   String? genderTerpilih;
@@ -19,6 +22,12 @@ class _formState extends State<form> {
 
   List<String> styleTerpilih = [];
   List<String> equipmentTerpilih = [];
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,25 +72,53 @@ class _formState extends State<form> {
                     borderRadius: BorderRadius.circular(15)),
                 padding: EdgeInsets.symmetric(vertical: 15),
               ),
-              onPressed: () {
+              onPressed: _loading ? null : () async {
                 if (_index < 2) {
-                  setState(() {
-                    _index++;
-                  });
-                } else {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => homepage()),
-                  );
+                  setState(() => _index++);
+                  return;
                 }
+                setState(() => _loading = true);
+                final res = await ApiService.put(
+                  '/api/user/onboarding',
+                  body: {
+                    'name': _nameController.text.trim(),
+                    'age_range': usiaTerpilih,
+                    'gender': genderTerpilih,
+                    'allergies': alergiTerpilih,
+                    'medical_history': riwayatPenyakitTerpilih,
+                    'cooking_styles': styleTerpilih,
+                    'equipment': equipmentTerpilih,
+                  },
+                );
+                if (!mounted) return;
+                setState(() => _loading = false);
+                if (!res.success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(res.message ?? 'Gagal menyimpan')),
+                  );
+                  return;
+                }
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => homepage()),
+                );
               },
-              child: Text(
-                _index == 2 ? 'Save And Confirm' : 'Lanjut',
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColor().putih),
-              ),
+              child: _loading
+                  ? SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColor().putih,
+                      ),
+                    )
+                  : Text(
+                      _index == 2 ? 'Save And Confirm' : 'Lanjut',
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColor().putih),
+                    ),
             ),
           ),
         ],
@@ -101,6 +138,7 @@ class _formState extends State<form> {
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 35),
               child: TextFormField(
+                controller: _nameController,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15)),

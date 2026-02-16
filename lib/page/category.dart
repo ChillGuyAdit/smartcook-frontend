@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'masakan.dart';
+import 'package:smartcook/service/api_service.dart';
 
 class CategoryPage extends StatefulWidget {
   final String categoryName;
@@ -18,66 +19,65 @@ class CategoryPage extends StatefulWidget {
 }
 
 class _CategoryPageState extends State<CategoryPage> {
-  // Variabel untuk menyimpan data makanan
   List<Map<String, dynamic>> _allFoodList = [];
   List<Map<String, dynamic>> _filteredFoodList = [];
-
-  // Variabel untuk Filter & Search
   String _searchQuery = "";
-  int _maxCalories = 500; // Default max kalori
-  int _maxTime = 45;      // Default max waktu (menit)
+  int _maxCalories = 500;
+  int _maxTime = 45;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    // Inisialisasi data saat halaman pertama kali dibuka
-    _allFoodList = _getDummyData();
-    _filteredFoodList = List.from(_allFoodList);
+    _loadRecipes();
   }
 
-  // Data Dummy berdasarkan kategori
-  List<Map<String, dynamic>> _getDummyData() {
-    if (widget.categoryName.contains("Barat")) {
-      return [
-        {"title": "Classic Beef Burger", "cal": "450", "time": "20m", "image": "image/burger.png"},
-        {"title": "Spaghetti Bolognese", "cal": "380", "time": "25m", "image": "image/burger.png"},
-        {"title": "Chicken Steak", "cal": "410", "time": "30m", "image": "image/burger.png"},
-      ];
-    } else if (widget.categoryName.contains("Sehat")) {
-      return [
-        {"title": "Broccoli Garlic Salad", "cal": "120", "time": "10m", "image": "image/broccoli.png"},
-        {"title": "Green Spinach Soup", "cal": "150", "time": "15m", "image": "image/soup.png"},
-        {"title": "Oatmeal Buah Segar", "cal": "200", "time": "5m", "image": "image/broccoli.png"},
-        {"title": "Broccoli Garlic Salad", "cal": "120", "time": "10m", "image": "image/broccoli.png"},
-        {"title": "Broccoli Garlic Salad", "cal": "120", "time": "10m", "image": "image/broccoli.png"},
-        {"title": "Broccoli Garlic Salad", "cal": "120", "time": "10m", "image": "image/broccoli.png"},
-        {"title": "Green Spinach Soup", "cal": "150", "time": "15m", "image": "image/soup.png"},
-        {"title": "Green Spinach Soup", "cal": "150", "time": "15m", "image": "image/soup.png"},
-      ];
-    } else {
-      return [
-        {"title": "Nasi Gila Seimbang", "cal": "320", "time": "15m", "image": "image/balanced_food.png"},
-        {"title": "Salad Ayam Panggang", "cal": "280", "time": "20m", "image": "image/balanced_food.png"},
-        {"title": "Jagung Manis Rebus", "cal": "180", "time": "10m", "image": "image/corn.png"},
-      ];
+  String _categoryToParam() {
+    final n = widget.categoryName.toLowerCase();
+    if (n.contains("barat")) return "western";
+    if (n.contains("sehat") || n.contains("rendah kalori")) return "healthy";
+    if (n.contains("nutrisi") || n.contains("seimbang")) return "balanced";
+    return "";
+  }
+
+  Future<void> _loadRecipes() async {
+    setState(() => _loading = true);
+    final category = _categoryToParam();
+    final params = <String, String>{'page': '1', 'limit': '50'};
+    if (category.isNotEmpty) params['category'] = category;
+    final res = await ApiService.get('/api/recipes', queryParameters: params);
+    if (!mounted) return;
+    List<Map<String, dynamic>> list = [];
+    if (res.success && res.data != null) {
+      final data = res.data;
+      if (data is List) {
+        list = data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      } else if (data is Map && data['recipes'] is List) {
+        list = (data['recipes'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
     }
+    setState(() {
+      _allFoodList = list;
+      _filteredFoodList = List.from(_allFoodList);
+      _loading = false;
+    });
+    _applyFilters();
   }
 
-  // Fungsi untuk menjalankan Filter dan Search
   void _applyFilters() {
     setState(() {
       _filteredFoodList = _allFoodList.where((food) {
-        // 1. Cek Pencarian (Search)
-        final matchSearch = food["title"].toLowerCase().contains(_searchQuery.toLowerCase());
-        
-        // 2. Cek Kalori
-        final foodCal = int.parse(food["cal"]);
+        final title = food["title"]?.toString().toLowerCase() ?? '';
+        final matchSearch = _searchQuery.isEmpty || title.contains(_searchQuery.toLowerCase());
+        final calVal = food["nutrition_info"] is Map
+            ? (food["nutrition_info"] as Map)["calories"]
+            : food["cal"];
+        final foodCal = calVal != null ? int.tryParse(calVal.toString()) ?? 0 : 0;
         final matchCal = foodCal <= _maxCalories;
-
-        // 3. Cek Waktu (Hilangkan huruf 'm' lalu ubah ke int)
-        final foodTime = int.parse(food["time"].replaceAll(RegExp(r'[^0-9]'), ''));
-        final matchTime = foodTime <= _maxTime;
-
+        final prep = food["prep_time"] ?? 0;
+        final cook = food["cook_time"] ?? 0;
+        final totalTime = (prep is int ? prep : 0) + (cook is int ? cook : 0);
+        final matchTime = totalTime <= _maxTime;
         return matchSearch && matchCal && matchTime;
       }).toList();
     });
@@ -361,20 +361,29 @@ class _CategoryPageState extends State<CategoryPage> {
           // --- LIST MAKANAN ---
           SliverPadding(
             padding: const EdgeInsets.all(20),
-            sliver: _filteredFoodList.isEmpty
-                ? SliverToBoxAdapter(
+            sliver: _loading
+                ? const SliverToBoxAdapter(
                     child: Center(
                       child: Padding(
-                        padding: const EdgeInsets.only(top: 50),
-                        child: Text(
-                          "Resep tidak ditemukan 😥\nCoba ubah filter atau pencarianmu.",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey.shade500),
-                        ),
+                        padding: EdgeInsets.only(top: 50),
+                        child: CircularProgressIndicator(),
                       ),
                     ),
                   )
-                : SliverList(
+                : _filteredFoodList.isEmpty
+                    ? SliverToBoxAdapter(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 50),
+                            child: Text(
+                              "Resep tidak ditemukan 😥\nCoba ubah filter atau pencarianmu.",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.grey.shade500),
+                            ),
+                          ),
+                        ),
+                      )
+                    : SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         final food = _filteredFoodList[index];
@@ -389,22 +398,28 @@ class _CategoryPageState extends State<CategoryPage> {
     );
   }
 
-  // Desain Card List dengan Navigasi (Tidak ada yang diubah)
   Widget _buildFoodListItem(Map<String, dynamic> food) {
+    final recipeId = food["_id"]?.toString();
+    final title = food["title"]?.toString() ?? "Resep";
+    final imageUrl = food["image_url"]?.toString();
+    final foodImage = food["image"]?.toString();
+    final calVal = food["nutrition_info"] is Map
+        ? (food["nutrition_info"] as Map)["calories"]
+        : food["cal"];
+    final cal = calVal?.toString() ?? "0";
+    final prep = food["prep_time"] ?? 0;
+    final cook = food["cook_time"] ?? 0;
+    final timeStr = food["time"] ?? "${(prep is int ? prep : 0) + (cook is int ? cook : 0)}m";
     return GestureDetector(
-      // --- NAVIGASI KE MASAKAN PAGE ---
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MasakanPage(
-              title: food["title"],
-              imagePath: food["image"],
-              calories: food["cal"], // Mengirim data kalori
-              time: food["time"],    // Mengirim data waktu
+        if (recipeId != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MasakanPage(recipeId: recipeId),
             ),
-          ),
-        );
+          );
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
@@ -429,9 +444,13 @@ class _CategoryPageState extends State<CategoryPage> {
                 color: widget.themeColors[0].withOpacity(0.1),
                 borderRadius: BorderRadius.circular(15),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Image.asset(food["image"]),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: imageUrl != null && imageUrl.isNotEmpty
+                    ? Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.restaurant, color: widget.themeColors[1]))
+                    : (foodImage != null && foodImage.isNotEmpty
+                        ? Image.asset(foodImage, fit: BoxFit.cover)
+                        : Icon(Icons.restaurant, color: widget.themeColors[1])),
               ),
             ),
             const SizedBox(width: 16),
@@ -440,7 +459,7 @@ class _CategoryPageState extends State<CategoryPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    food["title"],
+                    title,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -452,11 +471,11 @@ class _CategoryPageState extends State<CategoryPage> {
                     children: [
                       const Icon(Icons.local_fire_department_rounded, size: 16, color: Colors.orange),
                       const SizedBox(width: 4),
-                      Text("${food["cal"]} Kal", style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                      Text("$cal Kal", style: const TextStyle(fontSize: 13, color: Colors.black54)),
                       const SizedBox(width: 12),
                       const Icon(Icons.access_time_rounded, size: 16, color: Colors.blueGrey),
                       const SizedBox(width: 4),
-                      Text(food["time"], style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                      Text(timeStr.toString(), style: const TextStyle(fontSize: 13, color: Colors.black54)),
                     ],
                   ),
                 ],
