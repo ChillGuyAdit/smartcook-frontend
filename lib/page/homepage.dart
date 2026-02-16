@@ -4,6 +4,11 @@ import 'category.dart';
 import 'kulkas.dart';
 import 'masakan.dart';
 import 'tambahkan_bahan.dart';
+// Import halaman baru
+import 'search_page.dart';
+import 'bot_page.dart';
+import 'save_page.dart';
+import 'profile_page.dart';
 
 class homepage extends StatefulWidget {
   const homepage({super.key});
@@ -24,421 +29,9 @@ class _homepageState extends State<homepage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // --- HEADER SECTION ---
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 26,
-                        backgroundImage: AssetImage('image/mainLogo.jpg'),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: const [
-                              Text("Hallo, Smarty! ",
-                                  style: TextStyle(
-                                      fontSize: 14, color: Colors.black54)),
-                              Icon(Icons.auto_awesome,
-                                  color: Colors.amber, size: 16),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          const Text("Masak apa hari ini?",
-                              style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87)),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.15),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.notifications_outlined,
-                        size: 26, color: Colors.black87),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 30),
-
-              // --- CATEGORY SECTION ---
-              const Text("Kategori selera memasak",
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87)),
-              const SizedBox(height: 15),
-              SizedBox(
-                height: 160,
-                child: ListView(
-                  clipBehavior: Clip.none,
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    _buildCategoryCard(
-                      title: "Masakan Sehat\nRendah Kalori\nTinggi Nutrisi",
-                      imagePath: 'image/broccoli.png',
-                      cardWidth: cardWidth,
-                      colors: [
-                        const Color(0xFF4CAF50),
-                        const Color(0xFF2E7D32)
-                      ],
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CategoryPage(
-                              categoryName: "Masakan Sehat\nRendah Kalori",
-                              themeColors: [
-                                Color(0xFF4CAF50),
-                                Color(0xFF2E7D32)
-                              ],
-                              headerImagePath: 'image/broccoli.png',
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildCategoryCard(
-                      title: "Masakan Dengan\nNutrisi Seimbang",
-                      imagePath: 'image/balanced_food.png',
-                      cardWidth: cardWidth,
-                      colors: [
-                        const Color(0xFFFFA726),
-                        const Color(0xFFEF6C00)
-                      ],
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CategoryPage(
-                              categoryName: "Masakan Nutrisi Seimbang",
-                              themeColors: [
-                                Color(0xFFFFA726),
-                                Color(0xFFEF6C00)
-                              ],
-                              headerImagePath: 'image/balanced_food.png',
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildCategoryCard(
-                      title: "Ala-Ala\nMasakan Barat",
-                      imagePath: 'image/burger.png',
-                      cardWidth: cardWidth,
-                      colors: [
-                        const Color(0xFFEF5350),
-                        const Color(0xFFC62828)
-                      ],
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CategoryPage(
-                              categoryName: "Ala-Ala Masakan Barat",
-                              themeColors: [
-                                Color(0xFFEF5350),
-                                Color(0xFFC62828)
-                              ],
-                              headerImagePath: 'image/burger.png',
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 25),
-
-              // --- FRIDGE SECTION ---
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
-                    )
-                  ],
-                  image: DecorationImage(
-                    image: const AssetImage('image/bg_kulkas.png'),
-                    fit: BoxFit.cover,
-                    colorFilter: ColorFilter.mode(
-                      Colors.black.withOpacity(0.4),
-                      BlendMode.darken,
-                    ),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("Apa saja isi kulkas mu?",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              )),
-                          const SizedBox(height: 8),
-                          const Text(
-                            "Temukan berbagai resep makanan berdasarkan bahan yang kamu miliki",
-                            style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 13,
-                                height: 1.4),
-                          ),
-                          const SizedBox(height: 15),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const TambahkanBahanPage()),
-                              );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 10),
-                              decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.25),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.white30)),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.add_circle_outline,
-                                      size: 20, color: Colors.white),
-                                  SizedBox(width: 8),
-                                  Text("Tambahkan Bahan",
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w500)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 15),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        borderRadius: const BorderRadius.only(
-                            bottomLeft: Radius.circular(20),
-                            bottomRight: Radius.circular(20)),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.kitchen_outlined,
-                              color: Colors.white70, size: 20),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text("1. Kentang (5)",
-                                    style: TextStyle(
-                                        color: Colors.white, fontSize: 13)),
-                                SizedBox(height: 4),
-                                Text("2. Wortel (10)",
-                                    style: TextStyle(
-                                        color: Colors.white, fontSize: 13)),
-                              ],
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => const KulkasPage()),
-                              );
-                            },
-                            child: const Text(
-                              "Lihat Semua >",
-                              style: TextStyle(
-                                color: Colors.greenAccent,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  ],
-                ),
-              ),
-              const SizedBox(height: 35),
-
-              // --- MEAL MODE SECTION (UPDATED) ---
-              const Center(
-                  child: Text("Pilih Waktu Makan",
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87))),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildModeFoodItem(
-                      Icons.wb_twilight_rounded, "Breakfast", Colors.orange),
-                  _buildModeFoodItem(
-                      Icons.wb_sunny_rounded, "Lunch", Colors.green),
-                  _buildModeFoodItem(
-                      Icons.nights_stay_rounded, "Dinner", Colors.indigo),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-              // Animasi dan List Makanan Berdasarkan Waktu
-              _buildMealTimeDynamicSection(),
-
-              const SizedBox(height: 35),
-
-              // --- SAVE FOR YOU SECTION ---
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text("Disimpan untukmu",
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87)),
-                      SizedBox(height: 4),
-                      Text("Bebas kacang!",
-                          style:
-                              TextStyle(fontSize: 14, color: Colors.black54)),
-                    ],
-                  ),
-                  const Text("Lihat Semua",
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.green,
-                          fontWeight: FontWeight.w600)),
-                ],
-              ),
-              const SizedBox(height: 15),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.35,
-                ),
-                itemCount: 4,
-                itemBuilder: (context, index) {
-                  List<Color> cardColors = [
-                    const Color(0xFF2A9D8F),
-                    const Color(0xFFE76F51),
-                    const Color(0xFFD4A373),
-                    const Color(0xFF6A994E),
-                  ];
-
-                  String title =
-                      index % 2 == 1 ? "Jagung Rebus" : "Spinach Soup";
-                  String imagePath =
-                      index % 2 == 1 ? 'image/corn.png' : 'image/soup.png';
-
-                  return _buildSaveForYouCard(
-                      title: title,
-                      imagePath: imagePath,
-                      color: cardColors[index % 4],
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => MasakanPage(
-                              title: title,
-                              imagePath: imagePath,
-                              calories: "210 Kal",
-                              time: "10-15m",
-                            ),
-                          ),
-                        );
-                      });
-                },
-              ),
-              const SizedBox(height: 35),
-
-              // --- RECOMMENDATION SECTION ---
-              const Text("5 Rekomendasi Masakan",
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87)),
-              const SizedBox(height: 15),
-
-              _buildBigRecommendationCard(onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MasakanPage(
-                      title: "Jagung Sayur Kentang Bowl",
-                      imagePath: 'image/jagung_bowl.png',
-                      calories: "220 Kal",
-                      time: "10 menit",
-                    ),
-                  ),
-                );
-              }),
-              const SizedBox(height: 20),
-              _buildBigRecommendationCard(onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MasakanPage(
-                      title: "Jagung Sayur Kentang Bowl",
-                      imagePath: 'image/jagung_bowl.png',
-                      calories: "220 Kal",
-                      time: "10 menit",
-                    ),
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
+      body: _selectedIndex == 0
+          ? _buildHomeContent(screenWidth, cardWidth)
+          : _buildOtherPages(),
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
@@ -446,6 +39,417 @@ class _homepageState extends State<homepage> {
             _selectedIndex = index;
           });
         },
+      ),
+    );
+  }
+
+  Widget _buildOtherPages() {
+    switch (_selectedIndex) {
+      case 1:
+        return const SearchPage();
+      case 2:
+        return const BotPage();
+      case 3:
+        return const SavePage();
+      case 4:
+        return const ProfilePage();
+      default:
+        return const Center(child: Text("Halaman tidak ditemukan"));
+    }
+  }
+
+  Widget _buildHomeContent(double screenWidth, double cardWidth) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- HEADER SECTION ---
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const CircleAvatar(
+                      radius: 26,
+                      backgroundImage: AssetImage('image/mainLogo.jpg'),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: const [
+                            Text("Hallo, Smarty! ",
+                                style: TextStyle(
+                                    fontSize: 14, color: Colors.black54)),
+                            Icon(Icons.auto_awesome,
+                                color: Colors.amber, size: 16),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        const Text("Masak apa hari ini?",
+                            style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87)),
+                      ],
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.15),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.notifications_outlined,
+                      size: 26, color: Colors.black87),
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+
+            // --- CATEGORY SECTION ---
+            const Text("Kategori selera memasak",
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87)),
+            const SizedBox(height: 15),
+            SizedBox(
+              height: 160,
+              child: ListView(
+                clipBehavior: Clip.none,
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _buildCategoryCard(
+                    title: "Masakan Sehat\nRendah Kalori\nTinggi Nutrisi",
+                    imagePath: 'image/broccoli.png',
+                    cardWidth: cardWidth,
+                    colors: [const Color(0xFF4CAF50), const Color(0xFF2E7D32)],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CategoryPage(
+                            categoryName: "Masakan Sehat\nRendah Kalori",
+                            themeColors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
+                            headerImagePath: 'image/broccoli.png',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildCategoryCard(
+                    title: "Masakan Dengan\nNutrisi Seimbang",
+                    imagePath: 'image/balanced_food.png',
+                    cardWidth: cardWidth,
+                    colors: [const Color(0xFFFFA726), const Color(0xFFEF6C00)],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CategoryPage(
+                            categoryName: "Masakan Nutrisi Seimbang",
+                            themeColors: [Color(0xFFFFA726), Color(0xFFEF6C00)],
+                            headerImagePath: 'image/balanced_food.png',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildCategoryCard(
+                    title: "Ala-Ala\nMasakan Barat",
+                    imagePath: 'image/burger.png',
+                    cardWidth: cardWidth,
+                    colors: [const Color(0xFFEF5350), const Color(0xFFC62828)],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CategoryPage(
+                            categoryName: "Ala-Ala Masakan Barat",
+                            themeColors: [Color(0xFFEF5350), Color(0xFFC62828)],
+                            headerImagePath: 'image/burger.png',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 25),
+
+            // --- FRIDGE SECTION ---
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
+                  )
+                ],
+                image: DecorationImage(
+                  image: const AssetImage('image/bg_kulkas.png'),
+                  fit: BoxFit.cover,
+                  colorFilter: ColorFilter.mode(
+                    Colors.black.withOpacity(0.4),
+                    BlendMode.darken,
+                  ),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Apa saja isi kulkas mu?",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            )),
+                        const SizedBox(height: 8),
+                        const Text(
+                          "Temukan berbagai resep makanan berdasarkan bahan yang kamu miliki",
+                          style: TextStyle(
+                              color: Colors.white70, fontSize: 13, height: 1.4),
+                        ),
+                        const SizedBox(height: 15),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      const TambahkanBahanPage()),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.25),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white30)),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(Icons.add_circle_outline,
+                                    size: 20, color: Colors.white),
+                                SizedBox(width: 8),
+                                Text("Tambahkan Bahan",
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w500)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 15),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(20),
+                          bottomRight: Radius.circular(20)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.kitchen_outlined,
+                            color: Colors.white70, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text("1. Kentang (5)",
+                                  style: TextStyle(
+                                      color: Colors.white, fontSize: 13)),
+                              SizedBox(height: 4),
+                              Text("2. Wortel (10)",
+                                  style: TextStyle(
+                                      color: Colors.white, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const KulkasPage()),
+                            );
+                          },
+                          child: const Text(
+                            "Lihat Semua >",
+                            style: TextStyle(
+                              color: Colors.greenAccent,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 35),
+
+            // --- MEAL MODE SECTION (UPDATED) ---
+            const Center(
+                child: Text("Pilih Waktu Makan",
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87))),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildModeFoodItem(
+                    Icons.wb_twilight_rounded, "Breakfast", Colors.orange),
+                _buildModeFoodItem(
+                    Icons.wb_sunny_rounded, "Lunch", Colors.green),
+                _buildModeFoodItem(
+                    Icons.nights_stay_rounded, "Dinner", Colors.indigo),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+            // Animasi dan List Makanan Berdasarkan Waktu
+            _buildMealTimeDynamicSection(),
+
+            const SizedBox(height: 35),
+
+            // --- SAVE FOR YOU SECTION ---
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text("Disimpan untukmu",
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87)),
+                    SizedBox(height: 4),
+                    Text("Bebas kacang!",
+                        style: TextStyle(fontSize: 14, color: Colors.black54)),
+                  ],
+                ),
+                const Text("Lihat Semua",
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.green,
+                        fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const SizedBox(height: 15),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.35,
+              ),
+              itemCount: 4,
+              itemBuilder: (context, index) {
+                List<Color> cardColors = [
+                  const Color(0xFF2A9D8F),
+                  const Color(0xFFE76F51),
+                  const Color(0xFFD4A373),
+                  const Color(0xFF6A994E),
+                ];
+
+                String title = index % 2 == 1 ? "Jagung Rebus" : "Spinach Soup";
+                String imagePath =
+                    index % 2 == 1 ? 'image/corn.png' : 'image/soup.png';
+
+                return _buildSaveForYouCard(
+                    title: title,
+                    imagePath: imagePath,
+                    color: cardColors[index % 4],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MasakanPage(
+                            title: title,
+                            imagePath: imagePath,
+                            calories: "210 Kal",
+                            time: "10-15m",
+                          ),
+                        ),
+                      );
+                    });
+              },
+            ),
+            const SizedBox(height: 35),
+
+            // --- RECOMMENDATION SECTION ---
+            const Text("5 Rekomendasi Masakan",
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87)),
+            const SizedBox(height: 15),
+
+            _buildBigRecommendationCard(onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MasakanPage(
+                    title: "Jagung Sayur Kentang Bowl",
+                    imagePath: 'image/jagung_bowl.png',
+                    calories: "220 Kal",
+                    time: "10 menit",
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: 20),
+            _buildBigRecommendationCard(onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MasakanPage(
+                    title: "Jagung Sayur Kentang Bowl",
+                    imagePath: 'image/jagung_bowl.png',
+                    calories: "220 Kal",
+                    time: "10 menit",
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
