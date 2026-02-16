@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:smartcook/helper/color.dart';
 
 class onboarding2 extends StatefulWidget {
   const onboarding2({super.key});

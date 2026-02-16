@@ -21,11 +21,11 @@ dependencies:
   firebase_auth: ^5.5.0
   smooth_page_indicator: ^2.0.1
 
+  url_launcher: any
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  url_launcher: ^6.3.1
   flutter_lints: ^6.0.0
 
 

@@ -17,10 +17,10 @@ class _signinState extends State<signin> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final AuthService _authService = AuthService();
 
-  TextEditingController _kontrolEmail = TextEditingController();
-  TextEditingController _kontrolPassword = TextEditingController();
-  FocusNode _focusNode1 = FocusNode();
-  FocusNode _focusNode2 = FocusNode();
+  final TextEditingController _kontrolEmail = TextEditingController();
+  final TextEditingController _kontrolPassword = TextEditingController();
+  final FocusNode _focusNode1 = FocusNode();
+  final FocusNode _focusNode2 = FocusNode();
 
   @override
   void dispose() {

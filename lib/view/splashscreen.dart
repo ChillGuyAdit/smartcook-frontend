@@ -3,6 +3,8 @@ import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/auth/signup.dart';
 
 class splashscreen extends StatefulWidget {
+  const splashscreen({super.key});
+
   @override
   State<splashscreen> createState() => _splashscreenState();
 }

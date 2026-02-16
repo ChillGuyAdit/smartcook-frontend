@@ -3,6 +3,7 @@ import 'reusable/bottom_navbar.dart';
 import 'category.dart';
 import 'kulkas.dart';
 import 'masakan.dart';
+import 'tambahkan_bahan.dart';
 
 class homepage extends StatefulWidget {
   const homepage({super.key});
@@ -215,24 +216,34 @@ class _homepageState extends State<homepage> {
                                 height: 1.4),
                           ),
                           const SizedBox(height: 15),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                            decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.25),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.white30)),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Icon(Icons.add_circle_outline,
-                                    size: 20, color: Colors.white),
-                                SizedBox(width: 8),
-                                Text("Tambahkan Bahan",
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w500)),
-                              ],
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const TambahkanBahanPage()),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
+                              decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.25),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.white30)),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.add_circle_outline,
+                                      size: 20, color: Colors.white),
+                                  SizedBox(width: 8),
+                                  Text("Tambahkan Bahan",
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w500)),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -623,7 +634,8 @@ class _homepageState extends State<homepage> {
                   Text(
                     title,
                     maxLines: 1, // Membatasi hanya 1 baris
-                    overflow: TextOverflow.ellipsis, // Menambahkan "..." jika teks kepotong
+                    overflow: TextOverflow
+                        .ellipsis, // Menambahkan "..." jika teks kepotong
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,

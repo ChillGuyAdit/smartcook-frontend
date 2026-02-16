@@ -1,0 +1,622 @@
+import 'package:flutter/material.dart';
+import 'package:smartcook/helper/color.dart';
+
+class TambahkanBahanPage extends StatefulWidget {
+  const TambahkanBahanPage({super.key});
+
+  @override
+  State<TambahkanBahanPage> createState() => _TambahkanBahanPageState();
+}
+
+class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
+  String selectedCategory = '';
+
+  // Data dengan field: 'id', 'name', 'count', 'isSelected'
+  final Map<String, List<Map<String, dynamic>>> bahanData = {
+    'Protein': [
+      {
+        'title': 'Protein Hewani',
+        'color': Color(0xFFFFC107), // Amber
+        'items': [
+          {
+            'id': 'ayam-utuh',
+            'name': 'Ayam utuh',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'dada-ayam',
+            'name': 'Dada ayam',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'paha-ayam',
+            'name': 'Paha ayam',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'sayap-ayam',
+            'name': 'Sayap ayam',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'daging-bebek',
+            'name': 'Daging bebek',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'daging-sapi',
+            'name': 'Daging sapi',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'daging-giling',
+            'name': 'Daging giling',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'iga-sapi',
+            'name': 'Iga sapi',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'daging-kambing',
+            'name': 'Daging kambing',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'daging-domba',
+            'name': 'Daging domba',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'telur-ayam',
+            'name': 'Telur ayam',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'telur-bebek',
+            'name': 'Telur bebek',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'telur-puyuh',
+            'name': 'Telur Puyuh',
+            'count': 0,
+            'isSelected': false
+          },
+          {'id': 'sosis', 'name': 'Sosis', 'count': 0, 'isSelected': false},
+          {'id': 'bakso', 'name': 'Bakso', 'count': 0, 'isSelected': false},
+          {'id': 'nugget', 'name': 'Nugget', 'count': 0, 'isSelected': false},
+          {'id': 'kornet', 'name': 'Kornet', 'count': 0, 'isSelected': false},
+        ]
+      },
+      {
+        'title': 'Protein Seafood',
+        'color': Color(0xFF26A69A), // Teal
+        'items': [
+          {
+            'id': 'ikan-lele',
+            'name': 'Ikan lele',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'ikan-gurame',
+            'name': 'Ikan gurame',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'ikan-patin',
+            'name': 'Ikan patin',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'ikan-mas',
+            'name': 'Ikan mas',
+            'count': 0,
+            'isSelected': false
+          },
+          {'id': 'salmon', 'name': 'Salmon', 'count': 0, 'isSelected': false},
+          {'id': 'tongkol', 'name': 'Tongkol', 'count': 0, 'isSelected': false},
+          {'id': 'kembung', 'name': 'Kembung', 'count': 0, 'isSelected': false},
+          {
+            'id': 'tenggiri',
+            'name': 'Tenggiri',
+            'count': 0,
+            'isSelected': false
+          },
+          {'id': 'tuna', 'name': 'Tuna', 'count': 0, 'isSelected': false},
+          {'id': 'kakap', 'name': 'Kakap', 'count': 0, 'isSelected': false},
+          {'id': 'teri', 'name': 'Teri', 'count': 0, 'isSelected': false},
+          {
+            'id': 'ikan-asin',
+            'name': 'Ikan asin',
+            'count': 0,
+            'isSelected': false
+          },
+          {'id': 'udang', 'name': 'Udang', 'count': 0, 'isSelected': false},
+          {
+            'id': 'kepiting',
+            'name': 'Kepiting',
+            'count': 0,
+            'isSelected': false
+          },
+          {'id': 'lobster', 'name': 'Lobster', 'count': 0, 'isSelected': false},
+          {
+            'id': 'cumi-cumi',
+            'name': 'Cumi-cumi',
+            'count': 0,
+            'isSelected': false
+          },
+          {'id': 'sotong', 'name': 'Sotong', 'count': 0, 'isSelected': false},
+          {'id': 'gurita', 'name': 'Gurita', 'count': 0, 'isSelected': false},
+          {'id': 'kerang', 'name': 'Kerang', 'count': 0, 'isSelected': false},
+        ]
+      },
+      {
+        'title': 'Protein Nabati',
+        'color': Color(0xFF33691E), // Dark Green
+        'items': [
+          {'id': 'tempe', 'name': 'Tempe', 'count': 0, 'isSelected': false},
+          {'id': 'tahu', 'name': 'Tahu', 'count': 0, 'isSelected': false},
+          {'id': 'oncom', 'name': 'Oncom', 'count': 0, 'isSelected': false},
+          {
+            'id': 'kacang-tanah',
+            'name': 'Kacang tanah',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'kacang-hijau',
+            'name': 'Kacang hijau',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'kacang-merah',
+            'name': 'Kacang merah',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'kacang-kedelai',
+            'name': 'Kacang kedelai',
+            'count': 0,
+            'isSelected': false
+          },
+          {'id': 'edamame', 'name': 'Edamame', 'count': 0, 'isSelected': false},
+          {'id': 'jamur', 'name': 'Jamur', 'count': 0, 'isSelected': false},
+          {'id': 'wijen', 'name': 'Wijen', 'count': 0, 'isSelected': false},
+        ]
+      },
+    ],
+    'Karbo': [
+      {
+        'title': 'Karbohidrat',
+        'color': Colors.brown,
+        'items': [
+          {'id': 'beras', 'name': 'Beras', 'count': 0, 'isSelected': false},
+          {'id': 'kentang', 'name': 'Kentang', 'count': 0, 'isSelected': false},
+          {'id': 'ubi', 'name': 'Ubi', 'count': 0, 'isSelected': false},
+          {'id': 'jagung', 'name': 'Jagung', 'count': 0, 'isSelected': false},
+        ]
+      }
+    ],
+    'Sayur': [
+      {
+        'title': 'Sayur - Mayur',
+        'color': Colors.green,
+        'items': [
+          {'id': 'bayam', 'name': 'Bayam', 'count': 0, 'isSelected': false},
+          {
+            'id': 'kangkung',
+            'name': 'Kangkung',
+            'count': 0,
+            'isSelected': false
+          },
+          {'id': 'wortel', 'name': 'Wortel', 'count': 0, 'isSelected': false},
+          {'id': 'brokoli', 'name': 'Brokoli', 'count': 0, 'isSelected': false},
+        ]
+      }
+    ],
+    'Bumbu': [
+      {
+        'title': 'Bumbu Dapur',
+        'color': Colors.orange[800],
+        'items': [
+          {
+            'id': 'bawang-merah',
+            'name': 'Bawang Merah',
+            'count': 0,
+            'isSelected': false
+          },
+          {
+            'id': 'bawang-putih',
+            'name': 'Bawang Putih',
+            'count': 0,
+            'isSelected': false
+          },
+          {'id': 'cabai', 'name': 'Cabai', 'count': 0, 'isSelected': false},
+          {'id': 'garam', 'name': 'Garam', 'count': 0, 'isSelected': false},
+        ]
+      }
+    ],
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    double screenWidth = MediaQuery.of(context).size.width;
+    double baseWidth = 430;
+    double scale = screenWidth / baseWidth;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Tambahkan Bahan',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 22 * scale,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24 * scale),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 20 * scale),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: 'Cari bahan...',
+                  hintStyle: TextStyle(color: Colors.grey),
+                  prefixIcon: Icon(Icons.search, color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.grey[200],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: EdgeInsets.symmetric(vertical: 0),
+                ),
+              ),
+              SizedBox(height: 30 * scale),
+              Text(
+                'Berdasarkan Kategori:',
+                style: TextStyle(
+                    fontSize: 18 * scale, fontWeight: FontWeight.w500),
+              ),
+              SizedBox(height: 20 * scale),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildCategoryItem(
+                      'Protein', 'image/protein.png', scale, AppColor().utama),
+                  _buildCategoryItem(
+                      'Karbo', 'image/karbo.png', scale, Colors.brown),
+                  _buildCategoryItem(
+                      'Sayur', 'image/sayur.png', scale, Colors.green),
+                  _buildCategoryItem(
+                      'Bumbu', 'image/bumbu.png', scale, Colors.orange),
+                ],
+              ),
+              SizedBox(height: 30 * scale),
+              Text(
+                'Daftar:',
+                style: TextStyle(
+                    fontSize: 18 * scale, fontWeight: FontWeight.w500),
+              ),
+              SizedBox(height: 15 * scale),
+              if (selectedCategory.isNotEmpty) ..._buildListCards(scale),
+              SizedBox(height: 50 * scale),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryItem(
+      String label, String imagePath, double scale, Color activeColor) {
+    bool isSelected = selectedCategory == label;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (selectedCategory == label) {
+            selectedCategory = '';
+          } else {
+            selectedCategory = label;
+          }
+        });
+      },
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 60 * scale,
+                height: 60 * scale,
+                child: Image.asset(imagePath,
+                    color: isSelected ? activeColor : Colors.grey),
+              ),
+              if (isSelected)
+                Positioned(
+                  right: -5,
+                  top: -5,
+                  child: Container(
+                    padding: EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: AppColor().utama,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Icon(Icons.check,
+                        size: 10 * scale, color: Colors.white),
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(height: 8 * scale),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14 * scale,
+              color: isSelected ? activeColor : Colors.grey[700],
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildListCards(double scale) {
+    List<Map<String, dynamic>> subCategories = bahanData[selectedCategory]!;
+    List<Widget> cards = [];
+
+    for (var subCat in subCategories) {
+      cards.add(_buildSingleCard(
+        scale: scale,
+        title: subCat['title'],
+        headerColor: subCat['color'],
+        items: subCat['items'],
+      ));
+      cards.add(SizedBox(height: 20 * scale));
+    }
+    return cards;
+  }
+
+  Widget _buildSingleCard({
+    required double scale,
+    required String title,
+    required Color headerColor,
+    required List<Map<String, dynamic>> items,
+  }) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: headerColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      padding: EdgeInsets.all(15 * scale),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20 * scale,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Icon(Icons.push_pin, color: Colors.white),
+            ],
+          ),
+          SizedBox(height: 15 * scale),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 10 * scale),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Nama', style: TextStyle(color: Colors.white70)),
+                Text('Total', style: TextStyle(color: Colors.white70)),
+              ],
+            ),
+          ),
+          SizedBox(height: 5 * scale),
+          ListView.builder(
+            physics: NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              return Padding(
+                padding: EdgeInsets.symmetric(vertical: 4 * scale),
+                child: Row(
+                  children: [
+                    // Area Klik Luas (Radio + Nama)
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            items[index]['isSelected'] =
+                                !items[index]['isSelected'];
+                          });
+                        },
+                        child: Row(
+                          children: [
+                            Icon(
+                              items[index]['isSelected']
+                                  ? Icons.radio_button_checked
+                                  : Icons.radio_button_unchecked,
+                              color: Colors.white,
+                              size: 20 * scale,
+                            ),
+                            SizedBox(width: 10 * scale),
+                            Expanded(
+                              // Memastikan teks tidak overflow dan area klik penuh
+                              child: Text(
+                                '${index + 1}. ${items[index]['name']}',
+                                style: TextStyle(
+                                    color: Colors.white, fontSize: 16 * scale),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Quantity Badge (Tetap Terpisah)
+                    SizedBox(width: 10 * scale), // Spasi antara teks dan badge
+                    GestureDetector(
+                      onTap: () {
+                        _showQuantityDialog(context, items[index]);
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 12 * scale, vertical: 4 * scale),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white70),
+                        ),
+                        child: Text(
+                          '${items[index]['count']} item',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14 * scale,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          SizedBox(height: 20 * scale),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                var selectedItems =
+                    items.where((i) => i['isSelected'] == true).toList();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text(
+                          'Menyimpan ${selectedItems.length} item dari $title')),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: headerColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                padding: EdgeInsets.symmetric(vertical: 12 * scale),
+              ),
+              child: Text(
+                'Save',
+                style: TextStyle(
+                    fontSize: 18 * scale, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Fungsi untuk menampilkan Pop-up Dialog Angka
+  void _showQuantityDialog(BuildContext context, Map<String, dynamic> item) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        // Menggunakan StatefulBuilder agar dialog bisa refresh statenya sendiri
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
+              title: Text(
+                'Jumlah ${item['name']}',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              content: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      if (item['count'] > 0) {
+                        setStateDialog(() {
+                          item['count']--;
+                        });
+                        // Update state parent page juga
+                        this.setState(() {});
+                      }
+                    },
+                    icon:
+                        Icon(Icons.remove_circle, color: Colors.red, size: 32),
+                  ),
+                  SizedBox(width: 20),
+                  Text(
+                    '${item['count']}',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(width: 20),
+                  IconButton(
+                    onPressed: () {
+                      setStateDialog(() {
+                        item['count']++;
+                      });
+                      this.setState(() {});
+                    },
+                    icon: Icon(Icons.add_circle, color: Colors.green, size: 32),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'Selesai',
+                    style: TextStyle(color: AppColor().utama, fontSize: 16),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}

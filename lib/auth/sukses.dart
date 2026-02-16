@@ -44,6 +44,13 @@ class _suksesState extends State<sukses> {
                 MaterialPageRoute(builder: (context) => signin()),
               );
             },
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              padding: EdgeInsets.symmetric(horizontal: 85, vertical: 10),
+              backgroundColor: AppColor().utama,
+            ),
             child: Text(
               'Lanjutkan',
               style: TextStyle(
@@ -51,13 +58,6 @@ class _suksesState extends State<sukses> {
                 fontWeight: FontWeight.bold,
                 color: AppColor().putih,
               ),
-            ),
-            style: ElevatedButton.styleFrom(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              padding: EdgeInsets.symmetric(horizontal: 85, vertical: 10),
-              backgroundColor: AppColor().utama,
             ),
           ),
         ],

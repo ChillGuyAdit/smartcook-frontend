@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/auth/signIn.dart';
 import 'package:smartcook/helper/color.dart';
-import 'package:smartcook/page/homepage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smartcook/service/auth_service.dart';
 import 'package:smartcook/view/onboarding/mainBoarding.dart';
 
 class signup extends StatefulWidget {
-  signup({super.key});
+  const signup({super.key});
 
   @override
   State<signup> createState() => _signupState();
@@ -17,13 +16,13 @@ class _signupState extends State<signup> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final AuthService _authService = AuthService();
 
-  TextEditingController _kontrolUsername = TextEditingController();
-  TextEditingController _kontrolEmail = TextEditingController();
-  TextEditingController _kontrolPassword = TextEditingController();
+  final TextEditingController _kontrolUsername = TextEditingController();
+  final TextEditingController _kontrolEmail = TextEditingController();
+  final TextEditingController _kontrolPassword = TextEditingController();
 
-  FocusNode _focusNode1 = FocusNode();
-  FocusNode _focusNode2 = FocusNode();
-  FocusNode _focusNode3 = FocusNode();
+  final FocusNode _focusNode1 = FocusNode();
+  final FocusNode _focusNode2 = FocusNode();
+  final FocusNode _focusNode3 = FocusNode();
 
   bool _obscuretext = true;
 
@@ -61,7 +60,7 @@ class _signupState extends State<signup> {
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: Container(
+      body: SizedBox(
         width: screenWidth,
         height: screenHeight,
         child: Center(
@@ -132,6 +131,7 @@ class _signupState extends State<signup> {
                           ),
                           backgroundColor: AppColor().utama,
                         ),
+                        onPressed: _submitData,
                         child: Text(
                           'Sign Up',
                           style: TextStyle(
@@ -140,7 +140,6 @@ class _signupState extends State<signup> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        onPressed: _submitData,
                       ),
                     ],
                   ),
