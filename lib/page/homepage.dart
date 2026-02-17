@@ -32,11 +32,53 @@ class _homepageState extends State<homepage> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _bootstrapAndLoadData();
   }
 
-  Future<void> _loadData() async {
+  /// Langkah 1: tampilkan dulu data yang sudah ada di cache (jika ada),
+  /// supaya home tidak lama kosong setelah login.
+  /// Langkah 2: baru refresh dari API di background dan update UI.
+  Future<void> _bootstrapAndLoadData() async {
     setState(() => _loading = true);
+
+    // --- BOOTSTRAP DARI CACHE (cepat, tanpa nunggu jaringan) ---
+    final cachedFavorites =
+        await OfflineCacheService.getRecipeList('home_favorites_preview');
+    final cachedRecs =
+        await OfflineCacheService.getRecipeList('home_recommendations');
+    final cachedBreakfast =
+        await OfflineCacheService.getRecipeList('by_meal_breakfast');
+    final cachedLunch =
+        await OfflineCacheService.getRecipeList('by_meal_lunch');
+    final cachedDinner =
+        await OfflineCacheService.getRecipeList('by_meal_dinner');
+
+    final hasAnyCache = cachedFavorites.isNotEmpty ||
+        cachedRecs.isNotEmpty ||
+        cachedBreakfast.isNotEmpty ||
+        cachedLunch.isNotEmpty ||
+        cachedDinner.isNotEmpty;
+
+    if (mounted && hasAnyCache) {
+      setState(() {
+        _favorites = cachedFavorites;
+        _recommendations = cachedRecs;
+        _byMeal['breakfast'] = cachedBreakfast;
+        _byMeal['lunch'] = cachedLunch;
+        _byMeal['dinner'] = cachedDinner;
+        _loading = false;
+      });
+    }
+
+    // --- REFRESH ONLINE DI BACKGROUND ---
+    await _loadData(fromBootstrap: hasAnyCache);
+  }
+
+  Future<void> _loadData({bool fromBootstrap = false}) async {
+    if (!fromBootstrap) {
+      // Jika tidak ada cache sama sekali, tampilkan loader sampai request pertama selesai
+      setState(() => _loading = true);
+    }
 
     final profileRes = await ApiService.get('/api/user/profile');
     final favRes =
