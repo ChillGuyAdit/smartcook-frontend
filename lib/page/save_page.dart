@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/service/api_service.dart';
-import 'masakan.dart';
+import 'package:smartcook/page/masakan.dart';
 
 class SavePage extends StatefulWidget {
   const SavePage({super.key});
@@ -10,116 +10,226 @@ class SavePage extends StatefulWidget {
 }
 
 class _SavePageState extends State<SavePage> {
-  List<Map<String, dynamic>> _favorites = [];
-  bool _loading = true;
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _savedRecipes = [];
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _fetchSavedRecipes();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
-    final res = await ApiService.get('/api/favorites');
-    if (!mounted) return;
-    List<Map<String, dynamic>> list = [];
-    if (res.success && res.data != null) {
-      final data = res.data;
-      if (data is List) {
-        for (final e in data) {
-          if (e is Map<String, dynamic>) {
-            final recipe = e['recipe'];
-            if (recipe is Map<String, dynamic>) list.add(recipe);
-          }
-        }
+  Future<void> _fetchSavedRecipes() async {
+    setState(() => _isLoading = true);
+    final response = await ApiService.get('/api/favorites');
+
+    if (mounted) {
+      if (response.success && response.data is List) {
+        final List<dynamic> data = response.data;
+        setState(() {
+          _savedRecipes = data.map((item) {
+            // Struktur response biasanya:
+            // [ { "_id": "favId", "user": "userId", "recipe": { ...detail resep... } }, ... ]
+            if (item is Map && item.containsKey('recipe')) {
+              return item['recipe'] as Map<String, dynamic>;
+            }
+            // Fallback jika struktur berbeda (misal langsung list recipe)
+            return item as Map<String, dynamic>;
+          }).toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _savedRecipes = [];
+          _isLoading = false;
+        });
       }
     }
-    setState(() {
-      _favorites = list;
-      _loading = false;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFFAFAFA),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (_favorites.isEmpty) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFFAFAFA),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.bookmark_border_rounded, size: 80, color: Colors.grey),
-              SizedBox(height: 16),
-              Text(
-                "Belum ada resep tersimpan",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black54,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: ListView.builder(
-          padding: const EdgeInsets.all(20),
-          itemCount: _favorites.length,
-          itemBuilder: (context, index) {
-            final r = _favorites[index];
-            final id = r['_id']?.toString();
-            final title = r['title']?.toString() ?? 'Resep';
-            final imageUrl = r['image_url']?.toString();
-            final cal = r['nutrition_info'] is Map
-                ? (r['nutrition_info'] as Map)['calories']?.toString()
-                : '0';
-            final prep = r['prep_time'] ?? 0;
-            final cook = r['cook_time'] ?? 0;
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                leading: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: imageUrl != null && imageUrl.isNotEmpty
-                      ? Image.network(imageUrl, width: 56, height: 56, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.restaurant, size: 56))
-                      : const Icon(Icons.restaurant, size: 56),
+      appBar: AppBar(
+        title: const Text(
+          "Disimpan",
+          style: TextStyle(
+              color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 24),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        automaticallyImplyLeading: false,
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _savedRecipes.isEmpty
+              ? _buildEmptyState()
+              : RefreshIndicator(
+                  onRefresh: _fetchSavedRecipes,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
+                    itemCount: _savedRecipes.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 16),
+                    itemBuilder: (context, index) {
+                      final recipe = _savedRecipes[index];
+                      return _buildRecipeCard(recipe);
+                    },
+                  ),
                 ),
-                title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text('$cal Kal • ${prep + cook}m'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: id != null
-                    ? () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => MasakanPage(recipeId: id),
-                          ),
-                        ).then((_) => _load());
-                      }
-                    : null,
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.bookmark_outline_rounded, size: 80, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            "Belum ada resep yang disimpan",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecipeCard(Map<String, dynamic> recipe) {
+    final String title = recipe['title'] ?? 'Resep Tanpa Nama';
+    final String imagePath = recipe['image_url'] ?? 'image/soup.png';
+    // Ambil info nutrisi
+    String calories = "0 Kal";
+    if (recipe['nutrition_info'] is Map) {
+      calories = "${recipe['nutrition_info']['calories'] ?? 0} Kal";
+    }
+
+    // Ambil waktu
+    final int prepTime = recipe['prep_time'] ?? 0;
+    final int cookTime = recipe['cook_time'] ?? 0;
+    final String time = "${prepTime + cookTime}m";
+    final String recipeId = recipe['_id'] ?? '';
+
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MasakanPage(
+              recipeId: recipeId,
+            ),
+          ),
+        );
+        _fetchSavedRecipes(); // Refresh saat kembali
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            // Gambar Resep
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: SizedBox(
+                width: 90,
+                height: 90,
+                child: imagePath.startsWith('http')
+                    ? Image.network(
+                        imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: Colors.grey[200],
+                          child:
+                              const Icon(Icons.restaurant, color: Colors.grey),
+                        ),
+                      )
+                    : Image.asset(
+                        imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: Colors.grey[200],
+                          child:
+                              const Icon(Icons.restaurant, color: Colors.grey),
+                        ),
+                      ),
               ),
-            );
-          },
+            ),
+            const SizedBox(width: 16),
+            // Info Resep
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _buildInfoChip(Icons.local_fire_department_rounded,
+                          calories, Colors.orange),
+                      const SizedBox(width: 12),
+                      _buildInfoChip(
+                          Icons.access_time_rounded, time, Colors.blueGrey),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Icon Panah
+            Container(
+              padding: const EdgeInsets.only(left: 8),
+              child: const Icon(Icons.arrow_forward_ios_rounded,
+                  size: 16, color: Colors.grey),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildInfoChip(IconData icon, String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }
