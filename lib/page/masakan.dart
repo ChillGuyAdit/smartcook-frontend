@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:smartcook/service/api_service.dart';
+import 'package:smartcook/service/offline_cache_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MasakanPage extends StatefulWidget {
@@ -27,13 +28,20 @@ class MasakanPage extends StatefulWidget {
 class _MasakanPageState extends State<MasakanPage> {
   bool isSaved = false;
   bool _loading = true;
-  Map<String, dynamic>? _recipe;
   List<Map<String, dynamic>> _ingredients = [];
   List<dynamic> _steps = [];
   String _displayTitle = '';
   String _displayImage = '';
   String _displayCalories = '0 Kal';
   String _displayTime = '0m';
+  static const String _fallbackAsset = 'image/jagung_bowl.png';
+
+  ImageProvider _resolveImageProvider() {
+    final s = _displayImage.trim();
+    if (s.isEmpty) return const AssetImage(_fallbackAsset);
+    if (s.startsWith('http')) return NetworkImage(s);
+    return AssetImage(s);
+  }
 
   @override
   void initState() {
@@ -55,8 +63,8 @@ class _MasakanPageState extends State<MasakanPage> {
     if (!mounted) return;
     if (res.success && res.data != null) {
       final r = res.data as Map<String, dynamic>;
+      await OfflineCacheService.saveRecipe(r);
       setState(() {
-        _recipe = r;
         _displayTitle = r['title']?.toString() ?? 'Resep';
         _displayImage = r['image_url']?.toString() ?? 'image/soup.png';
         final cal = r['nutrition_info'] is Map
@@ -83,6 +91,42 @@ class _MasakanPageState extends State<MasakanPage> {
         _loading = false;
       });
     } else {
+      // Offline fallback: coba load dari cache device
+      final cached = widget.recipeId != null
+          ? await OfflineCacheService.getRecipeById(widget.recipeId!)
+          : null;
+      if (cached != null) {
+        setState(() {
+          _displayTitle = cached['title']?.toString() ?? 'Resep';
+          _displayImage = cached['image_url']?.toString() ?? 'image/soup.png';
+          final cal = cached['nutrition_info'] is Map
+              ? (cached['nutrition_info'] as Map)['calories']?.toString()
+              : '0';
+          _displayCalories = '${cal} Kal';
+          final prep = cached['prep_time'] ?? 0;
+          final cook = cached['cook_time'] ?? 0;
+          _displayTime = '${prep + cook}m';
+          _ingredients = (cached['ingredients'] as List?)
+                  ?.map((e) => e is Map
+                      ? Map<String, dynamic>.from(e)
+                      : <String, dynamic>{'name': e.toString()})
+                  .toList() ??
+              [];
+          _steps = (cached['steps'] as List?)
+                  ?.map((e) {
+                    if (e is String) return e;
+                    if (e is Map) {
+                      return (e['instruction'] ?? e['text'] ?? '').toString();
+                    }
+                    return e.toString();
+                  })
+                  .toList() ??
+              [];
+          _loading = false;
+        });
+        return;
+      }
+
       setState(() => _loading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -178,9 +222,7 @@ class _MasakanPageState extends State<MasakanPage> {
                   width: double.infinity,
                   decoration: BoxDecoration(
                     image: DecorationImage(
-                      image: _displayImage.startsWith('http')
-                          ? NetworkImage(_displayImage)
-                          : AssetImage(_displayImage) as ImageProvider,
+                      image: _resolveImageProvider(),
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -296,10 +338,7 @@ class _MasakanPageState extends State<MasakanPage> {
                                   )
                                 ],
                                 image: DecorationImage(
-                                  image: _displayImage.startsWith('http')
-                                      ? NetworkImage(_displayImage)
-                                      : AssetImage(_displayImage)
-                                          as ImageProvider,
+                                  image: _resolveImageProvider(),
                                   fit: BoxFit.cover,
                                 ),
                               ),

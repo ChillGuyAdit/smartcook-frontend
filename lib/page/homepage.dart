@@ -9,6 +9,7 @@ import 'bot_page.dart';
 import 'save_page.dart';
 import 'profile_page.dart';
 import 'package:smartcook/service/api_service.dart';
+import 'package:smartcook/service/offline_cache_service.dart';
 
 class homepage extends StatefulWidget {
   const homepage({super.key});
@@ -45,13 +46,58 @@ class _homepageState extends State<homepage> {
     if (!mounted) return;
     final profile = profileRes.data as Map<String, dynamic>?;
     if (profile != null && profile['name'] != null) _userName = profile['name'].toString();
-    _favorites = _parseRecipeList(favRes.data);
-    _fridgePreview = _parseFridgeList(fridgeRes.data);
-    _recommendations = _parseRecipeList(recRes.data);
-    _byMeal['breakfast'] = _parseRecipeList(breakfastRes.data);
-    _byMeal['lunch'] = _parseRecipeList(lunchRes.data);
-    _byMeal['dinner'] = _parseRecipeList(dinnerRes.data);
-    setState(() => _loading = false);
+
+    // Parse online
+    final favoritesOnline = _parseRecipeList(favRes.data);
+    final fridgeOnline = _parseFridgeList(fridgeRes.data);
+    final recOnline = _parseRecipeList(recRes.data);
+    final breakfastOnline = _parseRecipeList(breakfastRes.data);
+    final lunchOnline = _parseRecipeList(lunchRes.data);
+    final dinnerOnline = _parseRecipeList(dinnerRes.data);
+
+    // Cache jika berhasil (offline fallback)
+    if (favoritesOnline.isNotEmpty) {
+      await OfflineCacheService.saveRecipeList('home_favorites_preview', favoritesOnline);
+    }
+    if (recOnline.isNotEmpty) {
+      await OfflineCacheService.saveRecipeList('home_recommendations', recOnline);
+    }
+    if (breakfastOnline.isNotEmpty) {
+      await OfflineCacheService.saveRecipeList('by_meal_breakfast', breakfastOnline);
+    }
+    if (lunchOnline.isNotEmpty) {
+      await OfflineCacheService.saveRecipeList('by_meal_lunch', lunchOnline);
+    }
+    if (dinnerOnline.isNotEmpty) {
+      await OfflineCacheService.saveRecipeList('by_meal_dinner', dinnerOnline);
+    }
+
+    // Jika offline/failed, fallback ke cache
+    final favorites = favoritesOnline.isNotEmpty
+        ? favoritesOnline
+        : await OfflineCacheService.getRecipeList('home_favorites_preview');
+    final recs = recOnline.isNotEmpty
+        ? recOnline
+        : await OfflineCacheService.getRecipeList('home_recommendations');
+    final breakfast = breakfastOnline.isNotEmpty
+        ? breakfastOnline
+        : await OfflineCacheService.getRecipeList('by_meal_breakfast');
+    final lunch = lunchOnline.isNotEmpty
+        ? lunchOnline
+        : await OfflineCacheService.getRecipeList('by_meal_lunch');
+    final dinner = dinnerOnline.isNotEmpty
+        ? dinnerOnline
+        : await OfflineCacheService.getRecipeList('by_meal_dinner');
+
+    setState(() {
+      _favorites = favorites;
+      _fridgePreview = fridgeOnline; // untuk kulkas, belum dicache (lebih dinamis)
+      _recommendations = recs;
+      _byMeal['breakfast'] = breakfast;
+      _byMeal['lunch'] = lunch;
+      _byMeal['dinner'] = dinner;
+      _loading = false;
+    });
   }
 
   List<Map<String, dynamic>> _parseRecipeList(dynamic data) {
@@ -788,7 +834,8 @@ class _homepageState extends State<homepage> {
                           errorBuilder: (_, __, ___) => Container(
                             height: 180,
                             color: Colors.grey.shade200,
-                            child: const Icon(Icons.restaurant, size: 48),
+                            child: Image.asset('image/jagung_bowl.png',
+                                fit: BoxFit.cover),
                           ),
                         )
                       : Image.asset(
@@ -874,26 +921,6 @@ class _homepageState extends State<homepage> {
             )
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTag(String label, Color bgColor, Color textColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.check_circle_rounded, size: 12, color: textColor),
-          const SizedBox(width: 4),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.w600, color: textColor)),
-        ],
       ),
     );
   }
