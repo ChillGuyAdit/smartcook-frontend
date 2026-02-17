@@ -38,8 +38,6 @@ class _KulkasPageState extends State<KulkasPage> {
     setState(() => _loading = true);
     final res = await ApiService.get('/api/fridge');
     if (!mounted) return;
-    final isOffline = !res.success &&
-        (res.statusCode == null || (res.message ?? '').contains('koneksi'));
 
     List<Map<String, dynamic>> list = [];
     if (res.success && res.data != null) {
@@ -61,11 +59,6 @@ class _KulkasPageState extends State<KulkasPage> {
           });
         }
       }
-    }
-
-    if (isOffline && list.isEmpty) {
-      // offline dan tidak ada response baru: coba pakai cache (kalau nanti disimpan)
-      // untuk sekarang, biarkan kosong tapi tampil pesan biasa
     }
 
     setState(() {
@@ -618,6 +611,17 @@ class _KulkasPageState extends State<KulkasPage> {
     if (res.success) {
       await _loadFridge();
       _showSuccessPopup('Bahan berhasil dihapus!');
+    } else if (OfflineManager.isOffline.value) {
+      // Fallback: anggap offline, hapus lokal & antrikan operasi
+      setState(() {
+        _fridgeItems.removeWhere((e) => e['id'] == id);
+        _applyFilters();
+      });
+      await OfflineCacheService.addPendingOperation(
+        method: 'DELETE',
+        path: '/api/fridge/$id',
+      );
+      _showSuccessPopup('Bahan dihapus (akan disinkron saat online)');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(res.message ?? 'Gagal menghapus')),

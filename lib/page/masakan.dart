@@ -138,6 +138,18 @@ class _MasakanPageState extends State<MasakanPage> {
   }
 
   Future<void> _checkFavorite() async {
+    // Jika sudah diketahui offline, langsung cek dari cache lokal
+    if (OfflineManager.isOffline.value) {
+      final localFavs = await OfflineCacheService.getLocalFavoriteRecipes();
+      final foundLocal = localFavs.any(
+        (r) => r['_id']?.toString() == widget.recipeId,
+      );
+      if (mounted) {
+        setState(() => isSaved = foundLocal);
+      }
+      return;
+    }
+
     final res = await ApiService.get('/api/favorites');
     if (!mounted) return;
     if (res.success && res.data is List) {
@@ -148,6 +160,15 @@ class _MasakanPageState extends State<MasakanPage> {
         return id?.toString() == widget.recipeId;
       });
       setState(() => isSaved = found);
+    } else if (OfflineManager.isOffline.value) {
+      // Jika request gagal dan dianggap offline, fallback ke cache lokal
+      final localFavs = await OfflineCacheService.getLocalFavoriteRecipes();
+      final foundLocal = localFavs.any(
+        (r) => r['_id']?.toString() == widget.recipeId,
+      );
+      if (mounted) {
+        setState(() => isSaved = foundLocal);
+      }
     }
   }
 
@@ -161,19 +182,43 @@ class _MasakanPageState extends State<MasakanPage> {
       );
       return;
     }
+
+    Future<void> _saveRecipeToLocalCacheIfNeeded() async {
+      // Bangun minimal data resep dari state tampilan saat ini.
+      if (widget.recipeId == null) return;
+      final recipe = <String, dynamic>{
+        '_id': widget.recipeId,
+        'title': _displayTitle,
+        'image_url': _displayImage,
+        'nutrition_info': {
+          'calories': _displayCalories.replaceAll(RegExp(r'[^0-9]'), ''),
+        },
+        'prep_time': 0,
+        'cook_time': 0,
+        'ingredients': _ingredients,
+        'steps': _steps,
+      };
+      await OfflineCacheService.saveRecipe(recipe);
+    }
+
+    final currentlySaved = isSaved;
+    final goingToBeSaved = !currentlySaved;
     final isOffline = OfflineManager.isOffline.value;
+
     if (isOffline) {
-      // Simpan operasi ke antrian dan update UI lokal saja
-      setState(() => isSaved = !isSaved);
+      // Mode offline penuh: update UI + cache lokal + antrian operasi
+      setState(() => isSaved = goingToBeSaved);
       await OfflineCacheService.addPendingOperation(
-        method: isSaved ? 'POST' : 'DELETE',
+        method: goingToBeSaved ? 'POST' : 'DELETE',
         path: '/api/favorites/${widget.recipeId}',
       );
-      // Update cache favorit lokal supaya SavePage bisa langsung baca
       await OfflineCacheService.setFavoriteLocally(
         widget.recipeId!,
-        isSaved,
+        goingToBeSaved,
       );
+      if (goingToBeSaved) {
+        await _saveRecipeToLocalCacheIfNeeded();
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Perubahan favorit akan disinkron saat online'),
@@ -182,7 +227,7 @@ class _MasakanPageState extends State<MasakanPage> {
       return;
     }
 
-    if (isSaved) {
+    if (currentlySaved) {
       final res = await ApiService.delete('/api/favorites/${widget.recipeId}');
       if (!mounted) return;
       if (res.success) {
@@ -193,6 +238,22 @@ class _MasakanPageState extends State<MasakanPage> {
         );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Resep dihapus dari simpanan")),
+        );
+      } else if (OfflineManager.isOffline.value) {
+        // Fallback: anggap offline, simpan perubahan sebagai operasi tertunda
+        setState(() => isSaved = false);
+        await OfflineCacheService.addPendingOperation(
+          method: 'DELETE',
+          path: '/api/favorites/${widget.recipeId}',
+        );
+        await OfflineCacheService.setFavoriteLocally(
+          widget.recipeId!,
+          false,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Perubahan favorit akan disinkron saat online'),
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -211,8 +272,26 @@ class _MasakanPageState extends State<MasakanPage> {
           widget.recipeId!,
           true,
         );
+        await _saveRecipeToLocalCacheIfNeeded();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Resep berhasil disimpan!")),
+        );
+      } else if (OfflineManager.isOffline.value) {
+        // Fallback: anggap offline, simpan perubahan sebagai operasi tertunda
+        setState(() => isSaved = true);
+        await OfflineCacheService.addPendingOperation(
+          method: 'POST',
+          path: '/api/favorites/${widget.recipeId}',
+        );
+        await OfflineCacheService.setFavoriteLocally(
+          widget.recipeId!,
+          true,
+        );
+        await _saveRecipeToLocalCacheIfNeeded();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Perubahan favorit akan disinkron saat online'),
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

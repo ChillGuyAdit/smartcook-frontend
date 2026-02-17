@@ -63,7 +63,12 @@ class _MyAppState extends State<MyApp> {
       }
 
       // Sync antrian operasi offline (favorit, kulkas, dll)
-      await OfflineCacheService.syncPendingOperations();
+      try {
+        await OfflineCacheService.syncPendingOperations();
+      } catch (_) {
+        // Biarkan silent: jika gagal, operasi akan tetap tersimpan
+        // dan dicoba lagi pada transisi online berikutnya.
+      }
     }
     _wasOffline = isOffline;
   }
@@ -77,6 +82,67 @@ class _MyAppState extends State<MyApp> {
       routes: {
         '/': (context) => const splashscreen(),
         '/signin': (context) => const signin(),
+      },
+      // Wrapper global untuk menampilkan banner offline di seluruh aplikasi.
+      builder: (context, child) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: OfflineManager.isOffline,
+          builder: (context, isOffline, _) {
+            final mediaQuery = MediaQuery.of(context);
+            return Stack(
+              children: [
+                child ?? const SizedBox.shrink(),
+                if (isOffline)
+                  Positioned(
+                    top: mediaQuery.padding.top + 8,
+                    left: 12,
+                    right: 12,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade600,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(
+                              Icons.wifi_off_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Anda sedang offline. Beberapa fitur mungkin terbatas.',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        );
       },
     );
   }

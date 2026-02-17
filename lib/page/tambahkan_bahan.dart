@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/service/api_service.dart';
+import 'package:smartcook/service/offline_cache_service.dart';
+import 'package:smartcook/service/offline_manager.dart';
 
 class TambahkanBahanPage extends StatefulWidget {
   const TambahkanBahanPage({super.key});
@@ -408,6 +410,33 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
       return;
     }
     setState(() => _saving = true);
+
+    // Jika sudah diketahui offline, langsung antrikan semua operasi dan beri feedback.
+    if (OfflineManager.isOffline.value) {
+      for (final item in toSave) {
+        await OfflineCacheService.addPendingOperation(
+          method: 'POST',
+          path: '/api/fridge',
+          body: {
+            'ingredient_name': item['name'],
+            'category': item['category'],
+            'quantity': item['quantity'],
+            'unit': item['unit'],
+          },
+        );
+      }
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              '${toSave.length} bahan akan disimpan ke kulkas saat online'),
+        ),
+      );
+      Navigator.pop(context);
+      return;
+    }
+
     int ok = 0;
     String? lastError;
     for (final item in toSave) {
@@ -423,13 +452,25 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
       );
       if (res.success) {
         ok++;
+      } else if (OfflineManager.isOffline.value) {
+        // Fallback: anggap offline, antrikan operasi dan lanjut
+        await OfflineCacheService.addPendingOperation(
+          method: 'POST',
+          path: '/api/fridge',
+          body: {
+            'ingredient_name': item['name'],
+            'category': item['category'],
+            'quantity': item['quantity'],
+            'unit': item['unit'],
+          },
+        );
       } else if (lastError == null && res.message != null) {
         lastError = res.message;
       }
     }
     if (!mounted) return;
     setState(() => _saving = false);
-    if (ok == 0 && toSave.isNotEmpty) {
+    if (ok == 0 && toSave.isNotEmpty && !OfflineManager.isOffline.value) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.red.shade700,
@@ -440,7 +481,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
           ),
         ),
       );
-    } else if (ok > 0 && ok < toSave.length) {
+    } else if (ok > 0 && ok < toSave.length && !OfflineManager.isOffline.value) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('$ok dari ${toSave.length} bahan berhasil disimpan.'),
@@ -448,7 +489,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$ok bahan disimpan ke kulkas')),
+        SnackBar(content: Text('${toSave.length} bahan diproses ke kulkas')),
       );
     }
     Navigator.pop(context);
