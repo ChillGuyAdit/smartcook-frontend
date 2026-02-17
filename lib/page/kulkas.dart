@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/service/api_service.dart';
+
 import 'tambahkan_bahan.dart';
 
 class KulkasPage extends StatefulWidget {
@@ -65,7 +66,8 @@ class _KulkasPageState extends State<KulkasPage> {
 
   // Menghitung sisa hari
   int _getDaysDiff(DateTime expiredDate) {
-    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final today =
+        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
     final exp = DateTime(expiredDate.year, expiredDate.month, expiredDate.day);
     return exp.difference(today).inDays;
   }
@@ -81,7 +83,8 @@ class _KulkasPageState extends State<KulkasPage> {
   // Warna Teks Kadaluarsa
   Color _getExpiredColor(int diffDays) {
     if (diffDays < 0) return Colors.red;
-    if (diffDays <= 3) return Colors.orange.shade800; // Peringatan jika < 3 hari
+    if (diffDays <= 3)
+      return Colors.orange.shade800; // Peringatan jika < 3 hari
     return Colors.green;
   }
 
@@ -92,7 +95,9 @@ class _KulkasPageState extends State<KulkasPage> {
             .toString()
             .toLowerCase()
             .contains(_searchQuery.toLowerCase());
-        final q = item['qty'] is int ? item['qty'] as int : int.tryParse(item['qty'].toString()) ?? 0;
+        final q = item['qty'] is int
+            ? item['qty'] as int
+            : int.tryParse(item['qty'].toString()) ?? 0;
         final matchStock = q <= _maxStock;
         final exp = item['expiredDate'];
         final diffDays = exp is DateTime ? _getDaysDiff(exp) : 0;
@@ -109,14 +114,22 @@ class _KulkasPageState extends State<KulkasPage> {
 
       if (_sortOption == "Terbanyak") {
         _filteredItems.sort((a, b) {
-          final qa = a['qty'] is int ? a['qty'] as int : int.tryParse(a['qty'].toString()) ?? 0;
-          final qb = b['qty'] is int ? b['qty'] as int : int.tryParse(b['qty'].toString()) ?? 0;
+          final qa = a['qty'] is int
+              ? a['qty'] as int
+              : int.tryParse(a['qty'].toString()) ?? 0;
+          final qb = b['qty'] is int
+              ? b['qty'] as int
+              : int.tryParse(b['qty'].toString()) ?? 0;
           return qb.compareTo(qa);
         });
       } else {
         _filteredItems.sort((a, b) {
-          final qa = a['qty'] is int ? a['qty'] as int : int.tryParse(a['qty'].toString()) ?? 0;
-          final qb = b['qty'] is int ? b['qty'] as int : int.tryParse(b['qty'].toString()) ?? 0;
+          final qa = a['qty'] is int
+              ? a['qty'] as int
+              : int.tryParse(a['qty'].toString()) ?? 0;
+          final qb = b['qty'] is int
+              ? b['qty'] as int
+              : int.tryParse(b['qty'].toString()) ?? 0;
           return qa.compareTo(qb);
         });
       }
@@ -133,7 +146,8 @@ class _KulkasPageState extends State<KulkasPage> {
           if (mounted) Navigator.of(context).pop();
         });
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           elevation: 0,
           backgroundColor: Colors.transparent,
           child: Container(
@@ -152,7 +166,8 @@ class _KulkasPageState extends State<KulkasPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 60),
+                const Icon(Icons.check_circle,
+                    color: Color(0xFF4CAF50), size: 60),
                 const SizedBox(height: 15),
                 Text(
                   message,
@@ -175,7 +190,8 @@ class _KulkasPageState extends State<KulkasPage> {
       context: context,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           elevation: 0,
           backgroundColor: Colors.transparent,
           child: Container(
@@ -200,7 +216,8 @@ class _KulkasPageState extends State<KulkasPage> {
                     color: Colors.red.shade50,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.warning_rounded, color: Colors.redAccent, size: 40),
+                  child: const Icon(Icons.warning_rounded,
+                      color: Colors.redAccent, size: 40),
                 ),
                 const SizedBox(height: 15),
                 const Text(
@@ -224,7 +241,8 @@ class _KulkasPageState extends State<KulkasPage> {
                       onPressed: () => Navigator.pop(context),
                       child: const Text(
                         "Batal",
-                        style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: Colors.grey, fontWeight: FontWeight.bold),
                       ),
                     ),
                     ElevatedButton(
@@ -240,7 +258,8 @@ class _KulkasPageState extends State<KulkasPage> {
                       },
                       child: const Text(
                         "Ya, Hapus",
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -302,7 +321,8 @@ class _KulkasPageState extends State<KulkasPage> {
                                 onTap: () => setPopupState(
                                     () => _sortOption = "Terbanyak"),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
                                   decoration: BoxDecoration(
                                     color: _sortOption == "Terbanyak"
                                         ? _themeColors[0]
@@ -329,7 +349,8 @@ class _KulkasPageState extends State<KulkasPage> {
                                 onTap: () => setPopupState(
                                     () => _sortOption = "Terdikit"),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
                                   decoration: BoxDecoration(
                                     color: _sortOption == "Terdikit"
                                         ? _themeColors[0]
@@ -361,19 +382,30 @@ class _KulkasPageState extends State<KulkasPage> {
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: ["Semua", "Kadaluarsa", "< 3 Hari", "< 7 Hari"].map((opt) {
+                          children: [
+                            "Semua",
+                            "Kadaluarsa",
+                            "< 3 Hari",
+                            "< 7 Hari"
+                          ].map((opt) {
                             final isSelected = _expiredFilterOption == opt;
                             return ChoiceChip(
-                              label: Text(opt, style: TextStyle(
-                                fontSize: 11,
-                                color: isSelected ? Colors.white : Colors.black87,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              )),
+                              label: Text(opt,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.black87,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  )),
                               selected: isSelected,
                               selectedColor: _themeColors[0],
                               backgroundColor: Colors.grey.shade100,
                               showCheckmark: false,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
                               onSelected: (val) {
                                 setPopupState(() => _expiredFilterOption = opt);
                               },
@@ -478,15 +510,15 @@ class _KulkasPageState extends State<KulkasPage> {
               decoration: InputDecoration(
                 labelText: 'Nama Bahan',
                 labelStyle: const TextStyle(color: Colors.black54),
-                prefixIcon: const Icon(Icons.restaurant_menu,
-                    color: Color(0xFF4CAF50)),
+                prefixIcon:
+                    const Icon(Icons.restaurant_menu, color: Color(0xFF4CAF50)),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide:
                       const BorderSide(color: Color(0xFF4CAF50), width: 2),
                 ),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
             const SizedBox(height: 15),
@@ -504,15 +536,15 @@ class _KulkasPageState extends State<KulkasPage> {
                   borderSide:
                       const BorderSide(color: Color(0xFF4CAF50), width: 2),
                 ),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
             const SizedBox(height: 25),
             ElevatedButton(
               onPressed: () async {
-                if (_nameController.text.isEmpty ||
-                    _qtyController.text.isEmpty) return;
+                if (_nameController.text.isEmpty || _qtyController.text.isEmpty)
+                  return;
                 final qty = int.tryParse(_qtyController.text) ?? 1;
                 final exp = existingItem['expiredDate'];
                 final res = await ApiService.put(
@@ -579,8 +611,7 @@ class _KulkasPageState extends State<KulkasPage> {
         onPressed: () async {
           await Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (context) => const TambahkanBahanPage()),
+            MaterialPageRoute(builder: (context) => const TambahkanBahanPage()),
           );
           _loadFridge();
         },
@@ -687,14 +718,14 @@ class _KulkasPageState extends State<KulkasPage> {
                         ),
                       )
                     : SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final item = _filteredItems[index];
-                        return _buildFridgeListItem(item);
-                      },
-                      childCount: _filteredItems.length,
-                    ),
-                  ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final item = _filteredItems[index];
+                            return _buildFridgeListItem(item);
+                          },
+                          childCount: _filteredItems.length,
+                        ),
+                      ),
           ),
         ],
       ),
@@ -711,9 +742,12 @@ class _KulkasPageState extends State<KulkasPage> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isExpired ? Colors.red.shade50 : Colors.white, // Berubah merah jika expired
+        color: isExpired
+            ? Colors.red.shade50
+            : Colors.white, // Berubah merah jika expired
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isExpired ? Colors.red.shade100 : Colors.grey.shade200),
+        border: Border.all(
+            color: isExpired ? Colors.red.shade100 : Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -729,10 +763,13 @@ class _KulkasPageState extends State<KulkasPage> {
             height: 60,
             width: 60,
             decoration: BoxDecoration(
-              color: isExpired ? Colors.red.shade100 : _themeColors[0].withOpacity(0.1),
+              color: isExpired
+                  ? Colors.red.shade100
+                  : _themeColors[0].withOpacity(0.1),
               borderRadius: BorderRadius.circular(15),
             ),
-            child: Icon(Icons.kitchen_rounded, color: isExpired ? Colors.red : _themeColors[1], size: 30),
+            child: Icon(Icons.kitchen_rounded,
+                color: isExpired ? Colors.red : _themeColors[1], size: 30),
           ),
           const SizedBox(width: 16),
           // Info Bahan Tengah
@@ -751,7 +788,7 @@ class _KulkasPageState extends State<KulkasPage> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                
+
                 // 1. Info Stok (Baris Pertama)
                 Row(
                   children: [
@@ -768,10 +805,10 @@ class _KulkasPageState extends State<KulkasPage> {
                     ),
                   ],
                 ),
-                
+
                 // Jarak vertikal antara Stok dan Kadaluarsa
-                const SizedBox(height: 4), 
-                
+                const SizedBox(height: 4),
+
                 // 2. Info Kadaluarsa (Baris Kedua)
                 Row(
                   children: [
@@ -801,10 +838,9 @@ class _KulkasPageState extends State<KulkasPage> {
                   padding: const EdgeInsets.all(8),
                   margin: const EdgeInsets.only(right: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.grey.shade300)
-                  ),
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey.shade300)),
                   child: const Icon(Icons.edit_note_rounded,
                       size: 20, color: Colors.black87),
                 ),
@@ -840,14 +876,15 @@ class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   // Memberikan space yang cukup untuk tombol back, judul, & deskripsi di mode collapsed
-  double get minExtent => safeArea + 70.0; 
-  
+  double get minExtent => safeArea + 70.0;
+
   @override
   // DIUBAH: Height awal dikurangi agar header tidak terlalu memakan tempat (sebelumnya 220.0)
   double get maxExtent => 170.0;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     // Persentase scroll (0.0 = full expand bawah, 1.0 = full collapsed atas)
     double percent = (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
 
@@ -885,7 +922,8 @@ class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2), // Background bulat transparan
+                  color: Colors.white
+                      .withOpacity(0.2), // Background bulat transparan
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -901,11 +939,12 @@ class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
           Positioned(
             // Bergerak dari kiri (16) ke kanan tombol back (sekitar 60)
             left: Tween<double>(begin: 16.0, end: 60.0).transform(percent),
-            
+
             // DIUBAH: Nilai "begin" dikurangi agar judul naik lebih dekat ke tombol Back
             // Sebelumnya (maxExtent - 85.0), sekarang diset fix safeArea + 65.0
-            top: Tween<double>(begin: safeArea + 65.0, end: safeArea + 10.0).transform(percent),
-            
+            top: Tween<double>(begin: safeArea + 65.0, end: safeArea + 10.0)
+                .transform(percent),
+
             right: 16, // Membatasi lebar agar text tidak tembus layar kanan
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -916,12 +955,15 @@ class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
                   "Isi Kulkasmu",
                   style: TextStyle(
                     // Ukuran mengecil perlahan
-                    fontSize: Tween<double>(begin: 24.0, end: 18.0).transform(percent),
+                    fontSize: Tween<double>(begin: 24.0, end: 18.0)
+                        .transform(percent),
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: Tween<double>(begin: 6.0, end: 2.0).transform(percent)),
+                SizedBox(
+                    height:
+                        Tween<double>(begin: 6.0, end: 2.0).transform(percent)),
                 // Deskripsi (Mengecil tapi TIDAK hilang / opacity tetap)
                 Text(
                   "Cek dan kelola persediaan bahan masakan yang ada di dalam kulkasmu dengan mudah.",
@@ -930,9 +972,10 @@ class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.85),
                     // Ukuran mengecil agar muat di atas saat collapsed
-                    fontSize: Tween<double>(begin: 12.0, end: 10.0).transform(percent),
+                    fontSize: Tween<double>(begin: 12.0, end: 10.0)
+                        .transform(percent),
                     // Line height (jarak antar baris) disesuaikan saat mengecil
-                    height: 1.2, 
+                    height: 1.2,
                   ),
                 ),
               ],
@@ -946,7 +989,7 @@ class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(covariant _KulkasHeaderDelegate oldDelegate) {
     return maxExtent != oldDelegate.maxExtent ||
-           minExtent != oldDelegate.minExtent ||
-           safeArea != oldDelegate.safeArea;
+        minExtent != oldDelegate.minExtent ||
+        safeArea != oldDelegate.safeArea;
   }
 }

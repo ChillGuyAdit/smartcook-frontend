@@ -73,7 +73,11 @@ class _MasakanPageState extends State<MasakanPage> {
                 .toList() ??
             [];
         _steps = (r['steps'] as List?)
-                ?.map((e) => e is String ? e : e.toString())
+                ?.map((e) {
+                  if (e is String) return e;
+                  if (e is Map) return (e['instruction'] ?? e['text'] ?? '').toString();
+                  return e.toString();
+                })
                 .toList() ??
             [];
         _loading = false;
