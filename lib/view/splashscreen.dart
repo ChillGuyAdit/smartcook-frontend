@@ -49,7 +49,7 @@ class _splashscreenState extends State<splashscreen> {
     Future.delayed(Duration(milliseconds: 2000), () {
       if (mounted) {
         setState(() {
-          _posisiLogo = Alignment(-0.65, 0);
+          _posisiLogo = Alignment(-0.50, 0);
           _posisiTeks = Alignment(0.48, 0);
         });
       }
