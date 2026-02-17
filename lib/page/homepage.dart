@@ -293,7 +293,7 @@ class _homepageState extends State<homepage> {
                               MaterialPageRoute(
                                   builder: (context) =>
                                       const TambahkanBahanPage()),
-                            );
+                            ).then((_) => _loadData());
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(

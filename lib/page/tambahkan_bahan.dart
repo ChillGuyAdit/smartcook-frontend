@@ -409,6 +409,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
     }
     setState(() => _saving = true);
     int ok = 0;
+    String? lastError;
     for (final item in toSave) {
       final res = await ApiService.post(
         '/api/fridge',
@@ -420,13 +421,36 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
         },
         useAuth: true,
       );
-      if (res.success) ok++;
+      if (res.success) {
+        ok++;
+      } else if (lastError == null && res.message != null) {
+        lastError = res.message;
+      }
     }
     if (!mounted) return;
     setState(() => _saving = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$ok bahan disimpan ke kulkas')),
-    );
+    if (ok == 0 && toSave.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red.shade700,
+          content: Text(
+            lastError?.isNotEmpty == true
+                ? 'Gagal menyimpan: $lastError'
+                : 'Gagal menyimpan. Pastikan sudah login.',
+          ),
+        ),
+      );
+    } else if (ok > 0 && ok < toSave.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$ok dari ${toSave.length} bahan berhasil disimpan.'),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$ok bahan disimpan ke kulkas')),
+      );
+    }
     Navigator.pop(context);
   }
 

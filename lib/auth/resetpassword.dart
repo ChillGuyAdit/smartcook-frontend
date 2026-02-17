@@ -164,8 +164,8 @@ class _resetpasswordState extends State<resetpassword> {
           if (value == null || value.isEmpty) {
             return "Password wajib isi bray";
           }
-          if (value.length < 8) {
-            return "Password minimal 8 karakter";
+          if (value.length < 6) {
+            return "Password minimal 6 karakter";
           }
           return null;
         },

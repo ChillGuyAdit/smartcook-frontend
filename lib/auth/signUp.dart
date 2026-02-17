@@ -437,6 +437,7 @@ class _signupState extends State<signup> {
         },
         validator: (value) {
           if (value == null || value.isEmpty) return "Wajib isi bray";
+          if (isPassword && value.length < 6) return "Minimal 6 karakter";
           return null;
         },
         decoration: InputDecoration(

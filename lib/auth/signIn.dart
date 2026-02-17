@@ -306,7 +306,7 @@ class _signinState extends State<signin> {
         onFieldSubmitted: (v) => _submitData(),
         validator: (value) {
           if (value == null || value.isEmpty) return "Wajib isi bray";
-          if (value.length < 8) return "Minimal 8 karakter";
+          if (value.length < 6) return "Minimal 6 karakter";
           return null;
         },
         decoration: InputDecoration(
