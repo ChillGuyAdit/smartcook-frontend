@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:http/http.dart' as http;
 import 'package:smartcook/config/api_config.dart';
+import 'package:smartcook/page/masakan.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/service/token_service.dart';
-import 'package:smartcook/page/masakan.dart';
 
 class BotPage extends StatefulWidget {
   const BotPage({super.key});
@@ -17,7 +17,7 @@ class BotPage extends StatefulWidget {
   State<BotPage> createState() => _BotPageState();
 }
 
-class _BotPageState extends State<BotPage> {
+class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   List<Map<String, dynamic>> _messages = [];
@@ -38,11 +38,20 @@ class _BotPageState extends State<BotPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadHistory();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadHistory();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     _scrollController.dispose();
     _typingTimer?.cancel();
@@ -68,12 +77,24 @@ class _BotPageState extends State<BotPage> {
           final e = msgList[i];
           if (e is Map<String, dynamic>) {
             list.add(e);
-            if (e['role'] == 'model' && e['recipe_embeds'] != null) {
-              final recipes = (e['recipe_embeds'] as List?)
-                  ?.map((r) => Map<String, dynamic>.from(r as Map))
-                  .toList();
-              if (recipes != null && recipes.isNotEmpty) {
-                embeds[i] = recipes;
+            if (e['role'] == 'model') {
+              final recipeEmbedsRaw = e['recipe_embeds'];
+              if (recipeEmbedsRaw != null) {
+                List<Map<String, dynamic>> recipes = [];
+                if (recipeEmbedsRaw is List) {
+                  recipes = recipeEmbedsRaw
+                      .map((r) {
+                        if (r is Map) {
+                          return Map<String, dynamic>.from(r);
+                        }
+                        return <String, dynamic>{};
+                      })
+                      .where((r) => r.isNotEmpty)
+                      .toList();
+                }
+                if (recipes.isNotEmpty) {
+                  embeds[i] = recipes;
+                }
               }
             }
           }
@@ -174,9 +195,11 @@ class _BotPageState extends State<BotPage> {
     _bufferedContent = '';
     _displayedContent = '';
 
+    final userMessage = {'role': 'user', 'content': text};
+    final modelMessage = {'role': 'model', 'content': ''};
     setState(() {
-      _messages.add({'role': 'user', 'content': text});
-      _messages.add({'role': 'model', 'content': ''});
+      _messages.add(userMessage);
+      _messages.add(modelMessage);
       _sending = true;
       _streamingOrTyping = true;
     });
@@ -273,8 +296,9 @@ class _BotPageState extends State<BotPage> {
             // Handle recipe embed
             if (data['type'] == 'recipe_embed' && data['recipes'] != null) {
               final recipes = (data['recipes'] as List?)
-                  ?.map((e) => Map<String, dynamic>.from(e as Map))
-                  .toList() ?? [];
+                      ?.map((e) => Map<String, dynamic>.from(e as Map))
+                      .toList() ??
+                  [];
               if (recipes.isNotEmpty && mounted) {
                 setState(() {
                   _recipeEmbeds[modelMessageIndex] = recipes;
@@ -314,6 +338,9 @@ class _BotPageState extends State<BotPage> {
           _streamingOrTyping = false;
         });
         _scrollToBottom();
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (mounted) _loadHistory();
+        });
       }
     } catch (e) {
       if (!mounted) return;
@@ -510,7 +537,8 @@ class _BotPageState extends State<BotPage> {
                                 ),
                                 constraints: BoxConstraints(
                                     maxWidth:
-                                        MediaQuery.of(context).size.width * 0.8),
+                                        MediaQuery.of(context).size.width *
+                                            0.8),
                                 child: Text(
                                   m['content']?.toString() ?? '',
                                   style: const TextStyle(
@@ -527,7 +555,8 @@ class _BotPageState extends State<BotPage> {
                                 margin: const EdgeInsets.only(bottom: 8),
                                 constraints: BoxConstraints(
                                     maxWidth:
-                                        MediaQuery.of(context).size.width * 0.8),
+                                        MediaQuery.of(context).size.width *
+                                            0.8),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -539,7 +568,8 @@ class _BotPageState extends State<BotPage> {
                                         borderRadius: BorderRadius.circular(16),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.05),
+                                            color:
+                                                Colors.black.withOpacity(0.05),
                                             blurRadius: 5,
                                             offset: const Offset(0, 2),
                                           ),

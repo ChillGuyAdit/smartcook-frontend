@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartcook/service/api_service.dart';
 
@@ -50,7 +51,8 @@ class OfflineCacheService {
     }
   }
 
-  static Future<void> saveRecipeList(String key, List<Map<String, dynamic>> recipes) async {
+  static Future<void> saveRecipeList(
+      String key, List<Map<String, dynamic>> recipes) async {
     final prefs = await SharedPreferences.getInstance();
     final ids = <String>[];
     for (final r in recipes) {
@@ -114,7 +116,8 @@ class OfflineCacheService {
 
   /// Cari cepat dari cache: title mengandung query (case-insensitive)
   /// (Best-effort: scan berdasarkan recent queries list keys)
-  static Future<List<Map<String, dynamic>>> searchCachedByTitle(String query) async {
+  static Future<List<Map<String, dynamic>>> searchCachedByTitle(
+      String query) async {
     final q = _norm(query);
     if (q.isEmpty) return [];
     final recents = await getRecentQueries(limit: 30);
@@ -251,4 +254,3 @@ class OfflineCacheService {
     await _savePendingOps(remaining);
   }
 }
-

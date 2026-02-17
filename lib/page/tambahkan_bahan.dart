@@ -270,8 +270,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
   }
 
   Future<void> _initData() async {
-    _hiddenIngredientKeys =
-        await OfflineCacheService.getHiddenIngredientKeys();
+    _hiddenIngredientKeys = await OfflineCacheService.getHiddenIngredientKeys();
     _applyHiddenToBahanData();
     await _loadGlobalIngredients();
     if (mounted) {
@@ -413,8 +412,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                           borderRadius: BorderRadius.circular(15),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 0),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
                       ),
                     ),
                   ),
@@ -594,7 +592,9 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
         for (final i in items) {
           final item = Map<String, dynamic>.from(i as Map);
           if (item['isSelected'] == true) {
-            final count = item['count'] is int ? item['count'] as int : int.tryParse(item['count'].toString()) ?? 0;
+            final count = item['count'] is int
+                ? item['count'] as int
+                : int.tryParse(item['count'].toString()) ?? 0;
             if (count > 0) {
               toSave.add({
                 'name': item['name'],
@@ -689,7 +689,9 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
           ),
         ),
       );
-    } else if (ok > 0 && ok < toSave.length && !OfflineManager.isOffline.value) {
+    } else if (ok > 0 &&
+        ok < toSave.length &&
+        !OfflineManager.isOffline.value) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('$ok dari ${toSave.length} bahan berhasil disimpan.'),
@@ -892,12 +894,11 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                           ),
                           onPressed: () async {
                             final name = items[index]['name']?.toString() ?? '';
-                            final backendCategory = _mapCategoryToBackend(
-                                selectedCategory);
-                            final key = _buildHiddenKey(
-                                name, backendCategory);
-                            await OfflineCacheService
-                                .addHiddenIngredientKey(key);
+                            final backendCategory =
+                                _mapCategoryToBackend(selectedCategory);
+                            final key = _buildHiddenKey(name, backendCategory);
+                            await OfflineCacheService.addHiddenIngredientKey(
+                                key);
                             setState(() {
                               _hiddenIngredientKeys.add(key);
                               items.removeAt(index);
