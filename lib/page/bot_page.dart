@@ -8,6 +8,7 @@ import 'package:smartcook/config/api_config.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/service/token_service.dart';
+import 'package:smartcook/page/masakan.dart';
 
 class BotPage extends StatefulWidget {
   const BotPage({super.key});
@@ -30,6 +31,9 @@ class _BotPageState extends State<BotPage> {
   bool _isTyping = false;
   Timer? _typingTimer;
   static const int _typingIntervalMs = 100;
+
+  // State untuk recipe embeds: Map<messageIndex, List<recipes>>
+  Map<int, List<Map<String, dynamic>>> _recipeEmbeds = {};
 
   @override
   void initState() {
@@ -163,6 +167,7 @@ class _BotPageState extends State<BotPage> {
       _sending = true;
       _streamingOrTyping = true;
     });
+    final modelMessageIndex = _messages.length - 1;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -204,6 +209,7 @@ class _BotPageState extends State<BotPage> {
         } catch (_) {}
         setState(() {
           _messages.removeLast();
+          _recipeEmbeds.remove(modelMessageIndex);
           _sending = false;
           _streamingOrTyping = false;
         });
@@ -251,6 +257,19 @@ class _BotPageState extends State<BotPage> {
               throw Exception(data['error'].toString());
             }
 
+            // Handle recipe embed
+            if (data['type'] == 'recipe_embed' && data['recipes'] != null) {
+              final recipes = (data['recipes'] as List?)
+                  ?.map((e) => Map<String, dynamic>.from(e as Map))
+                  .toList() ?? [];
+              if (recipes.isNotEmpty && mounted) {
+                setState(() {
+                  _recipeEmbeds[modelMessageIndex] = recipes;
+                });
+              }
+              continue;
+            }
+
             // Done: set buffer saja; timer tetap jalan sampai tampil semua pelan-pelan
             if (data['done'] == true && data['fullReply'] != null) {
               _bufferedContent = data['fullReply'].toString();
@@ -288,6 +307,7 @@ class _BotPageState extends State<BotPage> {
       _stopTypingAnimation();
       setState(() {
         _messages.removeLast();
+        _recipeEmbeds.remove(modelMessageIndex);
         _sending = false;
         _streamingOrTyping = false;
       });
@@ -301,8 +321,72 @@ class _BotPageState extends State<BotPage> {
     final res = await ApiService.delete('/api/chat/history');
     if (!mounted) return;
     if (res.success) {
-      setState(() => _messages = []);
+      setState(() {
+        _messages = [];
+        _recipeEmbeds = {};
+      });
     }
+  }
+
+  Widget _buildRecipeEmbedCard(Map<String, dynamic> recipe) {
+    const String fallbackAsset = 'image/jagung_bowl.png';
+    final id = recipe['_id']?.toString();
+    final title = recipe['title']?.toString() ?? 'Resep';
+    final imageUrl = recipe['image_url']?.toString();
+    final cal = recipe['nutrition_info'] is Map
+        ? (recipe['nutrition_info'] as Map)['calories']?.toString()
+        : '0';
+    final prep = recipe['prep_time'] ?? 0;
+    final cook = recipe['cook_time'] ?? 0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: imageUrl != null && imageUrl.isNotEmpty
+              ? Image.network(
+                  imageUrl,
+                  width: 56,
+                  height: 56,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Image.asset(
+                    fallbackAsset,
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              : Image.asset(
+                  fallbackAsset,
+                  width: 56,
+                  height: 56,
+                  fit: BoxFit.cover,
+                ),
+        ),
+        title: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text('$cal Kal • ${prep + cook}m'),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: id != null
+            ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MasakanPage(recipeId: id),
+                  ),
+                );
+              }
+            : null,
+      ),
+    );
   }
 
   @override
@@ -311,7 +395,7 @@ class _BotPageState extends State<BotPage> {
       return Scaffold(
         backgroundColor: const Color(0xFFFAFAFA),
         appBar: AppBar(
-          title: const Text('Bot AI'),
+          title: const Text('SmartChef'),
           backgroundColor: Colors.white,
           foregroundColor: Colors.black87,
           elevation: 0,
@@ -320,7 +404,7 @@ class _BotPageState extends State<BotPage> {
           child: Padding(
             padding: EdgeInsets.all(24),
             child: Text(
-              'Bot AI tidak tersedia saat offline.\nSilakan sambungkan internet untuk melanjutkan.',
+              'SmartChef tidak tersedia saat offline.\nSilakan sambungkan internet untuk melanjutkan.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.black54),
             ),
@@ -331,7 +415,7 @@ class _BotPageState extends State<BotPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        title: const Text('Bot AI'),
+        title: const Text('SmartChef'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
@@ -391,61 +475,96 @@ class _BotPageState extends State<BotPage> {
                         itemBuilder: (context, index) {
                           final m = _messages[index];
                           final isUser = m['role'] == 'user';
-                          return Align(
-                            alignment: isUser
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: isUser
-                                    ? const Color(0xFF4CAF50)
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 5,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              constraints: BoxConstraints(
-                                  maxWidth:
-                                      MediaQuery.of(context).size.width * 0.8),
-                              child: isUser
-                                  ? Text(
-                                      m['content']?.toString() ?? '',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                      ),
-                                    )
-                                  : MarkdownBody(
-                                      key: ValueKey(
-                                          '${index}_${m['content']?.toString().length ?? 0}'),
-                                      data: m['content']?.toString() ?? '',
-                                      styleSheet: MarkdownStyleSheet(
-                                        p: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.black87,
-                                          height: 1.4,
-                                        ),
-                                        listBullet: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.black87,
-                                        ),
-                                        strong: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                      shrinkWrap: true,
+                          final recipeEmbeds = _recipeEmbeds[index];
+
+                          if (isUser) {
+                            return Align(
+                              alignment: Alignment.centerRight,
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF4CAF50),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 5,
+                                      offset: const Offset(0, 2),
                                     ),
-                            ),
-                          );
+                                  ],
+                                ),
+                                constraints: BoxConstraints(
+                                    maxWidth:
+                                        MediaQuery.of(context).size.width * 0.8),
+                                child: Text(
+                                  m['content']?.toString() ?? '',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            );
+                          } else {
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                constraints: BoxConstraints(
+                                    maxWidth:
+                                        MediaQuery.of(context).size.width * 0.8),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.05),
+                                            blurRadius: 5,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: MarkdownBody(
+                                        key: ValueKey(
+                                            '${index}_${m['content']?.toString().length ?? 0}'),
+                                        data: m['content']?.toString() ?? '',
+                                        styleSheet: MarkdownStyleSheet(
+                                          p: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.black87,
+                                            height: 1.4,
+                                          ),
+                                          listBullet: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.black87,
+                                          ),
+                                          strong: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                        shrinkWrap: true,
+                                      ),
+                                    ),
+                                    if (recipeEmbeds != null &&
+                                        recipeEmbeds.isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      ...recipeEmbeds.map((recipe) =>
+                                          _buildRecipeEmbedCard(recipe)),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
                         },
                       ),
           ),

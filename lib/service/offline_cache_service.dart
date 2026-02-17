@@ -9,6 +9,7 @@ class OfflineCacheService {
   static const _kPendingOps = 'pending_operations_v1';
   static const _kFavoriteIds = 'local_favorites_ids_v1';
   static const _kGlobalIngredients = 'global_ingredients_v1';
+  static const _kHiddenIngredients = 'hidden_ingredients_v1';
 
   static String _norm(String s) =>
       s.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
@@ -93,6 +94,21 @@ class OfflineCacheService {
       return [];
     } catch (_) {
       return [];
+    }
+  }
+
+  static Future<List<String>> getHiddenIngredientKeys() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_kHiddenIngredients) ?? <String>[];
+  }
+
+  static Future<void> addHiddenIngredientKey(String key) async {
+    if (key.trim().isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_kHiddenIngredients) ?? <String>[];
+    if (!list.contains(key)) {
+      list.add(key);
+      await prefs.setStringList(_kHiddenIngredients, list);
     }
   }
 

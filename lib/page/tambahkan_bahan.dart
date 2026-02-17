@@ -15,6 +15,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
   String selectedCategory = '';
   bool _saving = false;
   final TextEditingController _searchController = TextEditingController();
+  List<String> _hiddenIngredientKeys = [];
 
   // Data dengan field: 'id', 'name', 'count', 'isSelected'
   final Map<String, List<Map<String, dynamic>>> bahanData = {
@@ -265,7 +266,17 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
   @override
   void initState() {
     super.initState();
-    _loadGlobalIngredients();
+    _initData();
+  }
+
+  Future<void> _initData() async {
+    _hiddenIngredientKeys =
+        await OfflineCacheService.getHiddenIngredientKeys();
+    _applyHiddenToBahanData();
+    await _loadGlobalIngredients();
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _loadGlobalIngredients() async {
@@ -274,15 +285,11 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
       _mergeGlobalIngredients(cached);
     }
     if (!mounted) {
-      setState(() {});
       return;
     }
     final res = await ApiService.get('/api/ingredients', useAuth: false);
     if (!mounted) return;
     if (!res.success || res.data is! List) {
-      if (cached.isNotEmpty) {
-        setState(() {});
-      }
       return;
     }
     final list = (res.data as List)
@@ -290,7 +297,6 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
         .toList();
     _mergeGlobalIngredients(list);
     await OfflineCacheService.saveGlobalIngredients(list);
-    setState(() {});
   }
 
   void _mergeGlobalIngredients(List<Map<String, dynamic>> list) {
@@ -303,6 +309,8 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
       if (groups == null || groups.isEmpty) continue;
       final items = groups.first['items'] as List<dynamic>? ?? [];
       final lower = name.toLowerCase();
+      final key = _buildHiddenKey(name, cat);
+      if (_hiddenIngredientKeys.contains(key)) continue;
       final exists = items.any((raw) {
         final m = raw as Map;
         return (m['name']?.toString().toLowerCase() ?? '') == lower;
@@ -317,6 +325,29 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
       });
       groups.first['items'] = items;
     }
+  }
+
+  void _applyHiddenToBahanData() {
+    if (_hiddenIngredientKeys.isEmpty) return;
+    for (final entry in bahanData.entries) {
+      final label = entry.key;
+      final groups = entry.value;
+      for (final group in groups) {
+        final items = group['items'] as List<dynamic>? ?? [];
+        items.removeWhere((raw) {
+          final m = raw as Map;
+          final name = m['name']?.toString() ?? '';
+          final backend = _mapCategoryToBackend(label);
+          final key = _buildHiddenKey(name, backend);
+          return _hiddenIngredientKeys.contains(key);
+        });
+        group['items'] = items;
+      }
+    }
+  }
+
+  String _buildHiddenKey(String name, String backendCategory) {
+    return '${name.trim().toLowerCase()}|$backendCategory';
   }
 
   String _mapBackendToLabel(String backend) {
@@ -579,8 +610,11 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
 
     if (toSave.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pilih minimal satu bahan dengan jumlah > 0')),
+        const SnackBar(
+            content: Text(
+                'Tidak ada bahan yang dikirim ke kulkas. Perubahan daftar tersimpan.')),
       );
+      Navigator.pop(context);
       return;
     }
     setState(() => _saving = true);
@@ -850,19 +884,26 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                             ),
                           ),
                         ),
-                        if (items[index]['isCustom'] == true)
-                          IconButton(
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                items.removeAt(index);
-                              });
-                            },
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.white,
+                            size: 18,
                           ),
+                          onPressed: () async {
+                            final name = items[index]['name']?.toString() ?? '';
+                            final backendCategory = _mapCategoryToBackend(
+                                selectedCategory);
+                            final key = _buildHiddenKey(
+                                name, backendCategory);
+                            await OfflineCacheService
+                                .addHiddenIngredientKey(key);
+                            setState(() {
+                              _hiddenIngredientKeys.add(key);
+                              items.removeAt(index);
+                            });
+                          },
+                        ),
                       ],
                     ),
                   ],
