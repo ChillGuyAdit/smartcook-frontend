@@ -21,6 +21,7 @@ class _SearchPageState extends State<SearchPage> {
   Timer? _debounce;
   bool _isOfflineFallback = false;
   static const String _fallbackAsset = 'image/jagung_bowl.png';
+  bool _useGlobalSearch = false;
 
   String _norm(String s) =>
       s.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
@@ -75,18 +76,17 @@ class _SearchPageState extends State<SearchPage> {
     final q = query.trim();
     if (q.isEmpty) return;
     final res = await ApiService.get(
-      '/api/recipes/query',
+      _useGlobalSearch ? '/api/recipes/global-search' : '/api/recipes/query',
       queryParameters: {'q': q},
     );
     if (!mounted) return;
     if (res.success && res.data is Map) {
       final data = res.data as Map;
-      final results = data['results'];
+      final results = _useGlobalSearch ? data : data['results'];
       if (results is List) {
-        final list = results
-            .map((e) => Map<String, dynamic>.from(e as Map))
-            .toList();
-        final key = 'search_${_norm(q)}';
+        final list =
+            results.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        final key = 'search_${_norm(q)}${_useGlobalSearch ? "_global" : ""}';
         await OfflineCacheService.saveRecipeList(key, list);
         setState(() {
           _results = list;
@@ -106,44 +106,70 @@ class _SearchPageState extends State<SearchPage> {
       _isOfflineFallback = false;
     });
 
-    // Generate + simpan (server)
-    final res = await ApiService.get(
-      '/api/recipes/ai-search',
-      queryParameters: {'q': query},
-    );
-    if (!mounted) return;
-
-    List<Map<String, dynamic>> list = [];
-    if (res.success && res.data != null) {
-      final data = res.data;
-      if (data is Map) {
-        final results = data['results'];
-        if (results is List) {
-          list =
-              results.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        } else if (data['generated'] is Map) {
-          list = [Map<String, dynamic>.from(data['generated'] as Map)];
-        }
-      } else if (data is List) {
-        list = data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      }
-    } else {
-      // Offline fallback: pakai cache yang ada
-      await _applyCachedForTyping(query);
+    if (_useGlobalSearch) {
+      final res = await ApiService.get(
+        '/api/recipes/global-search',
+        queryParameters: {'q': query},
+      );
       if (!mounted) return;
-      setState(() => _loading = false);
-      return;
+      List<Map<String, dynamic>> list = [];
+      if (res.success && res.data is List) {
+        list = (res.data as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+      } else {
+        await _applyCachedForTyping(query);
+        if (!mounted) return;
+        setState(() => _loading = false);
+        return;
+      }
+      final key = 'search_${_norm(query)}_global';
+      await OfflineCacheService.saveRecipeList(key, list);
+      await OfflineCacheService.addRecentQuery(query);
+      await _loadRecents();
+      setState(() {
+        _results = list;
+        _loading = false;
+      });
+    } else {
+      final res = await ApiService.get(
+        '/api/recipes/ai-search',
+        queryParameters: {'q': query},
+      );
+      if (!mounted) return;
+
+      List<Map<String, dynamic>> list = [];
+      if (res.success && res.data != null) {
+        final data = res.data;
+        if (data is Map) {
+          final results = data['results'];
+          if (results is List) {
+            list = results
+                .map((e) => Map<String, dynamic>.from(e as Map))
+                .toList();
+          } else if (data['generated'] is Map) {
+            list = [Map<String, dynamic>.from(data['generated'] as Map)];
+          }
+        } else if (data is List) {
+          list = data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        }
+      } else {
+        await _applyCachedForTyping(query);
+        if (!mounted) return;
+        setState(() => _loading = false);
+        return;
+      }
+
+      final key = 'search_${_norm(query)}';
+      await OfflineCacheService.saveRecipeList(key, list);
+      await OfflineCacheService.addRecentQuery(query);
+      await _loadRecents();
+
+      setState(() {
+        _results = list;
+        _loading = false;
+      });
     }
-
-    final key = 'search_${_norm(query)}';
-    await OfflineCacheService.saveRecipeList(key, list);
-    await OfflineCacheService.addRecentQuery(query);
-    await _loadRecents();
-
-    setState(() {
-      _results = list;
-      _loading = false;
-    });
   }
 
   @override
@@ -155,27 +181,72 @@ class _SearchPageState extends State<SearchPage> {
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child: TextField(
-                controller: _controller,
-                decoration: InputDecoration(
-                  hintText: 'Cari resep...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _controller,
+                          decoration: InputDecoration(
+                            hintText: 'Cari resep...',
+                            prefixIcon: const Icon(Icons.search),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onChanged: (v) async {
+                            await _applyCachedForTyping(v);
+                            _debounce?.cancel();
+                            _debounce =
+                                Timer(const Duration(milliseconds: 350), () {
+                              _backgroundRefreshExisting(v);
+                            });
+                          },
+                          onSubmitted: _submitGenerate,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'Global',
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.black54),
+                          ),
+                          Switch(
+                            value: _useGlobalSearch,
+                            onChanged: (v) {
+                              setState(() {
+                                _useGlobalSearch = v;
+                              });
+                              if (_controller.text.trim().isNotEmpty) {
+                                _backgroundRefreshExisting(
+                                    _controller.text.trim());
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                onChanged: (v) async {
-                  await _applyCachedForTyping(v);
-                  _debounce?.cancel();
-                  _debounce = Timer(const Duration(milliseconds: 350), () {
-                    _backgroundRefreshExisting(v);
-                  });
-                },
-                onSubmitted: _submitGenerate,
+                  if (_useGlobalSearch)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Mode global: menampilkan resep yang sudah ada di database dari semua user (tetap disesuaikan alergi dan preferensimu).',
+                        style:
+                            TextStyle(fontSize: 11, color: Colors.black54),
+                      ),
+                    ),
+                ],
               ),
             ),
             Expanded(

@@ -60,7 +60,8 @@ class _MasakanPageState extends State<MasakanPage> {
   }
 
   Future<void> _loadRecipe() async {
-    final res = await ApiService.get('/api/recipes/${widget.recipeId}');
+    final res =
+        await ApiService.get('/api/recipes/with-fridge/${widget.recipeId}');
     if (!mounted) return;
     if (res.success && res.data != null) {
       final r = res.data as Map<String, dynamic>;
@@ -76,9 +77,17 @@ class _MasakanPageState extends State<MasakanPage> {
         final cook = r['cook_time'] ?? 0;
         _displayTime = '${prep + cook}m';
         _ingredients = (r['ingredients'] as List?)
-                ?.map((e) => e is Map
-                    ? Map<String, dynamic>.from(e)
-                    : <String, dynamic>{'name': e.toString()})
+                ?.map((e) {
+                  if (e is Map) {
+                    final m = Map<String, dynamic>.from(e);
+                    m['in_fridge'] = e['in_fridge'] == true;
+                    return m;
+                  }
+                  return <String, dynamic>{
+                    'name': e.toString(),
+                    'in_fridge': false,
+                  };
+                })
                 .toList() ??
             [];
         _steps = (r['steps'] as List?)
@@ -108,9 +117,17 @@ class _MasakanPageState extends State<MasakanPage> {
           final cook = cached['cook_time'] ?? 0;
           _displayTime = '${prep + cook}m';
           _ingredients = (cached['ingredients'] as List?)
-                  ?.map((e) => e is Map
-                      ? Map<String, dynamic>.from(e)
-                      : <String, dynamic>{'name': e.toString()})
+                  ?.map((e) {
+                    if (e is Map) {
+                      final m = Map<String, dynamic>.from(e);
+                      m['in_fridge'] = e['in_fridge'] == true;
+                      return m;
+                    }
+                    return <String, dynamic>{
+                      'name': e.toString(),
+                      'in_fridge': false,
+                    };
+                  })
                   .toList() ??
               [];
           _steps = (cached['steps'] as List?)
@@ -522,6 +539,7 @@ class _MasakanPageState extends State<MasakanPage> {
                                 final text = qty != null
                                     ? '$nama ($qty)'
                                     : nama.toString();
+                                final available = bahan['in_fridge'] == true;
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: Row(
@@ -536,8 +554,13 @@ class _MasakanPageState extends State<MasakanPage> {
                                               color: Colors.black87),
                                         ),
                                       ),
-                                      const Icon(Icons.circle,
-                                          color: Colors.green, size: 12),
+                                      Icon(
+                                        Icons.circle,
+                                        color: available
+                                            ? Colors.green
+                                            : Colors.red,
+                                        size: 12,
+                                      ),
                                     ],
                                   ),
                                 );
@@ -550,7 +573,40 @@ class _MasakanPageState extends State<MasakanPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: () {},
+                        onPressed: () async {
+                          if (widget.recipeId == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content:
+                                      Text('Resep tidak memiliki ID valid')),
+                            );
+                            return;
+                          }
+                          final res = await ApiService.post(
+                            '/api/fridge/bulk-from-recipe/${widget.recipeId}',
+                            useAuth: true,
+                          );
+                          if (!mounted) return;
+                          if (res.success) {
+                            final createdCount = res.data is Map<String, dynamic>
+                                ? (res.data['createdCount'] ?? 0) as int
+                                : 0;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    '$createdCount bahan ditambahkan ke kulkas'),
+                              ),
+                            );
+                            await _loadRecipe();
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(res.message ??
+                                    'Gagal menambahkan bahan ke kulkas'),
+                              ),
+                            );
+                          }
+                        },
                         icon:
                             const Icon(Icons.shopping_cart_outlined, size: 20),
                         label: const Text(

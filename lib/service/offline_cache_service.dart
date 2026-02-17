@@ -8,6 +8,7 @@ class OfflineCacheService {
   static const _kListByKey = 'recipe_list_v1:'; // + key
   static const _kPendingOps = 'pending_operations_v1';
   static const _kFavoriteIds = 'local_favorites_ids_v1';
+  static const _kGlobalIngredients = 'global_ingredients_v1';
 
   static String _norm(String s) =>
       s.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
@@ -69,6 +70,30 @@ class OfflineCacheService {
       if (r != null) out.add(r);
     }
     return out;
+  }
+
+  static Future<void> saveGlobalIngredients(
+      List<Map<String, dynamic>> ingredients) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kGlobalIngredients, jsonEncode(ingredients));
+  }
+
+  static Future<List<Map<String, dynamic>>> getGlobalIngredients() async {
+    final prefs = await SharedPreferences.getInstance();
+    final s = prefs.getString(_kGlobalIngredients);
+    if (s == null || s.isEmpty) return [];
+    try {
+      final decoded = jsonDecode(s);
+      if (decoded is List) {
+        return decoded
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
   }
 
   /// Cari cepat dari cache: title mengandung query (case-insensitive)

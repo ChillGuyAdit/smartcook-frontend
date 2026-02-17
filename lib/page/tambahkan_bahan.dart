@@ -14,6 +14,7 @@ class TambahkanBahanPage extends StatefulWidget {
 class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
   String selectedCategory = '';
   bool _saving = false;
+  final TextEditingController _searchController = TextEditingController();
 
   // Data dengan field: 'id', 'name', 'count', 'isSelected'
   final Map<String, List<Map<String, dynamic>>> bahanData = {
@@ -262,6 +263,78 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    _loadGlobalIngredients();
+  }
+
+  Future<void> _loadGlobalIngredients() async {
+    final cached = await OfflineCacheService.getGlobalIngredients();
+    if (cached.isNotEmpty) {
+      _mergeGlobalIngredients(cached);
+    }
+    if (!mounted) {
+      setState(() {});
+      return;
+    }
+    final res = await ApiService.get('/api/ingredients', useAuth: false);
+    if (!mounted) return;
+    if (!res.success || res.data is! List) {
+      if (cached.isNotEmpty) {
+        setState(() {});
+      }
+      return;
+    }
+    final list = (res.data as List)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+    _mergeGlobalIngredients(list);
+    await OfflineCacheService.saveGlobalIngredients(list);
+    setState(() {});
+  }
+
+  void _mergeGlobalIngredients(List<Map<String, dynamic>> list) {
+    for (final ing in list) {
+      final name = ing['name']?.toString() ?? '';
+      final cat = ing['category']?.toString() ?? '';
+      if (name.isEmpty || cat.isEmpty) continue;
+      final label = _mapBackendToLabel(cat);
+      final groups = bahanData[label];
+      if (groups == null || groups.isEmpty) continue;
+      final items = groups.first['items'] as List<dynamic>? ?? [];
+      final lower = name.toLowerCase();
+      final exists = items.any((raw) {
+        final m = raw as Map;
+        return (m['name']?.toString().toLowerCase() ?? '') == lower;
+      });
+      if (exists) continue;
+      items.add({
+        'id': lower.replaceAll(RegExp(r'\s+'), '-'),
+        'name': name,
+        'count': 0,
+        'isSelected': false,
+        'isCustom': true,
+      });
+      groups.first['items'] = items;
+    }
+  }
+
+  String _mapBackendToLabel(String backend) {
+    switch (backend) {
+      case 'protein':
+        return 'Protein';
+      case 'karbo':
+        return 'Karbo';
+      case 'sayur':
+        return 'Sayur';
+      case 'bumbu':
+        return 'Bumbu';
+      default:
+        return backend;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     double baseWidth = 430;
@@ -292,19 +365,50 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: 20 * scale),
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'Cari bahan...',
-                  hintStyle: TextStyle(color: Colors.grey),
-                  prefixIcon: Icon(Icons.search, color: Colors.grey),
-                  filled: true,
-                  fillColor: Colors.grey[200],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide.none,
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText:
+                            'Cari atau ketik nama bahan baru (mis. \"Daun bawang\")',
+                        hintStyle: const TextStyle(color: Colors.grey),
+                        prefixIcon:
+                            const Icon(Icons.search, color: Colors.grey),
+                        filled: true,
+                        fillColor: Colors.grey[200],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 0),
+                      ),
+                    ),
                   ),
-                  contentPadding: EdgeInsets.symmetric(vertical: 0),
-                ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: _addManualIngredient,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColor().utama,
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 10 * scale, vertical: 10 * scale),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.add, size: 18, color: Colors.white),
+                    label: Text(
+                      'Tambah',
+                      style: TextStyle(
+                        fontSize: 12 * scale,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               SizedBox(height: 30 * scale),
               Text(
@@ -327,6 +431,24 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                 ],
               ),
               SizedBox(height: 30 * scale),
+              if (_searchController.text.trim().isNotEmpty &&
+                  selectedCategory.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.only(bottom: 12 * scale),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Bahan baru: "${_searchController.text.trim()}" akan disimpan sebagai ${selectedCategory.toLowerCase()}.',
+                          style: TextStyle(
+                            fontSize: 12 * scale,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Text(
                 'Daftar:',
                 style: TextStyle(
@@ -381,6 +503,57 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
     return cat.toLowerCase();
   }
 
+  void _addManualIngredient() {
+    final name = _searchController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Isi nama bahan terlebih dahulu')),
+      );
+      return;
+    }
+    if (selectedCategory.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pilih kategori bahan terlebih dahulu')),
+      );
+      return;
+    }
+
+    final categoryKey = selectedCategory;
+    final groups = bahanData[categoryKey];
+    if (groups == null || groups.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kategori tidak valid')),
+      );
+      return;
+    }
+    final items = groups.first['items'] as List<dynamic>? ?? [];
+    final lower = name.toLowerCase();
+    final alreadyExists = items.any((raw) {
+      final m = raw as Map;
+      return (m['name']?.toString().toLowerCase() ?? '') == lower;
+    });
+    if (alreadyExists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bahan sudah ada di daftar kategori ini')),
+      );
+      return;
+    }
+
+    final newItem = {
+      'id': lower.replaceAll(RegExp(r'\s+'), '-'),
+      'name': name,
+      'count': 1,
+      'isSelected': true,
+      'isCustom': true,
+    };
+
+    setState(() {
+      items.add(newItem);
+      groups.first['items'] = items;
+      _searchController.clear();
+    });
+  }
+
   Future<void> _simpanSemua() async {
     final toSave = <Map<String, dynamic>>[];
     for (final entry in bahanData.entries) {
@@ -403,6 +576,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
         }
       }
     }
+
     if (toSave.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Pilih minimal satu bahan dengan jumlah > 0')),
@@ -650,29 +824,46 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                       ),
                     ),
 
-                    // Quantity Badge (Tetap Terpisah)
-                    SizedBox(width: 10 * scale), // Spasi antara teks dan badge
-                    GestureDetector(
-                      onTap: () {
-                        _showQuantityDialog(context, items[index]);
-                      },
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 12 * scale, vertical: 4 * scale),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white70),
-                        ),
-                        child: Text(
-                          '${items[index]['count']} item',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14 * scale,
-                            fontWeight: FontWeight.bold,
+                    SizedBox(width: 10 * scale),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            _showQuantityDialog(context, items[index]);
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12 * scale, vertical: 4 * scale),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white70),
+                            ),
+                            child: Text(
+                              '${items[index]['count']} item',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14 * scale,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        if (items[index]['isCustom'] == true)
+                          IconButton(
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                items.removeAt(index);
+                              });
+                            },
+                          ),
+                      ],
                     ),
                   ],
                 ),

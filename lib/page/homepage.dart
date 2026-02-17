@@ -27,6 +27,7 @@ class _homepageState extends State<homepage> {
   List<Map<String, dynamic>> _favorites = [];
   List<Map<String, dynamic>> _fridgePreview = [];
   List<Map<String, dynamic>> _recommendations = [];
+  List<Map<String, dynamic>> _popularRecipes = [];
   Map<String, List<Map<String, dynamic>>> _byMeal = {};
   bool _loading = true;
 
@@ -87,6 +88,8 @@ class _homepageState extends State<homepage> {
     final fridgeRes = await ApiService.get('/api/fridge');
     final recRes = await ApiService.get('/api/recipes/recommendations',
         queryParameters: {'limit': '5'});
+    final popularRes = await ApiService.get('/api/recipes/popular',
+        queryParameters: {'limit': '10'});
     final breakfastRes =
         await ApiService.get('/api/recipes/by-meal/breakfast');
     final lunchRes = await ApiService.get('/api/recipes/by-meal/lunch');
@@ -117,6 +120,7 @@ class _homepageState extends State<homepage> {
     final favoritesOnline = _parseRecipeList(favRes.data);
     final fridgeOnline = _parseFridgeList(fridgeRes.data);
     final recOnline = _parseRecipeList(recRes.data);
+    final popularOnline = _parseRecipeList(popularRes.data);
     final breakfastOnline = _parseRecipeList(breakfastRes.data);
     final lunchOnline = _parseRecipeList(lunchRes.data);
     final dinnerOnline = _parseRecipeList(dinnerRes.data);
@@ -127,6 +131,9 @@ class _homepageState extends State<homepage> {
     }
     if (recOnline.isNotEmpty) {
       await OfflineCacheService.saveRecipeList('home_recommendations', recOnline);
+    }
+    if (popularOnline.isNotEmpty) {
+      await OfflineCacheService.saveRecipeList('home_popular', popularOnline);
     }
     if (breakfastOnline.isNotEmpty) {
       await OfflineCacheService.saveRecipeList('by_meal_breakfast', breakfastOnline);
@@ -145,6 +152,9 @@ class _homepageState extends State<homepage> {
     final recs = recOnline.isNotEmpty
         ? recOnline
         : await OfflineCacheService.getRecipeList('home_recommendations');
+    final popular = popularOnline.isNotEmpty
+        ? popularOnline
+        : await OfflineCacheService.getRecipeList('home_popular');
     final breakfast = breakfastOnline.isNotEmpty
         ? breakfastOnline
         : await OfflineCacheService.getRecipeList('by_meal_breakfast');
@@ -161,6 +171,7 @@ class _homepageState extends State<homepage> {
       _fridgePreview =
           fridgeOnline; // untuk kulkas, belum dicache (lebih dinamis)
       _recommendations = recs;
+      _popularRecipes = popular;
       _byMeal['breakfast'] = breakfast;
       _byMeal['lunch'] = lunch;
       _byMeal['dinner'] = dinner;
@@ -534,23 +545,25 @@ class _homepageState extends State<homepage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("Disimpan untukmu",
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87)),
-                    const SizedBox(height: 4),
-                    Text(
-                      _buildAllergySubtitle(),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.black54,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("Disimpan untukmu",
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87)),
+                      const SizedBox(height: 4),
+                      Text(
+                        _buildAllergySubtitle(),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 GestureDetector(
                   onTap: () {
@@ -616,6 +629,52 @@ class _homepageState extends State<homepage> {
               },
             ),
             const SizedBox(height: 35),
+
+            // --- POPULAR RECIPES SECTION ---
+            if (_popularRecipes.isNotEmpty) ...[
+              const Text("10 Resep Terpopuler",
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87)),
+              const SizedBox(height: 15),
+              Column(
+                children: _popularRecipes.take(10).map((r) {
+                  final id = r['_id']?.toString();
+                  final hits = r['popularity_count'] ?? 0;
+                  final desc = (r['description'] ?? '').toString();
+                  final subtitle = hits > 0
+                      ? '${desc.isNotEmpty ? '$desc\n' : ''}Sudah dilihat $hits kali oleh pengguna.'
+                      : desc;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: _buildBigRecommendationCard(
+                      title: r['title']?.toString() ?? 'Resep',
+                      imageUrl: r['image_url']?.toString(),
+                      subtitle: subtitle,
+                      calories: r['nutrition_info'] is Map
+                          ? (r['nutrition_info'] as Map)['calories']
+                              ?.toString()
+                          : null,
+                      time:
+                          (r['prep_time'] ?? 0) + (r['cook_time'] ?? 0),
+                      onTap: id == null
+                          ? null
+                          : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      MasakanPage(recipeId: id),
+                                ),
+                              );
+                            },
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 35),
+            ],
 
             // --- RECOMMENDATION SECTION ---
             const Text("5 Rekomendasi Masakan",
