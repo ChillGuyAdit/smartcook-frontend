@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:smartcook/auth/signIn.dart';
 import 'package:smartcook/helper/color.dart';
@@ -5,9 +6,7 @@ import 'package:smartcook/page/homepage.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/auth_service.dart';
 import 'package:smartcook/service/token_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smartcook/view/onboarding/mainBoarding.dart';
-import 'package:flutter/foundation.dart';
 
 class signup extends StatefulWidget {
   const signup({super.key});
@@ -19,7 +18,6 @@ class signup extends StatefulWidget {
 class _signupState extends State<signup> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final AuthService _authService = AuthService();
-
   final TextEditingController _kontrolUsername = TextEditingController();
   final TextEditingController _kontrolEmail = TextEditingController();
   final TextEditingController _kontrolPassword = TextEditingController();
@@ -57,10 +55,11 @@ class _signupState extends State<signup> {
       );
       if (!mounted) return;
       setState(() => _loading = false);
-      debugPrint('Register response: success=${res.success}, statusCode=${res.statusCode}');
+      debugPrint(
+          'Register response: success=${res.success}, statusCode=${res.statusCode}');
       debugPrint('Register response data: ${res.data}');
       debugPrint('Register response message: ${res.message}');
-      
+
       if (!res.success) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -69,15 +68,17 @@ class _signupState extends State<signup> {
         }
         return;
       }
-      
+
       final data = res.data;
       debugPrint('Data type: ${data.runtimeType}');
       debugPrint('Data content: $data');
-      
+
       if (data == null || data is! Map<String, dynamic>) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Format respons tidak valid. Tipe: ${data.runtimeType}, Data: ${data?.toString() ?? 'null'}')),
+            SnackBar(
+                content: Text(
+                    'Format respons tidak valid. Tipe: ${data.runtimeType}, Data: ${data?.toString() ?? 'null'}')),
           );
         }
         return;
@@ -102,10 +103,10 @@ class _signupState extends State<signup> {
         }
         return;
       }
-      
+
       final onboardingCompleted = user?['onboarding_completed'] == true;
       if (!mounted) return;
-      
+
       try {
         if (onboardingCompleted) {
           Navigator.of(context).pushReplacement(
@@ -231,13 +232,13 @@ class _signupState extends State<signup> {
                                 ),
                               )
                             : Text(
-                          'Sign Up',
-                          style: TextStyle(
-                            color: AppColor().putih,
-                            fontSize: 22 * scale,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                                'Sign Up',
+                                style: TextStyle(
+                                  color: AppColor().putih,
+                                  fontSize: 22 * scale,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ],
                   ),
@@ -281,12 +282,14 @@ class _signupState extends State<signup> {
                           UserCredential? userCredential =
                               await _authService.signinWithGoogle();
                           if (userCredential == null) return;
-                          final idToken = await userCredential.user?.getIdToken();
+                          final idToken =
+                              await userCredential.user?.getIdToken();
                           if (idToken == null || idToken.isEmpty) {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                    content: Text('Gagal mendapatkan token Google')),
+                                    content:
+                                        Text('Gagal mendapatkan token Google')),
                               );
                             }
                             return;
@@ -302,14 +305,16 @@ class _signupState extends State<signup> {
                           if (!res.success) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                  content: Text(res.message ?? 'Login Google gagal')),
+                                  content: Text(
+                                      res.message ?? 'Login Google gagal')),
                             );
                             return;
                           }
                           final data = res.data;
                           if (data == null || data is! Map<String, dynamic>) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Format respons tidak valid')),
+                              const SnackBar(
+                                  content: Text('Format respons tidak valid')),
                             );
                             return;
                           }
@@ -317,7 +322,8 @@ class _signupState extends State<signup> {
                           final user = data['user'] as Map<String, dynamic>?;
                           if (token == null || token.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Token tidak ditemukan')),
+                              const SnackBar(
+                                  content: Text('Token tidak ditemukan')),
                             );
                             return;
                           }
@@ -341,7 +347,9 @@ class _signupState extends State<signup> {
                           if (!mounted) return;
                           setState(() => _loading = false);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Terjadi kesalahan: ${e.toString()}')),
+                            SnackBar(
+                                content:
+                                    Text('Terjadi kesalahan: ${e.toString()}')),
                           );
                         }
                       },

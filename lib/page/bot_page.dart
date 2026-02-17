@@ -21,14 +21,14 @@ class _BotPageState extends State<BotPage> {
   List<Map<String, dynamic>> _messages = [];
   bool _loading = true;
   bool _sending = false;
-  
+  bool _streamingOrTyping = false; // true sampai stream + animasi ketik selesai
+
   // State untuk animasi mengetik
-  String _bufferedContent = ''; // Semua chunk yang diterima
-  String _displayedContent = ''; // Konten yang sedang ditampilkan dengan animasi
-  bool _isTyping = false; // Apakah sedang animasi mengetik
-  Timer? _typingTimer; // Timer untuk mengontrol kecepatan mengetik
-  static const int _wordsPerSecond = 4; // Kecepatan mengetik: 4 kata per detik
-  static const int _delayPerWord = 1000 ~/ _wordsPerSecond; // ~250ms per kata
+  String _bufferedContent = '';
+  String _displayedContent = '';
+  bool _isTyping = false;
+  Timer? _typingTimer;
+  static const int _typingIntervalMs = 100;
 
   @override
   void initState() {
@@ -72,52 +72,56 @@ class _BotPageState extends State<BotPage> {
   void _startTypingAnimation() {
     if (_isTyping) return;
     _isTyping = true;
-    _displayedContent = '';
-    
+    if (_displayedContent.isEmpty) _displayedContent = '';
+
     _typingTimer?.cancel();
-    _typingTimer = Timer.periodic(Duration(milliseconds: _delayPerWord), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      
-      // Cek apakah masih ada konten yang belum ditampilkan
-      if (_bufferedContent.length > _displayedContent.length) {
-        // Ambil kata berikutnya dari buffer
-        final remaining = _bufferedContent.substring(_displayedContent.length);
-        final words = remaining.split(RegExp(r'(\s+)'));
-        
-        if (words.isNotEmpty && words[0].isNotEmpty) {
-          setState(() {
-            _displayedContent += words[0];
-            if (_messages.isNotEmpty && _messages.last['role'] == 'model') {
-              _messages.last['content'] = _displayedContent;
-            }
-          });
-          _scrollToBottom();
-        } else if (words.length > 1 && words[1].isNotEmpty) {
-          // Handle spasi di awal
-          setState(() {
-            _displayedContent += words[0] + words[1];
-            if (_messages.isNotEmpty && _messages.last['role'] == 'model') {
-              _messages.last['content'] = _displayedContent;
-            }
-          });
-          _scrollToBottom();
+    _typingTimer = Timer.periodic(
+      const Duration(milliseconds: _typingIntervalMs),
+      (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
         }
-      } else {
-        // Semua konten sudah ditampilkan
-        timer.cancel();
-        _isTyping = false;
-      }
-    });
+        if (_bufferedContent.length <= _displayedContent.length) {
+          timer.cancel();
+          _isTyping = false;
+          if (mounted) {
+            setState(() {
+              _sending = false;
+              _streamingOrTyping = false;
+            });
+          }
+          return;
+        }
+        final remaining =
+            _bufferedContent.substring(_displayedContent.length);
+        if (remaining.isEmpty) return;
+        
+        // Ambil chunk karakter dengan mempertahankan semua karakter termasuk spasi, newline, dan markdown
+        // Menggunakan chunk size yang lebih kecil untuk animasi yang lebih halus
+        // Chunk size sekitar 30-50 karakter per tick memberikan efek ketik yang natural
+        const chunkSize = 50;
+        final toAdd = remaining.length > chunkSize 
+            ? remaining.substring(0, chunkSize)
+            : remaining;
+        
+        if (toAdd.isEmpty) return;
+        
+        setState(() {
+          _displayedContent += toAdd;
+          if (_messages.isNotEmpty && _messages.last['role'] == 'model') {
+            _messages.last['content'] = _displayedContent;
+          }
+        });
+        _scrollToBottom();
+      },
+    );
   }
 
   void _stopTypingAnimation() {
     _typingTimer?.cancel();
     _typingTimer = null;
     _isTyping = false;
-    // Tampilkan semua konten yang tersisa
     if (_bufferedContent.length > _displayedContent.length) {
       setState(() {
         _displayedContent = _bufferedContent;
@@ -128,11 +132,15 @@ class _BotPageState extends State<BotPage> {
     }
   }
 
+  static const double _scrollThreshold = 100;
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (!_scrollController.hasClients) return;
+      final pos = _scrollController.position;
+      if (pos.pixels >= pos.maxScrollExtent - _scrollThreshold) {
         _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+          pos.maxScrollExtent,
           duration: const Duration(milliseconds: 100),
           curve: Curves.easeOut,
         );
@@ -142,18 +150,27 @@ class _BotPageState extends State<BotPage> {
 
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
-    if (text.isEmpty || _sending) return;
+    if (text.isEmpty || _sending || _streamingOrTyping) return;
     _controller.clear();
-    
-    // Reset state untuk animasi mengetik
+
     _stopTypingAnimation();
     _bufferedContent = '';
     _displayedContent = '';
-    
+
     setState(() {
       _messages.add({'role': 'user', 'content': text});
       _messages.add({'role': 'model', 'content': ''});
       _sending = true;
+      _streamingOrTyping = true;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
     });
 
     final uri = Uri.parse('${ApiConfig.baseUrl}/api/chat/message-stream');
@@ -188,6 +205,7 @@ class _BotPageState extends State<BotPage> {
         setState(() {
           _messages.removeLast();
           _sending = false;
+          _streamingOrTyping = false;
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errMsg)));
@@ -223,29 +241,18 @@ class _BotPageState extends State<BotPage> {
             final data = jsonDecode(dataLine) as Map<String, dynamic>?;
             if (data == null) continue;
             
-            // Handle heartbeat: koneksi sudah siap
-            if (data['status'] == 'connected') {
-              setState(() {
-                _sending = false; // Hilangkan loading indicator
-              });
-              continue;
-            }
+            // Heartbeat: jangan ubah _sending/_streamingOrTyping; tombol tetap disabled
+            if (data['status'] == 'connected') continue;
             
             // Handle error
             if (data['error'] != null) {
               throw Exception(data['error'].toString());
             }
             
-            // Handle done: streaming selesai
+            // Done: set buffer saja; timer tetap jalan sampai tampil semua pelan-pelan
             if (data['done'] == true && data['fullReply'] != null) {
               _bufferedContent = data['fullReply'].toString();
-              _stopTypingAnimation();
-              // Pastikan semua konten ditampilkan
-              setState(() {
-                if (_messages.isNotEmpty && _messages.last['role'] == 'model') {
-                  _messages.last['content'] = _bufferedContent;
-                }
-              });
+              if (!_isTyping) _startTypingAnimation();
               break;
             }
             
@@ -267,11 +274,11 @@ class _BotPageState extends State<BotPage> {
         }
       }
 
-      // Pastikan animasi berhenti dan semua konten ditampilkan
-      _stopTypingAnimation();
-      
-      if (mounted) {
-        setState(() => _sending = false);
+      if (mounted && !_isTyping) {
+        setState(() {
+          _sending = false;
+          _streamingOrTyping = false;
+        });
         _scrollToBottom();
       }
     } catch (e) {
@@ -280,6 +287,7 @@ class _BotPageState extends State<BotPage> {
       setState(() {
         _messages.removeLast();
         _sending = false;
+        _streamingOrTyping = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gagal mengirim: ${e.toString()}')),
@@ -393,6 +401,7 @@ class _BotPageState extends State<BotPage> {
                                       ),
                                     )
                                   : MarkdownBody(
+                                      key: ValueKey('${index}_${m['content']?.toString().length ?? 0}'),
                                       data: m['content']?.toString() ?? '',
                                       styleSheet: MarkdownStyleSheet(
                                         p: const TextStyle(
@@ -436,13 +445,15 @@ class _BotPageState extends State<BotPage> {
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 12),
                       ),
-                      onSubmitted: (_) => _sendMessage(),
+                      onSubmitted: (_) {
+                        if (!_sending && !_streamingOrTyping) _sendMessage();
+                      },
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton.filled(
-                    onPressed: _sending ? null : _sendMessage,
-                    icon: _sending
+                    onPressed: (_sending || _streamingOrTyping) ? null : _sendMessage,
+                    icon: (_sending || _streamingOrTyping)
                         ? const SizedBox(
                             width: 22,
                             height: 22,
