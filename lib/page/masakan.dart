@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_cache_service.dart';
+import 'package:smartcook/service/offline_manager.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MasakanPage extends StatefulWidget {
@@ -160,11 +161,36 @@ class _MasakanPageState extends State<MasakanPage> {
       );
       return;
     }
+    final isOffline = OfflineManager.isOffline.value;
+    if (isOffline) {
+      // Simpan operasi ke antrian dan update UI lokal saja
+      setState(() => isSaved = !isSaved);
+      await OfflineCacheService.addPendingOperation(
+        method: isSaved ? 'POST' : 'DELETE',
+        path: '/api/favorites/${widget.recipeId}',
+      );
+      // Update cache favorit lokal supaya SavePage bisa langsung baca
+      await OfflineCacheService.setFavoriteLocally(
+        widget.recipeId!,
+        isSaved,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Perubahan favorit akan disinkron saat online'),
+        ),
+      );
+      return;
+    }
+
     if (isSaved) {
       final res = await ApiService.delete('/api/favorites/${widget.recipeId}');
       if (!mounted) return;
       if (res.success) {
         setState(() => isSaved = false);
+        await OfflineCacheService.setFavoriteLocally(
+          widget.recipeId!,
+          false,
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Resep dihapus dari simpanan")),
         );
@@ -181,6 +207,10 @@ class _MasakanPageState extends State<MasakanPage> {
       if (!mounted) return;
       if (res.success) {
         setState(() => isSaved = true);
+        await OfflineCacheService.setFavoriteLocally(
+          widget.recipeId!,
+          true,
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Resep berhasil disimpan!")),
         );
@@ -207,6 +237,11 @@ class _MasakanPageState extends State<MasakanPage> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
+    final title = _displayTitle.trim();
+    final isLongTitle = title.length > 32;
+    final isVeryLongTitle = title.length > 48;
+    final headerHeight = isVeryLongTitle ? 380.0 : (isLongTitle ? 350.0 : 320.0);
+    final titleFontSize = isVeryLongTitle ? 20.0 : (isLongTitle ? 22.0 : 26.0);
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: SingleChildScrollView(
@@ -218,7 +253,7 @@ class _MasakanPageState extends State<MasakanPage> {
               children: [
                 // 1. Background Gambar yang di-Blur
                 Container(
-                  height: 320,
+                  height: headerHeight,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     image: DecorationImage(
@@ -281,7 +316,7 @@ class _MasakanPageState extends State<MasakanPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 24),
 
                         // Informasi Teks (Kiri) & Gambar Circle (Kanan)
                         Row(
@@ -293,12 +328,14 @@ class _MasakanPageState extends State<MasakanPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    _displayTitle,
-                                    style: const TextStyle(
-                                      fontSize: 26,
+                                    title.isEmpty ? 'Resep' : title,
+                                    maxLines: isVeryLongTitle ? 3 : 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: titleFontSize,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
-                                      height: 1.2,
+                                      height: 1.15,
                                     ),
                                   ),
                                   const SizedBox(height: 16),
@@ -379,7 +416,7 @@ class _MasakanPageState extends State<MasakanPage> {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(22),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.03),

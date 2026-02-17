@@ -10,6 +10,7 @@ import 'save_page.dart';
 import 'profile_page.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_cache_service.dart';
+import 'package:smartcook/service/offline_manager.dart';
 
 class homepage extends StatefulWidget {
   const homepage({super.key});
@@ -36,16 +37,27 @@ class _homepageState extends State<homepage> {
 
   Future<void> _loadData() async {
     setState(() => _loading = true);
+
     final profileRes = await ApiService.get('/api/user/profile');
-    final favRes = await ApiService.get('/api/favorites', queryParameters: {'limit': '4'});
+    final favRes =
+        await ApiService.get('/api/favorites', queryParameters: {'limit': '4'});
     final fridgeRes = await ApiService.get('/api/fridge');
-    final recRes = await ApiService.get('/api/recipes/recommendations', queryParameters: {'limit': '5'});
-    final breakfastRes = await ApiService.get('/api/recipes/by-meal/breakfast');
+    final recRes = await ApiService.get('/api/recipes/recommendations',
+        queryParameters: {'limit': '5'});
+    final breakfastRes =
+        await ApiService.get('/api/recipes/by-meal/breakfast');
     final lunchRes = await ApiService.get('/api/recipes/by-meal/lunch');
     final dinnerRes = await ApiService.get('/api/recipes/by-meal/dinner');
+
+    final maybeOffline = !profileRes.success &&
+        (profileRes.statusCode == null ||
+            (profileRes.message ?? '').contains('koneksi'));
+
     if (!mounted) return;
     final profile = profileRes.data as Map<String, dynamic>?;
-    if (profile != null && profile['name'] != null) _userName = profile['name'].toString();
+    if (profile != null && profile['name'] != null) {
+      _userName = profile['name'].toString();
+    }
 
     // Parse online
     final favoritesOnline = _parseRecipeList(favRes.data);
@@ -90,8 +102,10 @@ class _homepageState extends State<homepage> {
         : await OfflineCacheService.getRecipeList('by_meal_dinner');
 
     setState(() {
+      OfflineManager.setOffline(maybeOffline);
       _favorites = favorites;
-      _fridgePreview = fridgeOnline; // untuk kulkas, belum dicache (lebih dinamis)
+      _fridgePreview =
+          fridgeOnline; // untuk kulkas, belum dicache (lebih dinamis)
       _recommendations = recs;
       _byMeal['breakfast'] = breakfast;
       _byMeal['lunch'] = lunch;

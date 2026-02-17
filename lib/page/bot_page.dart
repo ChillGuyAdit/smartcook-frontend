@@ -6,6 +6,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:http/http.dart' as http;
 import 'package:smartcook/config/api_config.dart';
 import 'package:smartcook/service/api_service.dart';
+import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/service/token_service.dart';
 
 class BotPage extends StatefulWidget {
@@ -93,20 +94,19 @@ class _BotPageState extends State<BotPage> {
           }
           return;
         }
-        final remaining =
-            _bufferedContent.substring(_displayedContent.length);
+        final remaining = _bufferedContent.substring(_displayedContent.length);
         if (remaining.isEmpty) return;
-        
+
         // Ambil chunk karakter dengan mempertahankan semua karakter termasuk spasi, newline, dan markdown
         // Menggunakan chunk size yang lebih kecil untuk animasi yang lebih halus
         // Chunk size sekitar 30-50 karakter per tick memberikan efek ketik yang natural
         const chunkSize = 50;
-        final toAdd = remaining.length > chunkSize 
+        final toAdd = remaining.length > chunkSize
             ? remaining.substring(0, chunkSize)
             : remaining;
-        
+
         if (toAdd.isEmpty) return;
-        
+
         setState(() {
           _displayedContent += toAdd;
           if (_messages.isNotEmpty && _messages.last['role'] == 'model') {
@@ -190,9 +190,9 @@ class _BotPageState extends State<BotPage> {
     try {
       final client = http.Client();
       final response = await client.send(request).timeout(
-        const Duration(seconds: 120),
-        onTimeout: () => throw Exception('Timeout'),
-      );
+            const Duration(seconds: 120),
+            onTimeout: () => throw Exception('Timeout'),
+          );
       if (!mounted) return;
 
       if (response.statusCode != 200) {
@@ -208,23 +208,24 @@ class _BotPageState extends State<BotPage> {
           _streamingOrTyping = false;
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errMsg)));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(errMsg)));
         }
         return;
       }
 
       String buffer = '';
       bool firstChunkReceived = false;
-      
+
       await for (final chunk in response.stream.transform(utf8.decoder)) {
         if (!mounted) break;
         buffer += chunk;
         final parts = buffer.split('\n\n');
         buffer = parts.removeLast();
-        
+
         for (final part in parts) {
           if (part.trim().isEmpty) continue;
-          
+
           // Parse SSE format: "data: {...}"
           final lines = part.split('\n');
           String? dataLine;
@@ -234,33 +235,34 @@ class _BotPageState extends State<BotPage> {
               break;
             }
           }
-          
-          if (dataLine == null || dataLine.isEmpty || dataLine == '[DONE]') continue;
-          
+
+          if (dataLine == null || dataLine.isEmpty || dataLine == '[DONE]')
+            continue;
+
           try {
             final data = jsonDecode(dataLine) as Map<String, dynamic>?;
             if (data == null) continue;
-            
+
             // Heartbeat: jangan ubah _sending/_streamingOrTyping; tombol tetap disabled
             if (data['status'] == 'connected') continue;
-            
+
             // Handle error
             if (data['error'] != null) {
               throw Exception(data['error'].toString());
             }
-            
+
             // Done: set buffer saja; timer tetap jalan sampai tampil semua pelan-pelan
             if (data['done'] == true && data['fullReply'] != null) {
               _bufferedContent = data['fullReply'].toString();
               if (!_isTyping) _startTypingAnimation();
               break;
             }
-            
+
             // Handle text chunk: tambahkan ke buffer
             final delta = data['text']?.toString();
             if (delta != null && delta.isNotEmpty) {
               _bufferedContent += delta;
-              
+
               // Mulai animasi mengetik setelah chunk pertama
               if (!firstChunkReceived) {
                 firstChunkReceived = true;
@@ -305,6 +307,27 @@ class _BotPageState extends State<BotPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (OfflineManager.isOffline.value) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFFAFAFA),
+        appBar: AppBar(
+          title: const Text('Bot AI'),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black87,
+          elevation: 0,
+        ),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Bot AI tidak tersedia saat offline.\nSilakan sambungkan internet untuk melanjutkan.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.black54),
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
@@ -356,8 +379,7 @@ class _BotPageState extends State<BotPage> {
                             Text(
                               "Tanya apa saja tentang masak",
                               style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.black54),
+                                  fontSize: 16, color: Colors.black54),
                             ),
                           ],
                         ),
@@ -391,7 +413,8 @@ class _BotPageState extends State<BotPage> {
                                 ],
                               ),
                               constraints: BoxConstraints(
-                                  maxWidth: MediaQuery.of(context).size.width * 0.8),
+                                  maxWidth:
+                                      MediaQuery.of(context).size.width * 0.8),
                               child: isUser
                                   ? Text(
                                       m['content']?.toString() ?? '',
@@ -401,7 +424,8 @@ class _BotPageState extends State<BotPage> {
                                       ),
                                     )
                                   : MarkdownBody(
-                                      key: ValueKey('${index}_${m['content']?.toString().length ?? 0}'),
+                                      key: ValueKey(
+                                          '${index}_${m['content']?.toString().length ?? 0}'),
                                       data: m['content']?.toString() ?? '',
                                       styleSheet: MarkdownStyleSheet(
                                         p: const TextStyle(
@@ -452,7 +476,8 @@ class _BotPageState extends State<BotPage> {
                   ),
                   const SizedBox(width: 8),
                   IconButton.filled(
-                    onPressed: (_sending || _streamingOrTyping) ? null : _sendMessage,
+                    onPressed:
+                        (_sending || _streamingOrTyping) ? null : _sendMessage,
                     icon: (_sending || _streamingOrTyping)
                         ? const SizedBox(
                             width: 22,

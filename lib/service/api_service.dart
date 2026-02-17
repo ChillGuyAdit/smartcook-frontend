@@ -1,7 +1,9 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:smartcook/config/api_config.dart';
+import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/service/token_service.dart';
 
 class ApiService {
@@ -48,6 +50,8 @@ class ApiService {
       return ApiResponse(success: false, message: msg, statusCode: 401);
     }
     if (res.statusCode >= 200 && res.statusCode < 300) {
+      // Jika respons sukses, anggap koneksi online
+      OfflineManager.setOffline(false);
       // Backend mungkin mengembalikan data langsung atau dalam wrapper
       dynamic responseData = body;
       if (body is Map) {
@@ -89,6 +93,7 @@ class ApiService {
           .timeout(const Duration(seconds: 30));
       return _handleResponse(res);
     } catch (e) {
+      OfflineManager.setOffline(true);
       return ApiResponse(
         success: false,
         message: 'Periksa koneksi internet',
@@ -123,6 +128,7 @@ class ApiService {
       }
       return _handleResponse(res);
     } catch (e) {
+      OfflineManager.setOffline(true);
       return ApiResponse(
         success: false,
         message: 'Periksa koneksi internet: ${e.toString()}',
@@ -146,6 +152,7 @@ class ApiService {
           .timeout(const Duration(seconds: 30));
       return _handleResponse(res);
     } catch (e) {
+      OfflineManager.setOffline(true);
       return ApiResponse(
         success: false,
         message: 'Periksa koneksi internet',
@@ -164,6 +171,7 @@ class ApiService {
           .timeout(const Duration(seconds: 30));
       return _handleResponse(res);
     } catch (e) {
+      OfflineManager.setOffline(true);
       return ApiResponse(
         success: false,
         message: 'Periksa koneksi internet',

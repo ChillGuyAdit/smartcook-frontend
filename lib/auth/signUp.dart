@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:smartcook/auth/signIn.dart';
+import 'package:smartcook/auth/google_set_password.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/page/homepage.dart';
 import 'package:smartcook/service/api_service.dart';
@@ -28,6 +29,32 @@ class _signupState extends State<signup> {
 
   bool _obscuretext = true;
   bool _loading = false;
+
+  Future<void> _handleAfterLogin(Map<String, dynamic>? user) async {
+    final onboardingCompleted = user?['onboarding_completed'] == true;
+    if (!mounted) return;
+    try {
+      if (onboardingCompleted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const homepage()),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (context, anim1, anim2) => const onboarding(),
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error navigating: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal navigasi: ${e.toString()}')),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -104,31 +131,7 @@ class _signupState extends State<signup> {
         return;
       }
 
-      final onboardingCompleted = user?['onboarding_completed'] == true;
-      if (!mounted) return;
-
-      try {
-        if (onboardingCompleted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const homepage()),
-          );
-        } else {
-          Navigator.of(context).pushReplacement(
-            PageRouteBuilder(
-              pageBuilder: (context, anim1, anim2) => const onboarding(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-            ),
-          );
-        }
-      } catch (e) {
-        debugPrint('Error navigating: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal navigasi: ${e.toString()}')),
-          );
-        }
-      }
+      await _handleAfterLogin(user);
     } catch (e, stackTrace) {
       debugPrint('Error in _submitData: $e');
       debugPrint('Stack trace: $stackTrace');
@@ -282,14 +285,20 @@ class _signupState extends State<signup> {
                           UserCredential? userCredential =
                               await _authService.signinWithGoogle();
                           if (userCredential == null) return;
-                          final idToken =
-                              await userCredential.user?.getIdToken();
-                          if (idToken == null || idToken.isEmpty) {
+                          final firebaseUser = userCredential.user;
+                          final email = firebaseUser?.email;
+                          final name = firebaseUser?.displayName;
+                          final uid = firebaseUser?.uid;
+                          final photoUrl = firebaseUser?.photoURL;
+                          if (email == null ||
+                              email.isEmpty ||
+                              uid == null ||
+                              uid.isEmpty) {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                     content:
-                                        Text('Gagal mendapatkan token Google')),
+                                        Text('Gagal mendapatkan data akun Google')),
                               );
                             }
                             return;
@@ -297,7 +306,12 @@ class _signupState extends State<signup> {
                           setState(() => _loading = true);
                           final res = await ApiService.post(
                             '/api/auth/google',
-                            body: {'id_token': idToken},
+                            body: {
+                              'uid': uid,
+                              'email': email,
+                              'name': name,
+                              'photo_url': photoUrl,
+                            },
                             useAuth: false,
                           );
                           if (!mounted) return;
@@ -319,7 +333,10 @@ class _signupState extends State<signup> {
                             return;
                           }
                           final token = data['token'] as String?;
-                          final user = data['user'] as Map<String, dynamic>?;
+                          final backendUser =
+                              data['user'] as Map<String, dynamic>?;
+                          final needsPassword =
+                              data['needs_password'] == true;
                           if (token == null || token.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -328,20 +345,18 @@ class _signupState extends State<signup> {
                             return;
                           }
                           await TokenService.saveToken(token);
-                          if (user != null) await TokenService.saveUser(user);
-                          final onboardingCompleted =
-                              user?['onboarding_completed'] == true;
+                          if (backendUser != null) {
+                            await TokenService.saveUser(backendUser);
+                          }
                           if (!mounted) return;
-                          if (onboardingCompleted) {
+                          if (needsPassword) {
                             Navigator.of(context).pushReplacement(
                               MaterialPageRoute(
-                                  builder: (context) => const homepage()),
+                                  builder: (context) =>
+                                      const GoogleSetPasswordPage()),
                             );
                           } else {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                  builder: (context) => const onboarding()),
-                            );
+                            await _handleAfterLogin(backendUser);
                           }
                         } catch (e) {
                           if (!mounted) return;
@@ -438,7 +453,7 @@ class _signupState extends State<signup> {
         autovalidateMode: AutovalidateMode.onUserInteraction,
         onFieldSubmitted: (v) {
           if (nextNode != null) {
-            FocusScope.of(context).requestFocus(nextNode!);
+            FocusScope.of(context).requestFocus(nextNode);
           } else {
             _submitData();
           }

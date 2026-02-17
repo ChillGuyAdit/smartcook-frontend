@@ -4,6 +4,7 @@ import 'package:smartcook/auth/signUp.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/page/homepage.dart';
 import 'package:smartcook/service/api_service.dart';
+import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/service/token_service.dart';
 import 'package:smartcook/view/onboarding/mainBoarding.dart';
 
@@ -91,6 +92,17 @@ class _splashscreenState extends State<splashscreen> {
       final res = await ApiService.get('/api/user/profile', useAuth: true);
       if (!mounted) return;
       if (!res.success) {
+        // Jika gagal tapi kelihatannya karena offline, jangan paksa login ulang
+        final isMaybeOffline =
+            res.statusCode == null || (res.message ?? '').contains('koneksi');
+        if (isMaybeOffline) {
+          OfflineManager.setOffline(true);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => homepage()),
+          );
+          return;
+        }
         if (res.statusCode == 401) await TokenService.clearAll();
         Navigator.pushReplacement(
           context,
@@ -102,6 +114,7 @@ class _splashscreenState extends State<splashscreen> {
         );
         return;
       }
+      OfflineManager.setOffline(false);
       final data = res.data as Map<String, dynamic>?;
       final onboardingCompleted = data?['onboarding_completed'] == true;
       if (!mounted) return;

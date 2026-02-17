@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/service/api_service.dart';
+import 'package:smartcook/service/offline_cache_service.dart';
+import 'package:smartcook/service/offline_manager.dart';
 
 import 'tambahkan_bahan.dart';
 
@@ -36,6 +38,9 @@ class _KulkasPageState extends State<KulkasPage> {
     setState(() => _loading = true);
     final res = await ApiService.get('/api/fridge');
     if (!mounted) return;
+    final isOffline = !res.success &&
+        (res.statusCode == null || (res.message ?? '').contains('koneksi'));
+
     List<Map<String, dynamic>> list = [];
     if (res.success && res.data != null) {
       final data = res.data;
@@ -57,6 +62,12 @@ class _KulkasPageState extends State<KulkasPage> {
         }
       }
     }
+
+    if (isOffline && list.isEmpty) {
+      // offline dan tidak ada response baru: coba pakai cache (kalau nanti disimpan)
+      // untuk sekarang, biarkan kosong tapi tampil pesan biasa
+    }
+
     setState(() {
       _fridgeItems = list;
       _loading = false;
@@ -589,6 +600,19 @@ class _KulkasPageState extends State<KulkasPage> {
   }
 
   Future<void> _deleteItem(dynamic id) async {
+    if (OfflineManager.isOffline.value) {
+      // Hapus lokal dan antrikan operasi
+      setState(() {
+        _fridgeItems.removeWhere((e) => e['id'] == id);
+        _applyFilters();
+      });
+      await OfflineCacheService.addPendingOperation(
+        method: 'DELETE',
+        path: '/api/fridge/$id',
+      );
+      _showSuccessPopup('Bahan dihapus (akan disinkron saat online)');
+      return;
+    }
     final res = await ApiService.delete('/api/fridge/$id');
     if (!mounted) return;
     if (res.success) {

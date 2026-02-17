@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/service/api_service.dart';
+import 'package:smartcook/service/offline_cache_service.dart';
+import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/page/masakan.dart';
 
 class SavePage extends StatefulWidget {
@@ -23,26 +25,46 @@ class _SavePageState extends State<SavePage> {
     setState(() => _isLoading = true);
     final response = await ApiService.get('/api/favorites');
 
-    if (mounted) {
-      if (response.success && response.data is List) {
-        final List<dynamic> data = response.data;
-        setState(() {
-          _savedRecipes = data.map((item) {
-            // Struktur response biasanya:
-            // [ { "_id": "favId", "user": "userId", "recipe": { ...detail resep... } }, ... ]
-            if (item is Map && item.containsKey('recipe')) {
-              return item['recipe'] as Map<String, dynamic>;
-            }
-            // Fallback jika struktur berbeda (misal langsung list recipe)
-            return item as Map<String, dynamic>;
-          }).toList();
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _savedRecipes = [];
-          _isLoading = false;
-        });
+    if (!mounted) return;
+
+    if (response.success && response.data is List) {
+      final List<dynamic> data = response.data;
+      final recipes = data.map((item) {
+        // Struktur response biasanya:
+        // [ { "_id": "favId", "user": "userId", "recipe": { ...detail resep... } }, ... ]
+        if (item is Map && item.containsKey('recipe')) {
+          return item['recipe'] as Map<String, dynamic>;
+        }
+        // Fallback jika struktur berbeda (misal langsung list recipe)
+        return item as Map<String, dynamic>;
+      }).toList();
+
+      // Simpan ke cache lokal (recipe + daftar id favorit)
+      for (final r in recipes) {
+        OfflineCacheService.saveRecipe(r);
+        final id = r['_id']?.toString() ?? '';
+        if (id.isNotEmpty) {
+          OfflineCacheService.setFavoriteLocally(id, true);
+        }
+      }
+
+      setState(() {
+        _savedRecipes = recipes;
+        _isLoading = false;
+      });
+    } else {
+      // Jika gagal (kemungkinan offline), coba baca dari cache lokal
+      final cached = await OfflineCacheService.getLocalFavoriteRecipes();
+      setState(() {
+        _savedRecipes = cached;
+        _isLoading = false;
+      });
+      if (OfflineManager.isOffline.value && cached.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak bisa mengambil favorit dari server (offline)'),
+          ),
+        );
       }
     }
   }
@@ -105,7 +127,7 @@ class _SavePageState extends State<SavePage> {
 
   Widget _buildRecipeCard(Map<String, dynamic> recipe) {
     final String title = recipe['title'] ?? 'Resep Tanpa Nama';
-    final String imagePath = recipe['image_url'] ?? 'image/soup.png';
+    final String imagePath = recipe['image_url'] ?? '';
     // Ambil info nutrisi
     String calories = "0 Kal";
     if (recipe['nutrition_info'] is Map) {
@@ -151,25 +173,7 @@ class _SavePageState extends State<SavePage> {
               child: SizedBox(
                 width: 90,
                 height: 90,
-                child: imagePath.startsWith('http')
-                    ? Image.network(
-                        imagePath,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: Colors.grey[200],
-                          child:
-                              const Icon(Icons.restaurant, color: Colors.grey),
-                        ),
-                      )
-                    : Image.asset(
-                        imagePath,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: Colors.grey[200],
-                          child:
-                              const Icon(Icons.restaurant, color: Colors.grey),
-                        ),
-                      ),
+                child: _buildThumbnail(imagePath),
               ),
             ),
             const SizedBox(width: 16),
@@ -230,6 +234,30 @@ class _SavePageState extends State<SavePage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildThumbnail(String imagePath) {
+    const fallback = 'image/jagung_bowl.png';
+    if (imagePath.startsWith('http')) {
+      return Image.network(
+        imagePath,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Image.asset(
+          fallback,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
+    final assetPath = imagePath.isEmpty ? fallback : imagePath;
+    return Image.asset(
+      assetPath,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Image.asset(
+        fallback,
+        fit: BoxFit.cover,
+      ),
     );
   }
 }

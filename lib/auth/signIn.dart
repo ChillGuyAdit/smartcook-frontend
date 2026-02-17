@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/auth/forgotpassword.dart';
 import 'package:smartcook/auth/signUp.dart';
+import 'package:smartcook/auth/google_set_password.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/page/homepage.dart';
 import 'package:smartcook/service/api_service.dart';
@@ -37,6 +38,22 @@ class _signinState extends State<signin> {
   bool _obscuretext = true;
   bool _loading = false;
 
+  Future<void> _handleAfterLogin(Map<String, dynamic>? user) async {
+    final onboardingCompleted = user?['onboarding_completed'] == true;
+    if (!mounted) return;
+    if (onboardingCompleted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => homepage()),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => onboarding()),
+      );
+    }
+  }
+
   Future<void> _submitData() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
@@ -67,19 +84,7 @@ class _signinState extends State<signin> {
     }
     await TokenService.saveToken(token);
     if (user != null) await TokenService.saveUser(user);
-    final onboardingCompleted = user?['onboarding_completed'] == true;
-    if (!mounted) return;
-    if (onboardingCompleted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => homepage()),
-      );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => onboarding()),
-      );
-    }
+    await _handleAfterLogin(user);
   }
 
   @override
@@ -252,11 +257,6 @@ class _signinState extends State<signin> {
   }
 
   Widget email() {
-    final screenheight = MediaQuery.of(context).size.height;
-    final screenwidth = MediaQuery.of(context).size.width;
-
-    double basewidth = 430;
-    double scale = screenwidth / basewidth;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 31),
       child: TextFormField(
@@ -291,11 +291,6 @@ class _signinState extends State<signin> {
   }
 
   Widget password() {
-    final screenheight = MediaQuery.of(context).size.height;
-    final screenwidth = MediaQuery.of(context).size.width;
-
-    double basewidth = 430;
-    double scale = screenwidth / basewidth;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 31),
       child: TextFormField(
@@ -333,9 +328,7 @@ class _signinState extends State<signin> {
   }
 
   Widget bagianOr() {
-    final screenheight = MediaQuery.of(context).size.height;
     final screenwidth = MediaQuery.of(context).size.width;
-
     double basewidth = 430;
     double scale = screenwidth / basewidth;
     return Row(
@@ -355,11 +348,6 @@ class _signinState extends State<signin> {
   }
 
   Widget auth() {
-    final screenheight = MediaQuery.of(context).size.height;
-    final screenwidth = MediaQuery.of(context).size.width;
-
-    double basewidth = 430;
-    double scale = screenwidth / basewidth;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -369,11 +357,16 @@ class _signinState extends State<signin> {
             UserCredential? userCredential =
                 await _authService.signinWithGoogle();
             if (userCredential == null) return;
-            final idToken = await userCredential.user?.getIdToken();
-            if (idToken == null || idToken.isEmpty) {
+            final firebaseUser = userCredential.user;
+            final email = firebaseUser?.email;
+            final name = firebaseUser?.displayName;
+            final uid = firebaseUser?.uid;
+            final photoUrl = firebaseUser?.photoURL;
+            if (email == null || email.isEmpty || uid == null || uid.isEmpty) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Gagal mendapatkan token Google')),
+                  const SnackBar(
+                      content: Text('Gagal mendapatkan data akun Google')),
                 );
               }
               return;
@@ -381,7 +374,12 @@ class _signinState extends State<signin> {
             setState(() => _loading = true);
             final res = await ApiService.post(
               '/api/auth/google',
-              body: {'id_token': idToken},
+              body: {
+                'uid': uid,
+                'email': email,
+                'name': name,
+                'photo_url': photoUrl,
+              },
               useAuth: false,
             );
             if (!mounted) return;
@@ -394,7 +392,8 @@ class _signinState extends State<signin> {
             }
             final data = res.data as Map<String, dynamic>?;
             final token = data?['token'] as String?;
-            final user = data?['user'] as Map<String, dynamic>?;
+            final backendUser = data?['user'] as Map<String, dynamic>?;
+            final needsPassword = data?['needs_password'] == true;
             if (token == null || token.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Respons tidak valid')),
@@ -402,32 +401,30 @@ class _signinState extends State<signin> {
               return;
             }
             await TokenService.saveToken(token);
-            if (user != null) await TokenService.saveUser(user);
-            final onboardingCompleted = user?['onboarding_completed'] == true;
+            if (backendUser != null) await TokenService.saveUser(backendUser);
+
             if (!mounted) return;
-            if (onboardingCompleted) {
+            if (needsPassword) {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => homepage()),
+                MaterialPageRoute(
+                    builder: (context) => const GoogleSetPasswordPage()),
               );
             } else {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => onboarding()),
-              );
+              await _handleAfterLogin(backendUser);
             }
           },
           child: Image(
-            image: AssetImage('image/google.png'),
-            height: 100 * scale,
-            width: 100 * scale,
+            image: const AssetImage('image/google.png'),
+            height: 100,
+            width: 100,
           ),
         ),
-        SizedBox(width: 40),
-        Image(
+        const SizedBox(width: 40),
+        const Image(
           image: AssetImage('image/apple.png'),
-          height: 100 * scale,
-          width: 100 * scale,
+          height: 100,
+          width: 100,
         )
       ],
     );
