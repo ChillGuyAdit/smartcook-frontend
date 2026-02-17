@@ -6,7 +6,9 @@ import 'package:smartcook/service/token_service.dart';
 import 'package:smartcook/view/onboarding/mainBoarding.dart';
 
 class GoogleSetPasswordPage extends StatefulWidget {
-  const GoogleSetPasswordPage({super.key});
+  final String? email;
+
+  const GoogleSetPasswordPage({super.key, this.email});
 
   @override
   State<GoogleSetPasswordPage> createState() => _GoogleSetPasswordPageState();
@@ -14,6 +16,7 @@ class GoogleSetPasswordPage extends StatefulWidget {
 
 class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
   final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
 
@@ -25,7 +28,13 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
   @override
   void initState() {
     super.initState();
-    _loadUserEmail();
+    // Jika email sudah dikirim lewat navigator, pakai itu dulu
+    if (widget.email != null && widget.email!.isNotEmpty) {
+      _email = widget.email;
+      _emailController.text = widget.email!;
+    } else {
+      _loadUserEmail();
+    }
   }
 
   Future<void> _loadUserEmail() async {
@@ -33,11 +42,15 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
     if (!mounted) return;
     setState(() {
       _email = user?['email']?.toString();
+      if (_email != null && _email!.isNotEmpty) {
+        _emailController.text = _email!;
+      }
     });
   }
 
   @override
   void dispose() {
+    _emailController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
@@ -141,9 +154,10 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
                   SizedBox(height: 24 * scale),
                   TextFormField(
                     enabled: false,
-                    initialValue: _email ?? 'Memuat email...',
+                    controller: _emailController,
                     decoration: InputDecoration(
                       labelText: 'Email',
+                      hintText: _email ?? 'Memuat email...',
                       filled: true,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12 * scale),

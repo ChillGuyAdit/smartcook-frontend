@@ -352,8 +352,10 @@ class _signupState extends State<signup> {
                           if (needsPassword) {
                             Navigator.of(context).pushReplacement(
                               MaterialPageRoute(
-                                  builder: (context) =>
-                                      const GoogleSetPasswordPage()),
+                                  builder: (context) => GoogleSetPasswordPage(
+                                        email: backendUser?['email']
+                                            as String?,
+                                      )),
                             );
                           } else {
                             await _handleAfterLogin(backendUser);

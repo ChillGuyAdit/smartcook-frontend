@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/token_service.dart';
 import 'package:smartcook/view/onboarding/form.dart';
+import 'package:smartcook/page/change_password_page.dart';
+import 'package:smartcook/page/change_email_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -158,6 +160,60 @@ class _ProfilePageState extends State<ProfilePage> {
                   },
                   icon: const Icon(Icons.tune_rounded),
                   label: const Text('Edit preferensi & data diri'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF4CAF50),
+                    side: const BorderSide(color: Color(0xFF4CAF50)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Ubah password
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ChangePasswordPage(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.lock_reset),
+                  label: const Text('Ubah password'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF4CAF50),
+                    side: const BorderSide(color: Color(0xFF4CAF50)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Ganti email
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ChangeEmailPage(),
+                      ),
+                    ).then((changed) {
+                      if (changed == true) {
+                        _load();
+                      }
+                    });
+                  },
+                  icon: const Icon(Icons.alternate_email_rounded),
+                  label: const Text('Ganti email (OTP)'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF4CAF50),
                     side: const BorderSide(color: Color(0xFF4CAF50)),

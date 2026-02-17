@@ -408,7 +408,9 @@ class _signinState extends State<signin> {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => const GoogleSetPasswordPage()),
+                    builder: (context) => GoogleSetPasswordPage(
+                          email: backendUser?['email'] as String?,
+                        )),
               );
             } else {
               await _handleAfterLogin(backendUser);
