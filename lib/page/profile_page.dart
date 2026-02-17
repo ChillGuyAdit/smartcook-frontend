@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:smartcook/auth/signIn.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/token_service.dart';
+import 'package:smartcook/view/onboarding/form.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -142,6 +142,33 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => form(
+                          initialData: _profile,
+                          editFromProfile: true,
+                        ),
+                      ),
+                    ).then((_) => _load());
+                  },
+                  icon: const Icon(Icons.tune_rounded),
+                  label: const Text('Edit preferensi & data diri'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF4CAF50),
+                    side: const BorderSide(color: Color(0xFF4CAF50)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(

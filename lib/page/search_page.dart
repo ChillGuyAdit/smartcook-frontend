@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/service/api_service.dart';
+
 import 'masakan.dart';
 
 class SearchPage extends StatefulWidget {
@@ -110,17 +111,16 @@ class _SearchPageState extends State<SearchPage> {
                               ),
                             )
                           : ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
                               itemCount: _results.length,
                               itemBuilder: (context, index) {
                                 final r = _results[index];
                                 final id = r['_id']?.toString();
-                                final title =
-                                    r['title']?.toString() ?? 'Resep';
+                                final title = r['title']?.toString() ?? 'Resep';
                                 final imageUrl = r['image_url']?.toString();
                                 final cal = r['nutrition_info'] is Map
-                                    ? (r['nutrition_info']
-                                        as Map)['calories']
+                                    ? (r['nutrition_info'] as Map)['calories']
                                         ?.toString()
                                     : '0';
                                 final prep = r['prep_time'] ?? 0;
@@ -150,9 +150,11 @@ class _SearchPageState extends State<SearchPage> {
                                     title: Text(title,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis),
-                                    subtitle: Text('$cal Kal • ${prep + cook}m'),
+                                    subtitle:
+                                        Text('$cal Kal • ${prep + cook}m'),
                                     trailing: const Icon(
-                                        Icons.arrow_forward_ios, size: 16),
+                                        Icons.arrow_forward_ios,
+                                        size: 16),
                                     onTap: id != null
                                         ? () {
                                             Navigator.push(

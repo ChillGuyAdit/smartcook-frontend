@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'masakan.dart';
 import 'package:smartcook/service/api_service.dart';
+
+import 'masakan.dart';
 
 class CategoryPage extends StatefulWidget {
   final String categoryName;
@@ -53,7 +54,9 @@ class _CategoryPageState extends State<CategoryPage> {
       if (data is List) {
         list = data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       } else if (data is Map && data['recipes'] is List) {
-        list = (data['recipes'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        list = (data['recipes'] as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
       }
     }
     setState(() {
@@ -68,11 +71,13 @@ class _CategoryPageState extends State<CategoryPage> {
     setState(() {
       _filteredFoodList = _allFoodList.where((food) {
         final title = food["title"]?.toString().toLowerCase() ?? '';
-        final matchSearch = _searchQuery.isEmpty || title.contains(_searchQuery.toLowerCase());
+        final matchSearch =
+            _searchQuery.isEmpty || title.contains(_searchQuery.toLowerCase());
         final calVal = food["nutrition_info"] is Map
             ? (food["nutrition_info"] as Map)["calories"]
             : food["cal"];
-        final foodCal = calVal != null ? int.tryParse(calVal.toString()) ?? 0 : 0;
+        final foodCal =
+            calVal != null ? int.tryParse(calVal.toString()) ?? 0 : 0;
         final matchCal = foodCal <= _maxCalories;
         final prep = food["prep_time"] ?? 0;
         final cook = food["cook_time"] ?? 0;
@@ -93,7 +98,8 @@ class _CategoryPageState extends State<CategoryPage> {
         return Align(
           alignment: Alignment.topRight, // Posisikan di kanan atas
           child: Container(
-            margin: const EdgeInsets.only(top: 150, right: 20), // Atur jarak agar pas di bawah icon
+            margin: const EdgeInsets.only(
+                top: 150, right: 20), // Atur jarak agar pas di bawah icon
             child: Material(
               color: Colors.transparent,
               child: Container(
@@ -117,39 +123,57 @@ class _CategoryPageState extends State<CategoryPage> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("Filter Pencarian", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        const Text("Filter Pencarian",
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16)),
                         const Divider(),
-                        
+
                         // --- FILTER KALORI ---
-                        const Text("Maks. Kalori (Kal)", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        const Text("Maks. Kalori (Kal)",
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent),
-                              onPressed: () => setPopupState(() => _maxCalories = (_maxCalories - 50).clamp(50, 1000)),
+                              icon: const Icon(Icons.remove_circle_outline,
+                                  color: Colors.redAccent),
+                              onPressed: () => setPopupState(() =>
+                                  _maxCalories =
+                                      (_maxCalories - 50).clamp(50, 1000)),
                             ),
-                            Text("$_maxCalories", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text("$_maxCalories",
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 16)),
                             IconButton(
-                              icon: const Icon(Icons.add_circle_outline, color: Colors.green),
-                              onPressed: () => setPopupState(() => _maxCalories = (_maxCalories + 50).clamp(50, 1000)),
+                              icon: const Icon(Icons.add_circle_outline,
+                                  color: Colors.green),
+                              onPressed: () => setPopupState(() =>
+                                  _maxCalories =
+                                      (_maxCalories + 50).clamp(50, 1000)),
                             ),
                           ],
                         ),
 
                         // --- FILTER WAKTU ---
-                        const Text("Maks. Waktu (Menit)", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        const Text("Maks. Waktu (Menit)",
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent),
-                              onPressed: () => setPopupState(() => _maxTime = (_maxTime - 5).clamp(5, 120)),
+                              icon: const Icon(Icons.remove_circle_outline,
+                                  color: Colors.redAccent),
+                              onPressed: () => setPopupState(() =>
+                                  _maxTime = (_maxTime - 5).clamp(5, 120)),
                             ),
-                            Text("$_maxTime", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text("$_maxTime",
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 16)),
                             IconButton(
-                              icon: const Icon(Icons.add_circle_outline, color: Colors.green),
-                              onPressed: () => setPopupState(() => _maxTime = (_maxTime + 5).clamp(5, 120)),
+                              icon: const Icon(Icons.add_circle_outline,
+                                  color: Colors.green),
+                              onPressed: () => setPopupState(() =>
+                                  _maxTime = (_maxTime + 5).clamp(5, 120)),
                             ),
                           ],
                         ),
@@ -161,13 +185,15 @@ class _CategoryPageState extends State<CategoryPage> {
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: widget.themeColors[1],
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
                             ),
                             onPressed: () {
                               _applyFilters(); // Terapkan filter ke list
                               Navigator.pop(context); // Tutup popup
                             },
-                            child: const Text("Terapkan", style: TextStyle(color: Colors.white)),
+                            child: const Text("Terapkan",
+                                style: TextStyle(color: Colors.white)),
                           ),
                         )
                       ],
@@ -193,8 +219,9 @@ class _CategoryPageState extends State<CategoryPage> {
           SliverAppBar(
             pinned: true,
             expandedHeight: 200.0, // Tinggi saat keadaan terbuka full
-            toolbarHeight: 80.0,   // Tinggi minimum saat mengecil
-            automaticallyImplyLeading: false, // Kita buat tombol back custom sendiri
+            toolbarHeight: 80.0, // Tinggi minimum saat mengecil
+            automaticallyImplyLeading:
+                false, // Kita buat tombol back custom sendiri
             backgroundColor: widget.themeColors[0], // Fallback warna
             elevation: 0,
             flexibleSpace: LayoutBuilder(
@@ -204,8 +231,9 @@ class _CategoryPageState extends State<CategoryPage> {
                 final safeArea = MediaQuery.of(context).padding.top;
                 final maxHeight = 200.0 + safeArea;
                 final minHeight = 80.0 + safeArea;
-                
-                double percent = ((maxHeight - top) / (maxHeight - minHeight)).clamp(0.0, 1.0);
+
+                double percent = ((maxHeight - top) / (maxHeight - minHeight))
+                    .clamp(0.0, 1.0);
 
                 return Container(
                   decoration: BoxDecoration(
@@ -223,10 +251,11 @@ class _CategoryPageState extends State<CategoryPage> {
                         bottom: -10,
                         child: Opacity(
                           opacity: (0.3 * (1 - percent)).clamp(0.0, 0.3),
-                          child: Image.asset(widget.headerImagePath, width: 120),
+                          child:
+                              Image.asset(widget.headerImagePath, width: 120),
                         ),
                       ),
-                      
+
                       // Tombol Back Custom (Posisinya tetap fix)
                       Positioned(
                         top: safeArea + 16,
@@ -251,10 +280,10 @@ class _CategoryPageState extends State<CategoryPage> {
                       // Konten Judul & Deskripsi (Bergerak secara dinamis)
                       Positioned(
                         // Bergerak dari bawah ke samping tombol back
-                        left: 16 + (48 * percent), 
+                        left: 16 + (48 * percent),
                         top: (safeArea + 76) - (60 * percent),
                         // Melebar ke kanan saat header mengecil karena gambar sudah hilang
-                        right: 120 - (104 * percent), 
+                        right: 120 - (104 * percent),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
@@ -272,8 +301,9 @@ class _CategoryPageState extends State<CategoryPage> {
                                 height: 1.2,
                               ),
                             ),
-                            SizedBox(height: 8 - (4 * percent)), // Spasi mengecil
-                            
+                            SizedBox(
+                                height: 8 - (4 * percent)), // Spasi mengecil
+
                             // Teks Deskripsi (Tetap ada, namun opacity dan limit baris menyesuaikan)
                             Opacity(
                               opacity: 1.0 - (0.2 * percent),
@@ -326,9 +356,11 @@ class _CategoryPageState extends State<CategoryPage> {
                         },
                         decoration: InputDecoration(
                           hintText: "Cari resep...",
-                          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                          hintStyle: TextStyle(
+                              color: Colors.grey.shade400, fontSize: 14),
                           border: InputBorder.none,
-                          icon: Icon(Icons.search, color: widget.themeColors[1]),
+                          icon:
+                              Icon(Icons.search, color: widget.themeColors[1]),
                         ),
                       ),
                     ),
@@ -350,7 +382,8 @@ class _CategoryPageState extends State<CategoryPage> {
                           )
                         ],
                       ),
-                      child: const Icon(Icons.tune_rounded, color: Colors.white),
+                      child:
+                          const Icon(Icons.tune_rounded, color: Colors.white),
                     ),
                   ),
                 ],
@@ -384,14 +417,14 @@ class _CategoryPageState extends State<CategoryPage> {
                         ),
                       )
                     : SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final food = _filteredFoodList[index];
-                        return _buildFoodListItem(food);
-                      },
-                      childCount: _filteredFoodList.length,
-                    ),
-                  ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final food = _filteredFoodList[index];
+                            return _buildFoodListItem(food);
+                          },
+                          childCount: _filteredFoodList.length,
+                        ),
+                      ),
           ),
         ],
       ),
@@ -409,7 +442,8 @@ class _CategoryPageState extends State<CategoryPage> {
     final cal = calVal?.toString() ?? "0";
     final prep = food["prep_time"] ?? 0;
     final cook = food["cook_time"] ?? 0;
-    final timeStr = food["time"] ?? "${(prep is int ? prep : 0) + (cook is int ? cook : 0)}m";
+    final timeStr = food["time"] ??
+        "${(prep is int ? prep : 0) + (cook is int ? cook : 0)}m";
     return GestureDetector(
       onTap: () {
         if (recipeId != null) {
@@ -447,7 +481,10 @@ class _CategoryPageState extends State<CategoryPage> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(15),
                 child: imageUrl != null && imageUrl.isNotEmpty
-                    ? Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.restaurant, color: widget.themeColors[1]))
+                    ? Image.network(imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(Icons.restaurant,
+                            color: widget.themeColors[1]))
                     : (foodImage != null && foodImage.isNotEmpty
                         ? Image.asset(foodImage, fit: BoxFit.cover)
                         : Icon(Icons.restaurant, color: widget.themeColors[1])),
@@ -469,13 +506,19 @@ class _CategoryPageState extends State<CategoryPage> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.local_fire_department_rounded, size: 16, color: Colors.orange),
+                      const Icon(Icons.local_fire_department_rounded,
+                          size: 16, color: Colors.orange),
                       const SizedBox(width: 4),
-                      Text("$cal Kal", style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                      Text("$cal Kal",
+                          style: const TextStyle(
+                              fontSize: 13, color: Colors.black54)),
                       const SizedBox(width: 12),
-                      const Icon(Icons.access_time_rounded, size: 16, color: Colors.blueGrey),
+                      const Icon(Icons.access_time_rounded,
+                          size: 16, color: Colors.blueGrey),
                       const SizedBox(width: 4),
-                      Text(timeStr.toString(), style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                      Text(timeStr.toString(),
+                          style: const TextStyle(
+                              fontSize: 13, color: Colors.black54)),
                     ],
                   ),
                 ],
@@ -487,7 +530,8 @@ class _CategoryPageState extends State<CategoryPage> {
                 color: Colors.grey.shade100,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.arrow_forward_ios_rounded, size: 16, color: widget.themeColors[1]),
+              child: Icon(Icons.arrow_forward_ios_rounded,
+                  size: 16, color: widget.themeColors[1]),
             ),
           ],
         ),

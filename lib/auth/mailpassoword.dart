@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/auth/resetpassword.dart';
+import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/service/api_service.dart';
 
 class mailpassword extends StatefulWidget {
@@ -15,7 +15,8 @@ class mailpassword extends StatefulWidget {
 class _mailpasswordState extends State<mailpassword> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
-  final List<TextEditingController> _otpControllers = List.generate(4, (_) => TextEditingController());
+  final List<TextEditingController> _otpControllers =
+      List.generate(4, (_) => TextEditingController());
 
   @override
   void dispose() {

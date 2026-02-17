@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'package:url_launcher/url_launcher.dart';
+
+import 'package:flutter/material.dart';
 import 'package:smartcook/service/api_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MasakanPage extends StatefulWidget {
   final String? recipeId;
@@ -66,9 +67,15 @@ class _MasakanPageState extends State<MasakanPage> {
         final cook = r['cook_time'] ?? 0;
         _displayTime = '${prep + cook}m';
         _ingredients = (r['ingredients'] as List?)
-            ?.map((e) => e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{'name': e.toString()})
-            .toList() ?? [];
-        _steps = (r['steps'] as List?)?.map((e) => e is String ? e : e.toString()).toList() ?? [];
+                ?.map((e) => e is Map
+                    ? Map<String, dynamic>.from(e)
+                    : <String, dynamic>{'name': e.toString()})
+                .toList() ??
+            [];
+        _steps = (r['steps'] as List?)
+                ?.map((e) => e is String ? e : e.toString())
+                .toList() ??
+            [];
         _loading = false;
       });
     } else {
@@ -99,7 +106,9 @@ class _MasakanPageState extends State<MasakanPage> {
     if (widget.recipeId == null) {
       setState(() => isSaved = !isSaved);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(isSaved ? "Resep disimpan!" : "Resep dihapus dari simpanan")),
+        SnackBar(
+            content: Text(
+                isSaved ? "Resep disimpan!" : "Resep dihapus dari simpanan")),
       );
       return;
     }
@@ -185,7 +194,8 @@ class _MasakanPageState extends State<MasakanPage> {
                 // 2. Konten Header (Tombol, Teks, dan Gambar Circle)
                 SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
                     child: Column(
                       children: [
                         // Tombol Back & Save
@@ -200,8 +210,10 @@ class _MasakanPageState extends State<MasakanPage> {
                                   color: Colors.white.withOpacity(0.2),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.arrow_back_ios_new_rounded,
-                                    color: Colors.white, size: 20),
+                                child: const Icon(
+                                    Icons.arrow_back_ios_new_rounded,
+                                    color: Colors.white,
+                                    size: 20),
                               ),
                             ),
                             GestureDetector(
@@ -253,7 +265,8 @@ class _MasakanPageState extends State<MasakanPage> {
                                         text: _displayTime,
                                       ),
                                       _buildGlassBadge(
-                                        icon: Icons.local_fire_department_rounded,
+                                        icon:
+                                            Icons.local_fire_department_rounded,
                                         text: _displayCalories,
                                       ),
                                     ],
@@ -269,7 +282,8 @@ class _MasakanPageState extends State<MasakanPage> {
                               height: 110,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 3),
+                                border:
+                                    Border.all(color: Colors.white, width: 3),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.2),
@@ -280,7 +294,8 @@ class _MasakanPageState extends State<MasakanPage> {
                                 image: DecorationImage(
                                   image: _displayImage.startsWith('http')
                                       ? NetworkImage(_displayImage)
-                                      : AssetImage(_displayImage) as ImageProvider,
+                                      : AssetImage(_displayImage)
+                                          as ImageProvider,
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -332,27 +347,38 @@ class _MasakanPageState extends State<MasakanPage> {
                       ),
                       child: Column(
                         children: _ingredients.isEmpty
-                            ? [const Padding(
-                                padding: EdgeInsets.all(12),
-                                child: Text('Tidak ada data bahan', style: TextStyle(color: Colors.black54)),
-                              )]
+                            ? [
+                                const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: Text('Tidak ada data bahan',
+                                      style: TextStyle(color: Colors.black54)),
+                                )
+                              ]
                             : _ingredients.map((bahan) {
-                                final nama = bahan['name'] ?? bahan['nama'] ?? bahan['ingredient_name'] ?? bahan.toString();
+                                final nama = bahan['name'] ??
+                                    bahan['nama'] ??
+                                    bahan['ingredient_name'] ??
+                                    bahan.toString();
                                 final qty = bahan['quantity'] ?? bahan['qty'];
-                                final text = qty != null ? '$nama ($qty)' : nama.toString();
+                                final text = qty != null
+                                    ? '$nama ($qty)'
+                                    : nama.toString();
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(
                                         child: Text(
                                           text,
                                           style: const TextStyle(
-                                              fontSize: 14, color: Colors.black87),
+                                              fontSize: 14,
+                                              color: Colors.black87),
                                         ),
                                       ),
-                                      const Icon(Icons.circle, color: Colors.green, size: 12),
+                                      const Icon(Icons.circle,
+                                          color: Colors.green, size: 12),
                                     ],
                                   ),
                                 );
@@ -366,7 +392,8 @@ class _MasakanPageState extends State<MasakanPage> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () {},
-                        icon: const Icon(Icons.shopping_cart_outlined, size: 20),
+                        icon:
+                            const Icon(Icons.shopping_cart_outlined, size: 20),
                         label: const Text(
                           "Cari Bahan yang Kurang",
                           style: TextStyle(
@@ -399,13 +426,17 @@ class _MasakanPageState extends State<MasakanPage> {
                     // List Langkah
                     Column(
                       children: _steps.isEmpty
-                          ? [const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: Text('Tidak ada langkah', style: TextStyle(color: Colors.black54)),
-                            )]
+                          ? [
+                              const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: Text('Tidak ada langkah',
+                                    style: TextStyle(color: Colors.black54)),
+                              )
+                            ]
                           : List.generate(_steps.length, (index) {
                               final step = _steps[index];
-                              final text = step is String ? step : step.toString();
+                              final text =
+                                  step is String ? step : step.toString();
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
                                 child: Row(
@@ -414,7 +445,8 @@ class _MasakanPageState extends State<MasakanPage> {
                                     Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF4CAF50).withOpacity(0.1),
+                                        color: const Color(0xFF4CAF50)
+                                            .withOpacity(0.1),
                                         shape: BoxShape.circle,
                                       ),
                                       child: Text(
@@ -451,8 +483,10 @@ class _MasakanPageState extends State<MasakanPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: () => _launchYoutube("https://www.youtube.com/results?search_query=resep+$_displayTitle"),
-                        icon: const Icon(Icons.play_circle_fill_rounded, size: 20),
+                        onPressed: () => _launchYoutube(
+                            "https://www.youtube.com/results?search_query=resep+$_displayTitle"),
+                        icon: const Icon(Icons.play_circle_fill_rounded,
+                            size: 20),
                         label: const Text(
                           "Lihat Tutorial di YouTube",
                           style: TextStyle(
@@ -460,7 +494,8 @@ class _MasakanPageState extends State<MasakanPage> {
                         ),
                         style: ElevatedButton.styleFrom(
                           foregroundColor: Colors.white,
-                          backgroundColor: const Color(0xFFFF0000), // Warna khas YouTube
+                          backgroundColor:
+                              const Color(0xFFFF0000), // Warna khas YouTube
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -484,7 +519,7 @@ class _MasakanPageState extends State<MasakanPage> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    
+
                     // 5 Card Rekomendasi
                     Column(
                       children: List.generate(5, (index) {

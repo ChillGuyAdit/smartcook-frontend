@@ -4,7 +4,10 @@ import 'package:smartcook/page/homepage.dart';
 import 'package:smartcook/service/api_service.dart';
 
 class form extends StatefulWidget {
-  const form({super.key});
+  final Map<String, dynamic>? initialData;
+  final bool editFromProfile;
+
+  const form({super.key, this.initialData, this.editFromProfile = false});
 
   @override
   State<form> createState() => _formState();
@@ -22,6 +25,31 @@ class _formState extends State<form> {
 
   List<String> styleTerpilih = [];
   List<String> equipmentTerpilih = [];
+
+  static List<String> _parseStringList(dynamic value) {
+    if (value == null) return [];
+    if (value is List) {
+      return value.map((e) => e?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+    }
+    return [];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final data = widget.initialData;
+    if (data != null) {
+      _nameController.text = data['name']?.toString() ?? '';
+      final age = data['age_range']?.toString();
+      if (age != null && age.isNotEmpty) usiaTerpilih = age;
+      final gender = data['gender']?.toString();
+      if (gender != null && gender.isNotEmpty) genderTerpilih = gender;
+      alergiTerpilih = _parseStringList(data['allergies']);
+      riwayatPenyakitTerpilih = _parseStringList(data['medical_history']);
+      styleTerpilih = _parseStringList(data['cooking_styles']);
+      equipmentTerpilih = _parseStringList(data['equipment']);
+    }
+  }
 
   @override
   void dispose() {
@@ -72,37 +100,44 @@ class _formState extends State<form> {
                     borderRadius: BorderRadius.circular(15)),
                 padding: EdgeInsets.symmetric(vertical: 15),
               ),
-              onPressed: _loading ? null : () async {
-                if (_index < 2) {
-                  setState(() => _index++);
-                  return;
-                }
-                setState(() => _loading = true);
-                final res = await ApiService.put(
-                  '/api/user/onboarding',
-                  body: {
-                    'name': _nameController.text.trim(),
-                    'age_range': usiaTerpilih,
-                    'gender': genderTerpilih,
-                    'allergies': alergiTerpilih,
-                    'medical_history': riwayatPenyakitTerpilih,
-                    'cooking_styles': styleTerpilih,
-                    'equipment': equipmentTerpilih,
-                  },
-                );
-                if (!mounted) return;
-                setState(() => _loading = false);
-                if (!res.success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(res.message ?? 'Gagal menyimpan')),
-                  );
-                  return;
-                }
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => homepage()),
-                );
-              },
+              onPressed: _loading
+                  ? null
+                  : () async {
+                      if (_index < 2) {
+                        setState(() => _index++);
+                        return;
+                      }
+                      setState(() => _loading = true);
+                      final res = await ApiService.put(
+                        '/api/user/onboarding',
+                        body: {
+                          'name': _nameController.text.trim(),
+                          'age_range': usiaTerpilih,
+                          'gender': genderTerpilih,
+                          'allergies': alergiTerpilih,
+                          'medical_history': riwayatPenyakitTerpilih,
+                          'cooking_styles': styleTerpilih,
+                          'equipment': equipmentTerpilih,
+                        },
+                      );
+                      if (!mounted) return;
+                      setState(() => _loading = false);
+                      if (!res.success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content: Text(res.message ?? 'Gagal menyimpan')),
+                        );
+                        return;
+                      }
+                      if (widget.editFromProfile) {
+                        Navigator.pop(context, true);
+                      } else {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => homepage()),
+                        );
+                      }
+                    },
               child: _loading
                   ? SizedBox(
                       height: 22,
