@@ -23,6 +23,7 @@ class _homepageState extends State<homepage> {
   int _selectedIndex = 0;
   String _selectedMealTime = "breakfast";
   String _userName = 'Smarty';
+  List<String> _userAllergies = [];
   List<Map<String, dynamic>> _favorites = [];
   List<Map<String, dynamic>> _fridgePreview = [];
   List<Map<String, dynamic>> _recommendations = [];
@@ -97,8 +98,19 @@ class _homepageState extends State<homepage> {
 
     if (!mounted) return;
     final profile = profileRes.data as Map<String, dynamic>?;
-    if (profile != null && profile['name'] != null) {
-      _userName = profile['name'].toString();
+    if (profile != null) {
+      if (profile['name'] != null) {
+        _userName = profile['name'].toString();
+      }
+      final allergiesRaw = profile['allergies'];
+      if (allergiesRaw is List) {
+        _userAllergies = allergiesRaw
+            .map((e) => e?.toString() ?? '')
+            .where((s) => s.isNotEmpty)
+            .toList();
+      } else {
+        _userAllergies = [];
+      }
     }
 
     // Parse online
@@ -175,6 +187,17 @@ class _homepageState extends State<homepage> {
     if (data == null) return [];
     if (data is List) return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     return [];
+  }
+
+  String _buildAllergySubtitle() {
+    if (_userAllergies.isEmpty) {
+      return 'Disesuaikan dengan preferensi kesehatanmu';
+    }
+    if (_userAllergies.length == 1) {
+      return 'Aman untuk alergi: ${_userAllergies.first}';
+    }
+    final joined = _userAllergies.join(', ');
+    return 'Aman untuk alergi: $joined';
   }
 
   @override
@@ -513,22 +536,37 @@ class _homepageState extends State<homepage> {
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text("Disimpan untukmu",
+                  children: [
+                    const Text("Disimpan untukmu",
                         style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87)),
-                    SizedBox(height: 4),
-                    Text("Bebas kacang!",
-                        style: TextStyle(fontSize: 14, color: Colors.black54)),
+                    const SizedBox(height: 4),
+                    Text(
+                      _buildAllergySubtitle(),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
+                    ),
                   ],
                 ),
-                const Text("Lihat Semua",
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.green,
-                        fontWeight: FontWeight.w600)),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SavePage(),
+                      ),
+                    ).then((_) => _loadData());
+                  },
+                  child: const Text("Lihat Semua",
+                      style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.green,
+                          fontWeight: FontWeight.w600)),
+                ),
               ],
             ),
             const SizedBox(height: 15),
