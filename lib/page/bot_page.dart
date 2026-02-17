@@ -54,6 +54,7 @@ class _BotPageState extends State<BotPage> {
     final res = await ApiService.get('/api/chat/history');
     if (!mounted) return;
     List<Map<String, dynamic>> list = [];
+    Map<int, List<Map<String, dynamic>>> embeds = {};
     if (res.success && res.data != null) {
       final data = res.data;
       List? msgList;
@@ -63,13 +64,25 @@ class _BotPageState extends State<BotPage> {
         msgList = data;
       }
       if (msgList != null) {
-        for (final e in msgList) {
-          if (e is Map<String, dynamic>) list.add(e);
+        for (int i = 0; i < msgList.length; i++) {
+          final e = msgList[i];
+          if (e is Map<String, dynamic>) {
+            list.add(e);
+            if (e['role'] == 'model' && e['recipe_embeds'] != null) {
+              final recipes = (e['recipe_embeds'] as List?)
+                  ?.map((r) => Map<String, dynamic>.from(r as Map))
+                  .toList();
+              if (recipes != null && recipes.isNotEmpty) {
+                embeds[i] = recipes;
+              }
+            }
+          }
         }
       }
     }
     setState(() {
       _messages = list;
+      _recipeEmbeds = embeds;
       _loading = false;
     });
   }
