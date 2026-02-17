@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:smartcook/auth/forgotpassword.dart';
 import 'package:smartcook/auth/signUp.dart';
 import 'package:smartcook/helper/color.dart';
+import 'package:smartcook/page/homepage.dart';
+import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/auth_service.dart';
+import 'package:smartcook/service/token_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smartcook/view/onboarding/mainBoarding.dart';
 
@@ -32,9 +35,46 @@ class _signinState extends State<signin> {
   }
 
   bool _obscuretext = true;
+  bool _loading = false;
 
-  void _submitData() {
-    if (_formKey.currentState!.validate()) {
+  Future<void> _submitData() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _loading = true);
+    final res = await ApiService.post(
+      '/api/auth/login',
+      body: {
+        'email': _kontrolEmail.text.trim(),
+        'password': _kontrolPassword.text,
+      },
+      useAuth: false,
+    );
+    if (!mounted) return;
+    setState(() => _loading = false);
+    if (!res.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res.message ?? 'Login gagal')),
+      );
+      return;
+    }
+    final data = res.data as Map<String, dynamic>?;
+    final token = data?['token'] as String?;
+    final user = data?['user'] as Map<String, dynamic>?;
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Respons tidak valid')),
+      );
+      return;
+    }
+    await TokenService.saveToken(token);
+    if (user != null) await TokenService.saveUser(user);
+    final onboardingCompleted = user?['onboarding_completed'] == true;
+    if (!mounted) return;
+    if (onboardingCompleted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => homepage()),
+      );
+    } else {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => onboarding()),
@@ -131,8 +171,17 @@ class _signinState extends State<signin> {
                               vertical: 15 * scale,
                             ),
                           ),
-                          onPressed: _submitData,
-                          child: Text(
+                          onPressed: _loading ? null : _submitData,
+                          child: _loading
+                              ? SizedBox(
+                                  height: 22,
+                                  width: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColor().putih,
+                                  ),
+                                )
+                              : Text(
                             'SignIn',
                             style: TextStyle(
                               color: AppColor().putih,
@@ -316,9 +365,52 @@ class _signinState extends State<signin> {
       children: [
         InkWell(
           onTap: () async {
+            if (_loading) return;
             UserCredential? userCredential =
                 await _authService.signinWithGoogle();
-            if (userCredential != null) {
+            if (userCredential == null) return;
+            final idToken = await userCredential.user?.getIdToken();
+            if (idToken == null || idToken.isEmpty) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Gagal mendapatkan token Google')),
+                );
+              }
+              return;
+            }
+            setState(() => _loading = true);
+            final res = await ApiService.post(
+              '/api/auth/google',
+              body: {'id_token': idToken},
+              useAuth: false,
+            );
+            if (!mounted) return;
+            setState(() => _loading = false);
+            if (!res.success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(res.message ?? 'Login Google gagal')),
+              );
+              return;
+            }
+            final data = res.data as Map<String, dynamic>?;
+            final token = data?['token'] as String?;
+            final user = data?['user'] as Map<String, dynamic>?;
+            if (token == null || token.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Respons tidak valid')),
+              );
+              return;
+            }
+            await TokenService.saveToken(token);
+            if (user != null) await TokenService.saveUser(user);
+            final onboardingCompleted = user?['onboarding_completed'] == true;
+            if (!mounted) return;
+            if (onboardingCompleted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => homepage()),
+              );
+            } else {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => onboarding()),

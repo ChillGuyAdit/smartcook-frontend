@@ -1,0 +1,16 @@
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "image/mainLogo.jpg"
+  web:
+    generate: true
+    image_path: "image/mainLogo.jpg"
+    background_color: "#ffffff"
+    theme_color: "#ffffff"
+  windows:
+    generate: true
+    image_path: "image/mainLogo.jpg"
+    icon_size: 48
+  macos:
+    generate: true
+    image_path: "image/mainLogo.jpg"

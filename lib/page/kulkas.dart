@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:smartcook/service/api_service.dart';
+import 'tambahkan_bahan.dart';
 
 class KulkasPage extends StatefulWidget {
   const KulkasPage({super.key});
@@ -8,38 +10,56 @@ class KulkasPage extends StatefulWidget {
 }
 
 class _KulkasPageState extends State<KulkasPage> {
-  // Data Master (DITAMBAH: expiredDate)
-  final List<Map<String, dynamic>> _fridgeItems = [
-    {'id': 1, 'name': 'Kentang', 'qty': 5, 'expiredDate': DateTime.now().add(const Duration(days: 10))},
-    {'id': 2, 'name': 'Wortel', 'qty': 10, 'expiredDate': DateTime.now().add(const Duration(days: 1))}, // Besok
-    {'id': 3, 'name': 'Telur Ayam', 'qty': 12, 'expiredDate': DateTime.now().add(const Duration(days: 5))},
-    {'id': 4, 'name': 'Daging Sapi (Gram)', 'qty': 500, 'expiredDate': DateTime.now().add(const Duration(days: 2))},
-    {'id': 5, 'name': 'Bawang Putih', 'qty': 20, 'expiredDate': DateTime.now().subtract(const Duration(days: 2))}, // Sudah Lewat
-    {'id': 6, 'name': 'Tomat', 'qty': 8, 'expiredDate': DateTime.now()}, // Hari ini
-  ];
-
-  // Data yang akan ditampilkan (setelah di-filter)
+  List<Map<String, dynamic>> _fridgeItems = [];
   List<Map<String, dynamic>> _filteredItems = [];
-
-  // Controller untuk form edit
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _qtyController = TextEditingController();
-
-  // Variabel untuk Filter & Search
   String _searchQuery = "";
-  int _maxStock = 500; // Default max stok
-  String _sortOption = "Terbanyak"; // Default urutan stok
-  String _expiredFilterOption = "Semua"; // FITUR BARU: Default filter expired
+  int _maxStock = 500;
+  String _sortOption = "Terbanyak";
+  String _expiredFilterOption = "Semua";
+  bool _loading = true;
 
-  // Tema Warna Kulkas (Hijau)
   final List<Color> _themeColors = [
-    const Color(0xFF4CAF50), // Hijau Terang
-    const Color(0xFF1B5E20), // Hijau Gelap
+    const Color(0xFF4CAF50),
+    const Color(0xFF1B5E20),
   ];
 
   @override
   void initState() {
     super.initState();
+    _loadFridge();
+  }
+
+  Future<void> _loadFridge() async {
+    setState(() => _loading = true);
+    final res = await ApiService.get('/api/fridge');
+    if (!mounted) return;
+    List<Map<String, dynamic>> list = [];
+    if (res.success && res.data != null) {
+      final data = res.data;
+      if (data is List) {
+        for (final e in data) {
+          final item = Map<String, dynamic>.from(e as Map);
+          DateTime exp = DateTime.now().add(const Duration(days: 7));
+          try {
+            final ed = item['expired_date']?.toString();
+            if (ed != null && ed.isNotEmpty) exp = DateTime.parse(ed);
+          } catch (_) {}
+          list.add({
+            'id': item['_id']?.toString(),
+            'name': item['ingredient_name'] ?? item['name'] ?? 'Bahan',
+            'qty': item['quantity'] ?? item['qty'] ?? 0,
+            'expiredDate': exp,
+            'unit': item['unit'],
+          });
+        }
+      }
+    }
+    setState(() {
+      _fridgeItems = list;
+      _loading = false;
+    });
     _applyFilters();
   }
 
@@ -65,21 +85,17 @@ class _KulkasPageState extends State<KulkasPage> {
     return Colors.green;
   }
 
-  // Fungsi untuk menjalankan Filter, Search, dan Sorting
   void _applyFilters() {
     setState(() {
       _filteredItems = _fridgeItems.where((item) {
-        // 1. Cek Pencarian (Search)
         final matchSearch = item['name']
             .toString()
             .toLowerCase()
             .contains(_searchQuery.toLowerCase());
-
-        // 2. Cek Filter Maksimal Stok
-        final matchStock = item['qty'] <= _maxStock;
-
-        // 3. Cek Filter Expired
-        final diffDays = _getDaysDiff(item['expiredDate']);
+        final q = item['qty'] is int ? item['qty'] as int : int.tryParse(item['qty'].toString()) ?? 0;
+        final matchStock = q <= _maxStock;
+        final exp = item['expiredDate'];
+        final diffDays = exp is DateTime ? _getDaysDiff(exp) : 0;
         bool matchExpired = true;
         if (_expiredFilterOption == "Kadaluarsa") {
           matchExpired = diffDays < 0;
@@ -88,15 +104,21 @@ class _KulkasPageState extends State<KulkasPage> {
         } else if (_expiredFilterOption == "< 7 Hari") {
           matchExpired = diffDays >= 0 && diffDays <= 7;
         }
-
         return matchSearch && matchStock && matchExpired;
       }).toList();
 
-      // 4. Terapkan Sorting (Terbanyak / Terdikit)
       if (_sortOption == "Terbanyak") {
-        _filteredItems.sort((a, b) => b['qty'].compareTo(a['qty']));
+        _filteredItems.sort((a, b) {
+          final qa = a['qty'] is int ? a['qty'] as int : int.tryParse(a['qty'].toString()) ?? 0;
+          final qb = b['qty'] is int ? b['qty'] as int : int.tryParse(b['qty'].toString()) ?? 0;
+          return qb.compareTo(qa);
+        });
       } else {
-        _filteredItems.sort((a, b) => a['qty'].compareTo(b['qty']));
+        _filteredItems.sort((a, b) {
+          final qa = a['qty'] is int ? a['qty'] as int : int.tryParse(a['qty'].toString()) ?? 0;
+          final qb = b['qty'] is int ? b['qty'] as int : int.tryParse(b['qty'].toString()) ?? 0;
+          return qa.compareTo(qb);
+        });
       }
     });
   }
@@ -148,8 +170,7 @@ class _KulkasPageState extends State<KulkasPage> {
     );
   }
 
-  // Dialog Konfirmasi Hapus
-  void _showDeleteConfirmation(int id, String itemName) {
+  void _showDeleteConfirmation(dynamic id, String itemName) {
     showDialog(
       context: context,
       builder: (context) {
@@ -418,10 +439,10 @@ class _KulkasPageState extends State<KulkasPage> {
   }
 
   // Bottom Modal Sheet HANYA untuk Edit
-  void _showEditForm(int id) {
+  void _showEditForm(dynamic id) {
     final existingItem =
         _fridgeItems.firstWhere((element) => element['id'] == id);
-    _nameController.text = existingItem['name'];
+    _nameController.text = existingItem['name'].toString();
     _qtyController.text = existingItem['qty'].toString();
 
     showModalBottomSheet(
@@ -489,17 +510,30 @@ class _KulkasPageState extends State<KulkasPage> {
             ),
             const SizedBox(height: 25),
             ElevatedButton(
-              onPressed: () {
-                if (_nameController.text.isNotEmpty &&
-                    _qtyController.text.isNotEmpty) {
-                  _updateItem(id);
-                  _nameController.clear();
-                  _qtyController.clear();
-                  Navigator.of(context).pop();
-
-                  Future.delayed(const Duration(milliseconds: 250), () {
-                    _showSuccessPopup('Bahan berhasil diperbarui!');
-                  });
+              onPressed: () async {
+                if (_nameController.text.isEmpty ||
+                    _qtyController.text.isEmpty) return;
+                final qty = int.tryParse(_qtyController.text) ?? 1;
+                final exp = existingItem['expiredDate'];
+                final res = await ApiService.put(
+                  '/api/fridge/$id',
+                  body: {
+                    'quantity': qty,
+                    'unit': existingItem['unit'] ?? 'pcs',
+                    if (exp is DateTime) 'expired_date': exp.toIso8601String(),
+                  },
+                );
+                _nameController.clear();
+                _qtyController.clear();
+                if (!mounted) return;
+                Navigator.of(context).pop();
+                if (res.success) {
+                  await _loadFridge();
+                  _showSuccessPopup('Bahan berhasil diperbarui!');
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(res.message ?? 'Gagal memperbarui')),
+                  );
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -522,28 +556,17 @@ class _KulkasPageState extends State<KulkasPage> {
     );
   }
 
-  // UPDATE
-  void _updateItem(int id) {
-    setState(() {
-      final itemIndex =
-          _fridgeItems.indexWhere((element) => element['id'] == id);
-      _fridgeItems[itemIndex] = {
-        'id': id,
-        'name': _nameController.text,
-        'qty': int.tryParse(_qtyController.text) ?? 1,
-        'expiredDate': _fridgeItems[itemIndex]['expiredDate'], // Pertahankan expiredDate lama
-      };
-      _applyFilters();
-    });
-  }
-
-  // DELETE
-  void _deleteItem(int id) {
-    setState(() {
-      _fridgeItems.removeWhere((element) => element['id'] == id);
-      _applyFilters();
-    });
-    _showSuccessPopup('Bahan berhasil dihapus!');
+  Future<void> _deleteItem(dynamic id) async {
+    final res = await ApiService.delete('/api/fridge/$id');
+    if (!mounted) return;
+    if (res.success) {
+      await _loadFridge();
+      _showSuccessPopup('Bahan berhasil dihapus!');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res.message ?? 'Gagal menghapus')),
+      );
+    }
   }
 
   @override
@@ -552,6 +575,18 @@ class _KulkasPageState extends State<KulkasPage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const TambahkanBahanPage()),
+          );
+          _loadFridge();
+        },
+        backgroundColor: _themeColors[0],
+        child: const Icon(Icons.add),
+      ),
       body: CustomScrollView(
         slivers: [
           // --- CUSTOM HEADER ANIMATION (DIUBAH DARI SLIVERAPPBAR) ---
@@ -628,21 +663,30 @@ class _KulkasPageState extends State<KulkasPage> {
           // --- LIST BAHAN KULKAS ---
           SliverPadding(
             padding: const EdgeInsets.all(20),
-            sliver: _filteredItems.isEmpty
-                ? SliverToBoxAdapter(
+            sliver: _loading
+                ? const SliverToBoxAdapter(
                     child: Center(
                       child: Padding(
-                        padding: const EdgeInsets.only(top: 50),
-                        child: Text(
-                          "Bahan tidak ditemukan 😥\nCoba ubah filter atau pencarianmu.",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              color: Colors.grey.shade500, fontSize: 16),
-                        ),
+                        padding: EdgeInsets.only(top: 50),
+                        child: CircularProgressIndicator(),
                       ),
                     ),
                   )
-                : SliverList(
+                : _filteredItems.isEmpty
+                    ? SliverToBoxAdapter(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 50),
+                            child: Text(
+                              "Bahan tidak ditemukan 😥\nCoba ubah filter atau tambahkan bahan.",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  color: Colors.grey.shade500, fontSize: 16),
+                            ),
+                          ),
+                        ),
+                      )
+                    : SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         final item = _filteredItems[index];

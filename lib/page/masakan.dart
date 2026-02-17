@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
-import 'dart:ui'; // Wajib ditambahkan untuk BackdropFilter (Efek Blur)
-import 'package:url_launcher/url_launcher.dart'; // Import untuk buka link
+import 'dart:ui';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:smartcook/service/api_service.dart';
 
 class MasakanPage extends StatefulWidget {
-  final String title;
-  final String imagePath;
-  final String calories;
-  final String time;
+  final String? recipeId;
+  final String? title;
+  final String? imagePath;
+  final String? calories;
+  final String? time;
 
   const MasakanPage({
     super.key,
-    required this.title,
-    required this.imagePath,
-    required this.calories,
-    required this.time,
+    this.recipeId,
+    this.title,
+    this.imagePath,
+    this.calories,
+    this.time,
   });
 
   @override
@@ -22,27 +25,116 @@ class MasakanPage extends StatefulWidget {
 
 class _MasakanPageState extends State<MasakanPage> {
   bool isSaved = false;
+  bool _loading = true;
+  Map<String, dynamic>? _recipe;
+  List<Map<String, dynamic>> _ingredients = [];
+  List<dynamic> _steps = [];
+  String _displayTitle = '';
+  String _displayImage = '';
+  String _displayCalories = '0 Kal';
+  String _displayTime = '0m';
 
-  // Data dummy bahan
-  final List<Map<String, dynamic>> bahanBahan = [
-    {"nama": "Jagung Manis (2 Buah)", "ada": true},
-    {"nama": "Kentang (1 Buah)", "ada": true},
-    {"nama": "Wortel (1 Buah)", "ada": false},
-    {"nama": "Bawang Bombay (1/2 siung)", "ada": true},
-    {"nama": "Garam & Lada (secukupnya)", "ada": true},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    if (widget.recipeId != null) {
+      _loadRecipe();
+      _checkFavorite();
+    } else {
+      _displayTitle = widget.title ?? 'Resep';
+      _displayImage = widget.imagePath ?? 'image/soup.png';
+      _displayCalories = widget.calories ?? '0 Kal';
+      _displayTime = widget.time ?? '0m';
+      _loading = false;
+    }
+  }
 
-  // Data dummy langkah memasak
-  final List<String> langkahMemasak = [
-    "Cuci bersih semua bahan sayuran (jagung, kentang, wortel).",
-    "Pipil jagung manis, kemudian potong dadu kecil kentang dan wortel.",
-    "Rebus jagung, kentang, dan wortel ke dalam air mendidih selama 5-7 menit hingga empuk, lalu tiriskan.",
-    "Tumis bawang bombay dengan sedikit minyak zaitun hingga harum.",
-    "Masukkan sayuran rebus, tambahkan garam dan lada secukupnya. Aduk rata.",
-    "Angkat dan sajikan hangat di dalam mangkuk (bowl)."
-  ];
+  Future<void> _loadRecipe() async {
+    final res = await ApiService.get('/api/recipes/${widget.recipeId}');
+    if (!mounted) return;
+    if (res.success && res.data != null) {
+      final r = res.data as Map<String, dynamic>;
+      setState(() {
+        _recipe = r;
+        _displayTitle = r['title']?.toString() ?? 'Resep';
+        _displayImage = r['image_url']?.toString() ?? 'image/soup.png';
+        final cal = r['nutrition_info'] is Map
+            ? (r['nutrition_info'] as Map)['calories']?.toString()
+            : '0';
+        _displayCalories = '${cal} Kal';
+        final prep = r['prep_time'] ?? 0;
+        final cook = r['cook_time'] ?? 0;
+        _displayTime = '${prep + cook}m';
+        _ingredients = (r['ingredients'] as List?)
+            ?.map((e) => e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{'name': e.toString()})
+            .toList() ?? [];
+        _steps = (r['steps'] as List?)?.map((e) => e is String ? e : e.toString()).toList() ?? [];
+        _loading = false;
+      });
+    } else {
+      setState(() => _loading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res.message ?? 'Gagal memuat resep')),
+        );
+      }
+    }
+  }
 
-  // Fungsi untuk membuka YouTube
+  Future<void> _checkFavorite() async {
+    final res = await ApiService.get('/api/favorites');
+    if (!mounted) return;
+    if (res.success && res.data is List) {
+      final list = res.data as List;
+      final found = list.any((e) {
+        final r = e is Map ? e['recipe'] : null;
+        final id = r is Map ? r['_id'] : null;
+        return id?.toString() == widget.recipeId;
+      });
+      setState(() => isSaved = found);
+    }
+  }
+
+  Future<void> _toggleSave() async {
+    if (widget.recipeId == null) {
+      setState(() => isSaved = !isSaved);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(isSaved ? "Resep disimpan!" : "Resep dihapus dari simpanan")),
+      );
+      return;
+    }
+    if (isSaved) {
+      final res = await ApiService.delete('/api/favorites/${widget.recipeId}');
+      if (!mounted) return;
+      if (res.success) {
+        setState(() => isSaved = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Resep dihapus dari simpanan")),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res.message ?? 'Gagal menghapus')),
+        );
+      }
+    } else {
+      final res = await ApiService.post(
+        '/api/favorites/${widget.recipeId}',
+        useAuth: true,
+      );
+      if (!mounted) return;
+      if (res.success) {
+        setState(() => isSaved = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Resep berhasil disimpan!")),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res.message ?? 'Gagal menyimpan')),
+        );
+      }
+    }
+  }
+
   Future<void> _launchYoutube(String url) async {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
@@ -52,6 +144,12 @@ class _MasakanPageState extends State<MasakanPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFFAFAFA),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: SingleChildScrollView(
@@ -67,7 +165,9 @@ class _MasakanPageState extends State<MasakanPage> {
                   width: double.infinity,
                   decoration: BoxDecoration(
                     image: DecorationImage(
-                      image: AssetImage(widget.imagePath),
+                      image: _displayImage.startsWith('http')
+                          ? NetworkImage(_displayImage)
+                          : AssetImage(_displayImage) as ImageProvider,
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -105,20 +205,7 @@ class _MasakanPageState extends State<MasakanPage> {
                               ),
                             ),
                             GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  isSaved = !isSaved;
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(isSaved
-                                        ? "Resep berhasil disimpan!"
-                                        : "Resep dihapus dari simpanan"),
-                                    duration: const Duration(seconds: 1),
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
-                              },
+                              onTap: _toggleSave,
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
@@ -148,7 +235,7 @@ class _MasakanPageState extends State<MasakanPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    widget.title,
+                                    _displayTitle,
                                     style: const TextStyle(
                                       fontSize: 26,
                                       fontWeight: FontWeight.bold,
@@ -157,18 +244,17 @@ class _MasakanPageState extends State<MasakanPage> {
                                     ),
                                   ),
                                   const SizedBox(height: 16),
-                                  // Badge Waktu & Kalori
                                   Wrap(
                                     spacing: 10,
                                     runSpacing: 10,
                                     children: [
                                       _buildGlassBadge(
                                         icon: Icons.access_time_rounded,
-                                        text: widget.time,
+                                        text: _displayTime,
                                       ),
                                       _buildGlassBadge(
                                         icon: Icons.local_fire_department_rounded,
-                                        text: widget.calories,
+                                        text: _displayCalories,
                                       ),
                                     ],
                                   ),
@@ -192,7 +278,9 @@ class _MasakanPageState extends State<MasakanPage> {
                                   )
                                 ],
                                 image: DecorationImage(
-                                  image: AssetImage(widget.imagePath),
+                                  image: _displayImage.startsWith('http')
+                                      ? NetworkImage(_displayImage)
+                                      : AssetImage(_displayImage) as ImageProvider,
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -243,29 +331,32 @@ class _MasakanPageState extends State<MasakanPage> {
                         ],
                       ),
                       child: Column(
-                        children: bahanBahan.map((bahan) {
-                          bool isAvailable = bahan['ada'];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  bahan['nama'],
-                                  style: const TextStyle(
-                                      fontSize: 14, color: Colors.black87),
-                                ),
-                                Icon(
-                                  isAvailable
-                                      ? Icons.check_circle_rounded
-                                      : Icons.cancel_rounded,
-                                  color: isAvailable ? Colors.green : Colors.red,
-                                  size: 20,
-                                )
-                              ],
-                            ),
-                          );
-                        }).toList(),
+                        children: _ingredients.isEmpty
+                            ? [const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: Text('Tidak ada data bahan', style: TextStyle(color: Colors.black54)),
+                              )]
+                            : _ingredients.map((bahan) {
+                                final nama = bahan['name'] ?? bahan['nama'] ?? bahan['ingredient_name'] ?? bahan.toString();
+                                final qty = bahan['quantity'] ?? bahan['qty'];
+                                final text = qty != null ? '$nama ($qty)' : nama.toString();
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          text,
+                                          style: const TextStyle(
+                                              fontSize: 14, color: Colors.black87),
+                                        ),
+                                      ),
+                                      const Icon(Icons.circle, color: Colors.green, size: 12),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
                       ),
                     ),
                     const SizedBox(height: 15),
@@ -307,45 +398,52 @@ class _MasakanPageState extends State<MasakanPage> {
 
                     // List Langkah
                     Column(
-                      children: List.generate(langkahMemasak.length, (index) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF4CAF50).withOpacity(0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Text(
-                                  "${index + 1}",
-                                  style: const TextStyle(
-                                    color: Color(0xFF2E7D32),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(top: 6),
-                                  child: Text(
-                                    langkahMemasak[index],
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.black87,
-                                      height: 1.5,
+                      children: _steps.isEmpty
+                          ? [const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: Text('Tidak ada langkah', style: TextStyle(color: Colors.black54)),
+                            )]
+                          : List.generate(_steps.length, (index) {
+                              final step = _steps[index];
+                              final text = step is String ? step : step.toString();
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF4CAF50).withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Text(
+                                        "${index + 1}",
+                                        style: const TextStyle(
+                                          color: Color(0xFF2E7D32),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(top: 6),
+                                        child: Text(
+                                          text,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.black87,
+                                            height: 1.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
+                              );
+                            }),
                     ),
                     const SizedBox(height: 15),
 
@@ -353,7 +451,7 @@ class _MasakanPageState extends State<MasakanPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: () => _launchYoutube("https://www.youtube.com/results?search_query=resep+${widget.title}"),
+                        onPressed: () => _launchYoutube("https://www.youtube.com/results?search_query=resep+$_displayTitle"),
                         icon: const Icon(Icons.play_circle_fill_rounded, size: 20),
                         label: const Text(
                           "Lihat Tutorial di YouTube",

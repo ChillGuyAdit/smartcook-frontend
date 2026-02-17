@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/auth/mailpassoword.dart';
 import 'package:smartcook/helper/color.dart';
+import 'package:smartcook/service/api_service.dart';
 
 class forgotpassowrd extends StatefulWidget {
   const forgotpassowrd({super.key});
@@ -15,22 +16,28 @@ class _forgotpassowrdState extends State<forgotpassowrd> {
   final _emailController = TextEditingController();
 
   void _handleSend() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      await Future.delayed(Duration(milliseconds: 500));
-
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => mailpassword()),
-        ).then((_) {
-          if (mounted) setState(() => _isLoading = false);
-        });
-      }
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+    final email = _emailController.text.trim();
+    final res = await ApiService.post(
+      '/api/auth/forgot-password',
+      body: {'email': email},
+      useAuth: false,
+    );
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    if (!res.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res.message ?? 'Gagal mengirim kode')),
+      );
+      return;
     }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => mailpassword(email: email),
+      ),
+    );
   }
 
   @override

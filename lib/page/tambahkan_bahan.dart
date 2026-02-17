@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/helper/color.dart';
+import 'package:smartcook/service/api_service.dart';
 
 class TambahkanBahanPage extends StatefulWidget {
   const TambahkanBahanPage({super.key});
@@ -10,6 +11,7 @@ class TambahkanBahanPage extends StatefulWidget {
 
 class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
   String selectedCategory = '';
+  bool _saving = false;
 
   // Data dengan field: 'id', 'name', 'count', 'isSelected'
   final Map<String, List<Map<String, dynamic>>> bahanData = {
@@ -330,12 +332,102 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
               ),
               SizedBox(height: 15 * scale),
               if (selectedCategory.isNotEmpty) ..._buildListCards(scale),
+              SizedBox(height: 24 * scale),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _simpanSemua,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColor().utama,
+                    padding: EdgeInsets.symmetric(vertical: 16 * scale),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                  ),
+                  child: _saving
+                      ? SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Simpan ke Kulkas',
+                          style: TextStyle(
+                              fontSize: 18 * scale,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
+                        ),
+                ),
+              ),
               SizedBox(height: 50 * scale),
             ],
           ),
         ),
       ),
     );
+  }
+
+  String _mapCategoryToBackend(String cat) {
+    final c = cat.toLowerCase();
+    if (c.contains('protein')) return 'protein';
+    if (c.contains('karbo')) return 'karbo';
+    if (c.contains('sayur')) return 'sayur';
+    if (c.contains('bumbu')) return 'bumbu';
+    return cat.toLowerCase();
+  }
+
+  Future<void> _simpanSemua() async {
+    final toSave = <Map<String, dynamic>>[];
+    for (final entry in bahanData.entries) {
+      final category = entry.key;
+      for (final group in entry.value) {
+        final items = group['items'] as List<dynamic>? ?? [];
+        for (final i in items) {
+          final item = Map<String, dynamic>.from(i as Map);
+          if (item['isSelected'] == true) {
+            final count = item['count'] is int ? item['count'] as int : int.tryParse(item['count'].toString()) ?? 0;
+            if (count > 0) {
+              toSave.add({
+                'name': item['name'],
+                'category': _mapCategoryToBackend(category),
+                'quantity': count,
+                'unit': 'pcs',
+              });
+            }
+          }
+        }
+      }
+    }
+    if (toSave.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pilih minimal satu bahan dengan jumlah > 0')),
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    int ok = 0;
+    for (final item in toSave) {
+      final res = await ApiService.post(
+        '/api/fridge',
+        body: {
+          'ingredient_name': item['name'],
+          'category': item['category'],
+          'quantity': item['quantity'],
+          'unit': item['unit'],
+        },
+        useAuth: true,
+      );
+      if (res.success) ok++;
+    }
+    if (!mounted) return;
+    setState(() => _saving = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$ok bahan disimpan ke kulkas')),
+    );
+    Navigator.pop(context);
   }
 
   Widget _buildCategoryItem(
@@ -526,15 +618,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                var selectedItems =
-                    items.where((i) => i['isSelected'] == true).toList();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text(
-                          'Menyimpan ${selectedItems.length} item dari $title')),
-                );
-              },
+              onPressed: () => _simpanSemua(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: headerColor,

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:smartcook/auth/signIn.dart';
+import 'package:smartcook/auth/signUp.dart';
 import 'package:smartcook/helper/color.dart';
-import 'package:smartcook/auth/signup.dart';
+import 'package:smartcook/page/homepage.dart';
+import 'package:smartcook/service/api_service.dart';
+import 'package:smartcook/service/token_service.dart';
+import 'package:smartcook/view/onboarding/mainBoarding.dart';
 
 class splashscreen extends StatefulWidget {
   const splashscreen({super.key});
@@ -68,12 +73,48 @@ class _splashscreenState extends State<splashscreen> {
       }
     });
 
-    Future.delayed(Duration(milliseconds: 4600), () {
-      if (mounted) {
+    Future.delayed(Duration(milliseconds: 4600), () async {
+      if (!mounted) return;
+      final token = await TokenService.getToken();
+      if (token == null || token.isEmpty) {
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
             pageBuilder: (context, anim1, anim2) => signup(),
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+          ),
+        );
+        return;
+      }
+      final res = await ApiService.get('/api/user/profile', useAuth: true);
+      if (!mounted) return;
+      if (!res.success) {
+        if (res.statusCode == 401) await TokenService.clearAll();
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, anim1, anim2) => signin(),
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+          ),
+        );
+        return;
+      }
+      final data = res.data as Map<String, dynamic>?;
+      final onboardingCompleted = data?['onboarding_completed'] == true;
+      if (!mounted) return;
+      if (onboardingCompleted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => homepage()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, anim1, anim2) => onboarding(),
             transitionDuration: Duration.zero,
             reverseTransitionDuration: Duration.zero,
           ),

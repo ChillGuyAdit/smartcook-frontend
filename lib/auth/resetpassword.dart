@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/auth/animasisukses.dart';
+import 'package:smartcook/helper/color.dart';
+import 'package:smartcook/service/api_service.dart';
 
 class resetpassword extends StatefulWidget {
-  const resetpassword({super.key});
+  final String email;
+  final String otp;
+  const resetpassword({super.key, required this.email, required this.otp});
 
   @override
   State<resetpassword> createState() => _resetpasswordState();
 }
 
 class _resetpasswordState extends State<resetpassword> {
-  // Key untuk Form
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-  // Controller untuk membandingkan password
   final TextEditingController _passController = TextEditingController();
   final TextEditingController _confirmPassController = TextEditingController();
-
   bool _obscuretext = true;
   bool _obscuretextConfirm = true;
+  bool _loading = false;
 
   @override
   void dispose() {
@@ -27,24 +27,36 @@ class _resetpasswordState extends State<resetpassword> {
     super.dispose();
   }
 
-  void _submitReset() {
-    // Memicu validasi di semua TextFormField dalam Form
-    if (_formKey.currentState!.validate()) {
-      Navigator.push(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              animasisukses(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
-          },
-          transitionDuration: Duration(milliseconds: 500),
-        ),
+  void _submitReset() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _loading = true);
+    final res = await ApiService.post(
+      '/api/auth/reset-password',
+      body: {
+        'email': widget.email,
+        'otp': widget.otp,
+        'new_password': _passController.text,
+      },
+      useAuth: false,
+    );
+    if (!mounted) return;
+    setState(() => _loading = false);
+    if (!res.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res.message ?? 'Gagal reset password')),
       );
+      return;
     }
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => animasisukses(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
   }
 
   @override
@@ -112,8 +124,17 @@ class _resetpasswordState extends State<resetpassword> {
                         vertical: 12,
                       ),
                     ),
-                    onPressed: _submitReset,
-                    child: Text(
+                    onPressed: _loading ? null : _submitReset,
+                    child: _loading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
                       'Reset Password',
                       style: TextStyle(
                         color: AppColor().putih,
