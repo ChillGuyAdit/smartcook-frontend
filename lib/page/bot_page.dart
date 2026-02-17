@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -20,6 +21,14 @@ class _BotPageState extends State<BotPage> {
   List<Map<String, dynamic>> _messages = [];
   bool _loading = true;
   bool _sending = false;
+  
+  // State untuk animasi mengetik
+  String _bufferedContent = ''; // Semua chunk yang diterima
+  String _displayedContent = ''; // Konten yang sedang ditampilkan dengan animasi
+  bool _isTyping = false; // Apakah sedang animasi mengetik
+  Timer? _typingTimer; // Timer untuk mengontrol kecepatan mengetik
+  static const int _wordsPerSecond = 4; // Kecepatan mengetik: 4 kata per detik
+  static const int _delayPerWord = 1000 ~/ _wordsPerSecond; // ~250ms per kata
 
   @override
   void initState() {
@@ -31,6 +40,7 @@ class _BotPageState extends State<BotPage> {
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
+    _typingTimer?.cancel();
     super.dispose();
   }
 
@@ -59,10 +69,87 @@ class _BotPageState extends State<BotPage> {
     });
   }
 
+  void _startTypingAnimation() {
+    if (_isTyping) return;
+    _isTyping = true;
+    _displayedContent = '';
+    
+    _typingTimer?.cancel();
+    _typingTimer = Timer.periodic(Duration(milliseconds: _delayPerWord), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      
+      // Cek apakah masih ada konten yang belum ditampilkan
+      if (_bufferedContent.length > _displayedContent.length) {
+        // Ambil kata berikutnya dari buffer
+        final remaining = _bufferedContent.substring(_displayedContent.length);
+        final words = remaining.split(RegExp(r'(\s+)'));
+        
+        if (words.isNotEmpty && words[0].isNotEmpty) {
+          setState(() {
+            _displayedContent += words[0];
+            if (_messages.isNotEmpty && _messages.last['role'] == 'model') {
+              _messages.last['content'] = _displayedContent;
+            }
+          });
+          _scrollToBottom();
+        } else if (words.length > 1 && words[1].isNotEmpty) {
+          // Handle spasi di awal
+          setState(() {
+            _displayedContent += words[0] + words[1];
+            if (_messages.isNotEmpty && _messages.last['role'] == 'model') {
+              _messages.last['content'] = _displayedContent;
+            }
+          });
+          _scrollToBottom();
+        }
+      } else {
+        // Semua konten sudah ditampilkan
+        timer.cancel();
+        _isTyping = false;
+      }
+    });
+  }
+
+  void _stopTypingAnimation() {
+    _typingTimer?.cancel();
+    _typingTimer = null;
+    _isTyping = false;
+    // Tampilkan semua konten yang tersisa
+    if (_bufferedContent.length > _displayedContent.length) {
+      setState(() {
+        _displayedContent = _bufferedContent;
+        if (_messages.isNotEmpty && _messages.last['role'] == 'model') {
+          _messages.last['content'] = _displayedContent;
+        }
+      });
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _sending) return;
     _controller.clear();
+    
+    // Reset state untuk animasi mengetik
+    _stopTypingAnimation();
+    _bufferedContent = '';
+    _displayedContent = '';
+    
     setState(() {
       _messages.add({'role': 'user', 'content': text});
       _messages.add({'role': 'model', 'content': ''});
@@ -109,54 +196,87 @@ class _BotPageState extends State<BotPage> {
       }
 
       String buffer = '';
+      bool firstChunkReceived = false;
+      
       await for (final chunk in response.stream.transform(utf8.decoder)) {
         if (!mounted) break;
         buffer += chunk;
         final parts = buffer.split('\n\n');
         buffer = parts.removeLast();
+        
         for (final part in parts) {
-          final line = part.split('\n').where((l) => l.startsWith('data: ')).firstOrNull;
-          if (line == null) continue;
-          final dataStr = line.substring(6).trim();
-          if (dataStr == '[DONE]' || dataStr.isEmpty) continue;
+          if (part.trim().isEmpty) continue;
+          
+          // Parse SSE format: "data: {...}"
+          final lines = part.split('\n');
+          String? dataLine;
+          for (final line in lines) {
+            if (line.startsWith('data: ')) {
+              dataLine = line.substring(6).trim();
+              break;
+            }
+          }
+          
+          if (dataLine == null || dataLine.isEmpty || dataLine == '[DONE]') continue;
+          
           try {
-            final data = jsonDecode(dataStr) as Map<String, dynamic>?;
+            final data = jsonDecode(dataLine) as Map<String, dynamic>?;
             if (data == null) continue;
+            
+            // Handle heartbeat: koneksi sudah siap
+            if (data['status'] == 'connected') {
+              setState(() {
+                _sending = false; // Hilangkan loading indicator
+              });
+              continue;
+            }
+            
+            // Handle error
+            if (data['error'] != null) {
+              throw Exception(data['error'].toString());
+            }
+            
+            // Handle done: streaming selesai
             if (data['done'] == true && data['fullReply'] != null) {
+              _bufferedContent = data['fullReply'].toString();
+              _stopTypingAnimation();
+              // Pastikan semua konten ditampilkan
               setState(() {
                 if (_messages.isNotEmpty && _messages.last['role'] == 'model') {
-                  _messages.last['content'] = data['fullReply'].toString();
+                  _messages.last['content'] = _bufferedContent;
                 }
               });
               break;
             }
+            
+            // Handle text chunk: tambahkan ke buffer
             final delta = data['text']?.toString();
             if (delta != null && delta.isNotEmpty) {
-              setState(() {
-                if (_messages.isNotEmpty && _messages.last['role'] == 'model') {
-                  _messages.last['content'] =
-                      (_messages.last['content']?.toString() ?? '') + delta;
-                }
-              });
+              _bufferedContent += delta;
+              
+              // Mulai animasi mengetik setelah chunk pertama
+              if (!firstChunkReceived) {
+                firstChunkReceived = true;
+                _startTypingAnimation();
+              }
             }
-          } catch (_) {}
+          } catch (e) {
+            // Skip jika parsing gagal (bisa jadi chunk terpotong)
+            continue;
+          }
         }
       }
 
+      // Pastikan animasi berhenti dan semua konten ditampilkan
+      _stopTypingAnimation();
+      
       if (mounted) {
         setState(() => _sending = false);
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollController.hasClients) {
-            _scrollController.animateTo(
-              _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
-          }
-        });
+        _scrollToBottom();
       }
     } catch (e) {
       if (!mounted) return;
+      _stopTypingAnimation();
       setState(() {
         _messages.removeLast();
         _sending = false;
