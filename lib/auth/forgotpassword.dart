@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:smartcook/auth/mailpassoword.dart';
 import 'package:smartcook/helper/color.dart';
@@ -12,11 +13,43 @@ class forgotpassowrd extends StatefulWidget {
 
 class _forgotpassowrdState extends State<forgotpassowrd> {
   bool _isLoading = false;
+  int _otpCooldownSeconds = 0;
+  Timer? _otpTimer;
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
 
+  @override
+  void dispose() {
+    _otpTimer?.cancel();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  void _startOtpCooldown(int seconds) {
+    _otpTimer?.cancel();
+    setState(() {
+      _otpCooldownSeconds = seconds;
+    });
+    _otpTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        if (_otpCooldownSeconds > 1) {
+          _otpCooldownSeconds--;
+        } else {
+          _otpCooldownSeconds = 0;
+          timer.cancel();
+        }
+      });
+    });
+  }
+
   void _handleSend() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_otpCooldownSeconds > 0) return;
+
     setState(() => _isLoading = true);
     final email = _emailController.text.trim();
     final res = await ApiService.post(
@@ -26,12 +59,30 @@ class _forgotpassowrdState extends State<forgotpassowrd> {
     );
     if (!mounted) return;
     setState(() => _isLoading = false);
+
     if (!res.success) {
+      // Jika kena rate limit kirim OTP, gunakan retry_after_seconds untuk cooldown
+      int? retryAfter;
+      if (res.code == 'OTP_SEND_RATE_LIMIT' && res.data is Map<String, dynamic>) {
+        final data = res.data as Map<String, dynamic>;
+        final v = data['retry_after_seconds'];
+        if (v is num && v > 0) {
+          retryAfter = v.toInt();
+        }
+      }
+      if (retryAfter != null) {
+        _startOtpCooldown(retryAfter);
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(res.message ?? 'Gagal mengirim kode')),
       );
       return;
     }
+
+    // Sukses kirim OTP: mulai cooldown 60 detik
+    _startOtpCooldown(60);
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -42,7 +93,6 @@ class _forgotpassowrdState extends State<forgotpassowrd> {
 
   @override
   Widget build(BuildContext context) {
-    final screenheight = MediaQuery.of(context).size.height;
     final screenwidth = MediaQuery.of(context).size.width;
 
     double basewidth = 430;
@@ -117,7 +167,8 @@ class _forgotpassowrdState extends State<forgotpassowrd> {
               ),
               SizedBox(height: 25),
               ElevatedButton(
-                onPressed: _isLoading ? null : _handleSend,
+                onPressed:
+                    _isLoading || _otpCooldownSeconds > 0 ? null : _handleSend,
                 style: ElevatedButton.styleFrom(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -136,7 +187,9 @@ class _forgotpassowrdState extends State<forgotpassowrd> {
                         ),
                       )
                     : Text(
-                        'Send',
+                        _otpCooldownSeconds > 0
+                            ? 'Send (${_otpCooldownSeconds}s)'
+                            : 'Send',
                         style: TextStyle(
                           color: AppColor().putih,
                           fontWeight: FontWeight.bold,

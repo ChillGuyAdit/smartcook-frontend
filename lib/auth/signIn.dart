@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:smartcook/auth/forgotpassword.dart';
 import 'package:smartcook/auth/signUp.dart';
+import 'package:smartcook/auth/login_otp.dart';
 import 'package:smartcook/auth/google_set_password.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/page/homepage.dart';
@@ -17,7 +19,7 @@ class signin extends StatefulWidget {
   State<signin> createState() => _signinState();
 }
 
-class _signinState extends State<signin> {
+class _signinState extends State<signin> with SingleTickerProviderStateMixin {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final AuthService _authService = AuthService();
 
@@ -26,17 +28,38 @@ class _signinState extends State<signin> {
   final FocusNode _focusNode1 = FocusNode();
   final FocusNode _focusNode2 = FocusNode();
 
+  late final AnimationController _shakeController;
+  late final Animation<double> _shakeAnimation;
+
+  bool _hasError = false;
+  String? _errorMessage;
+  int _pwCooldownSeconds = 0;
+  Timer? _pwTimer;
+
   @override
   void dispose() {
+    _shakeController.dispose();
     _kontrolEmail.dispose();
     _kontrolPassword.dispose();
     _focusNode1.dispose();
     _focusNode2.dispose();
+    _pwTimer?.cancel();
     super.dispose();
   }
 
   bool _obscuretext = true;
   bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _shakeAnimation =
+        Tween<double>(begin: 0, end: 12).chain(CurveTween(curve: Curves.elasticIn)).animate(_shakeController);
+  }
 
   Future<void> _handleAfterLogin(Map<String, dynamic>? user) async {
     final onboardingCompleted = user?['onboarding_completed'] == true;
@@ -56,7 +79,12 @@ class _signinState extends State<signin> {
 
   Future<void> _submitData() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
+    if (_pwCooldownSeconds > 0) return;
+    setState(() {
+      _loading = true;
+      _hasError = false;
+      _errorMessage = null;
+    });
     final res = await ApiService.post(
       '/api/auth/login',
       body: {
@@ -67,12 +95,68 @@ class _signinState extends State<signin> {
     );
     if (!mounted) return;
     setState(() => _loading = false);
+
     if (!res.success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message ?? 'Login gagal')),
-      );
+      // Tangani kasus khusus dari backend berdasarkan kode error
+      final effectiveCode = res.code ?? '';
+
+      if (effectiveCode == 'LOGIN_OTP_REQUIRED') {
+        _kontrolPassword.clear();
+        if (!mounted) return;
+        int? expirySec;
+        if (res.data is Map<String, dynamic>) {
+          final data = res.data as Map<String, dynamic>;
+          final expires = data['expires_in_seconds'];
+          if (expires is num && expires > 0) {
+            expirySec = expires.toInt();
+          }
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LoginOtpPage(
+              email: _kontrolEmail.text.trim(),
+              initialExpirySeconds: expirySec,
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Jika kena rate limit login (5x salah / window 5 menit), baca retry_after_seconds
+      if (effectiveCode == 'LOGIN_RATE_LIMIT' && res.data is Map<String, dynamic>) {
+        final data = res.data as Map<String, dynamic>;
+        final ra = data['retry_after_seconds'];
+        if (ra is num && ra > 0) {
+          _pwTimer?.cancel();
+          _pwCooldownSeconds = ra.toInt();
+          _pwTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+            if (!mounted) {
+              timer.cancel();
+              return;
+            }
+            setState(() {
+              if (_pwCooldownSeconds > 1) {
+                _pwCooldownSeconds--;
+              } else {
+                _pwCooldownSeconds = 0;
+                timer.cancel();
+              }
+            });
+          });
+        }
+      }
+
+      final msg = res.message ?? 'Login gagal';
+      setState(() {
+        _hasError = true;
+        _errorMessage = msg;
+        _kontrolPassword.clear();
+      });
+      _shakeController.forward(from: 0);
       return;
     }
+
     final data = res.data as Map<String, dynamic>?;
     final token = data?['token'] as String?;
     final user = data?['user'] as Map<String, dynamic>?;
@@ -104,113 +188,143 @@ class _signinState extends State<signin> {
               child: Column(
                 children: [
                   SizedBox(height: 100),
-                  Container(
-                    height: 420 * scale,
-                    width: 380 * scale,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(56),
-                        topRight: Radius.circular(74),
+                  AnimatedBuilder(
+                    animation: _shakeController,
+                    builder: (context, child) {
+                      final dx = _hasError ? (_shakeAnimation.value - 6) : 0.0;
+                      return Transform.translate(
+                        offset: Offset(dx, 0),
+                        child: child,
+                      );
+                    },
+                    child: Container(
+                      height: 460 * scale,
+                      width: 380 * scale,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(56),
+                          topRight: Radius.circular(74),
+                        ),
+                        color: AppColor().hijauPucat,
                       ),
-                      color: AppColor().hijauPucat,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(left: 30),
-                          child: Align(
-                            alignment: Alignment.topLeft,
-                            child: Text(
-                              'SignIn',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 38 * scale,
-                                color: AppColor().hintTextColor,
-                              ),
-                            ),
-                          ),
-                        ),
-                        Form(
-                          key: _formKey,
-                          child: Column(
-                            children: [
-                              SizedBox(height: 30 * scale),
-                              email(),
-                              SizedBox(height: 15 * scale),
-                              password(),
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.only(right: 35),
-                          child: Align(
-                            alignment: Alignment.bottomRight,
-                            child: TextButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => forgotpassowrd(),
-                                  ),
-                                );
-                              },
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.only(left: 30),
+                            child: Align(
+                              alignment: Alignment.topLeft,
                               child: Text(
-                                'Lupa Password?',
+                                'SignIn',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 38 * scale,
                                   color: AppColor().hintTextColor,
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12 * scale),
-                            ),
-                            backgroundColor: AppColor().utama,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 100 * scale,
-                              vertical: 15 * scale,
-                            ),
-                          ),
-                          onPressed: _loading ? null : _submitData,
-                          child: _loading
-                              ? SizedBox(
-                                  height: 22,
-                                  width: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColor().putih,
+                          if (_errorMessage != null) ...[
+                            SizedBox(height: 12 * scale),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 31),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  _errorMessage!,
+                                  style: TextStyle(
+                                    color: Colors.red.shade700,
+                                    fontSize: 12 * scale,
                                   ),
-                                )
-                              : Text(
-                            'SignIn',
-                            style: TextStyle(
-                              color: AppColor().putih,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 22 * scale,
+                                ),
+                              ),
+                            ),
+                          ],
+                          Form(
+                            key: _formKey,
+                            child: Column(
+                              children: [
+                                SizedBox(height: 30 * scale),
+                                email(),
+                                SizedBox(height: 15 * scale),
+                                password(),
+                              ],
                             ),
                           ),
-                        ),
-                      ],
+                          Padding(
+                            padding: EdgeInsets.only(right: 35),
+                            child: Align(
+                              alignment: Alignment.bottomRight,
+                              child: TextButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => forgotpassowrd(),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  'Lupa Password?',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColor().hintTextColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12 * scale),
+                              ),
+                              backgroundColor: AppColor().utama,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 100 * scale,
+                                vertical: 15 * scale,
+                              ),
+                            ),
+                            onPressed: _loading || _pwCooldownSeconds > 0
+                                ? null
+                                : _submitData,
+                            child: _loading
+                                ? SizedBox(
+                                    height: 22,
+                                    width: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColor().putih,
+                                    ),
+                                  )
+                                : Text(
+                                    _pwCooldownSeconds > 0
+                                        ? 'SignIn (${_pwCooldownSeconds}s)'
+                                        : 'SignIn',
+                                    style: TextStyle(
+                                      color: AppColor().putih,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 22 * scale,
+                                    ),
+                                  ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   SizedBox(height: 100 * scale),
                   bagianOr(),
-                  SizedBox(height: 70 * scale),
+                  SizedBox(height: 40 * scale),
                   auth(),
                   SizedBox(
-                    height: 100 * scale,
+                    height: 40 * scale,
                   )
                 ],
               ),
             ),
           ),
           Padding(
-            padding: EdgeInsets.only(bottom: screenheight * 0.01),
+            padding: EdgeInsets.only(bottom: screenheight * 0.04),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -276,6 +390,26 @@ class _signinState extends State<signin> {
         },
         decoration: InputDecoration(
           errorStyle: TextStyle(height: 0, fontSize: 10),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide(
+              color: _hasError ? Colors.red.shade400 : Colors.transparent,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide(
+              color: _hasError ? Colors.red.shade400 : Colors.transparent,
+            ),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide(color: Colors.red.shade400),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide(color: Colors.red.shade400),
+          ),
           filled: true,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
@@ -306,6 +440,26 @@ class _signinState extends State<signin> {
         },
         decoration: InputDecoration(
           errorStyle: TextStyle(height: 0, fontSize: 10),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide(
+              color: _hasError ? Colors.red.shade400 : Colors.transparent,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide(
+              color: _hasError ? Colors.red.shade400 : Colors.transparent,
+            ),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide(color: Colors.red.shade400),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide(color: Colors.red.shade400),
+          ),
           filled: true,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),

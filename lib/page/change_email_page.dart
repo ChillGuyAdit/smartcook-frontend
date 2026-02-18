@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/service/api_service.dart';
+import 'package:smartcook/service/otp_cooldown_service.dart';
 import 'package:smartcook/service/token_service.dart';
 
 class ChangeEmailPage extends StatefulWidget {
@@ -17,16 +19,67 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
 
   bool _loadingSend = false;
   bool _loadingConfirm = false;
+  int _otpCooldownSeconds = 0;
+  Timer? _otpTimer;
+  int _expirySeconds = 0;
 
   @override
   void dispose() {
     _emailController.dispose();
     _otpController.dispose();
+    _otpTimer?.cancel();
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _initTimers();
+  }
+
+  Future<void> _initTimers() async {
+    const key = 'profile_email';
+    final cooldown = await OtpCooldownService.getRemainingCooldown(key);
+    final expiry = await OtpCooldownService.getRemainingExpiry(key);
+    setState(() {
+      _otpCooldownSeconds = cooldown;
+      _expirySeconds = expiry;
+    });
+    _otpTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        if (_otpCooldownSeconds > 0) _otpCooldownSeconds--;
+        if (_expirySeconds > 0) _expirySeconds--;
+      });
+    });
+  }
+
+  void _startOtpCooldown(int seconds) {
+    _otpTimer?.cancel();
+    setState(() {
+      _otpCooldownSeconds = seconds;
+    });
+    _otpTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        if (_otpCooldownSeconds > 1) {
+          _otpCooldownSeconds--;
+        } else {
+          _otpCooldownSeconds = 0;
+          timer.cancel();
+        }
+      });
+    });
+  }
+
   Future<void> _sendOtp() async {
-    if (_loadingSend) return;
+    if (_loadingSend || _otpCooldownSeconds > 0) return;
     if (_emailController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Email baru wajib diisi')),
@@ -41,14 +94,41 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
     );
     if (!mounted) return;
     setState(() => _loadingSend = false);
+
+    String baseMessage = res.message ??
+        (res.success
+            ? 'Kode OTP telah dikirim ke email kamu.'
+            : 'Gagal mengirim OTP');
+
+    const key = 'profile_email';
+
+    if (res.data is Map<String, dynamic>) {
+      final data = res.data as Map<String, dynamic>;
+      final expiresSec = data['expires_in_seconds'];
+      if (expiresSec is num && expiresSec > 0) {
+        final minutes = (expiresSec / 60).ceil();
+        baseMessage =
+            '$baseMessage Kode berlaku sekitar $minutes menit.';
+        await OtpCooldownService.setExpiry(key, expiresSec.toInt());
+        setState(() => _expirySeconds = expiresSec.toInt());
+      }
+
+      int? retryAfter;
+      final ra = data['retry_after_seconds'];
+      if (ra is num && ra > 0) {
+        retryAfter = ra.toInt();
+      }
+      final cooldown = retryAfter ?? 60;
+      await OtpCooldownService.setCooldown(key, cooldown);
+      _startOtpCooldown(cooldown);
+    } else if (res.success) {
+      await OtpCooldownService.setCooldown(key, 60);
+      _startOtpCooldown(60);
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          res.message ??
-              (res.success
-                  ? 'Kode OTP telah dikirim ke email kamu.'
-                  : 'Gagal mengirim OTP'),
-        ),
+        content: Text(baseMessage),
       ),
     );
   }
@@ -131,7 +211,8 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
                   ),
                   SizedBox(width: 12 * scale),
                   ElevatedButton(
-                    onPressed: _loadingSend ? null : _sendOtp,
+                    onPressed:
+                        _loadingSend || _otpCooldownSeconds > 0 ? null : _sendOtp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColor().utama,
                     ),
@@ -144,10 +225,25 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text('Kirim OTP'),
+                        : Text(
+                            _otpCooldownSeconds > 0
+                                ? 'Kirim OTP (${_otpCooldownSeconds}s)'
+                                : 'Kirim OTP',
+                          ),
                   ),
                 ],
               ),
+              if (_otpCooldownSeconds > 0 || _expirySeconds > 0) ...[
+                SizedBox(height: 8 * scale),
+                if (_expirySeconds > 0)
+                  Text(
+                    '⏰ OTP akan expired dalam ${OtpCooldownService.formatSeconds(_expirySeconds)}',
+                    style: TextStyle(
+                      fontSize: 12 * scale,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+              ],
               SizedBox(height: 24 * scale),
               SizedBox(
                 width: double.infinity,

@@ -1,32 +1,47 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:smartcook/auth/resetpassword.dart';
 import 'package:smartcook/helper/color.dart';
+import 'package:smartcook/page/homepage.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/otp_cooldown_service.dart';
+import 'package:smartcook/service/token_service.dart';
+import 'package:smartcook/view/onboarding/mainBoarding.dart';
 
-class mailpassword extends StatefulWidget {
+class LoginOtpPage extends StatefulWidget {
   final String email;
-  const mailpassword({super.key, required this.email});
+  final int? initialExpirySeconds;
+
+  const LoginOtpPage({
+    super.key,
+    required this.email,
+    this.initialExpirySeconds,
+  });
 
   @override
-  State<mailpassword> createState() => _mailpasswordState();
+  State<LoginOtpPage> createState() => _LoginOtpPageState();
 }
 
-class _mailpasswordState extends State<mailpassword> {
-  final _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
+class _LoginOtpPageState extends State<LoginOtpPage> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final List<TextEditingController> _otpControllers =
       List.generate(4, (_) => TextEditingController());
+  final TextEditingController _passwordController = TextEditingController();
 
+  bool _loading = false;
+  bool _showNewPassword = false;
+  bool _obscureNewPassword = true;
+  String? _errorMessage;
   int _expirySeconds = 0;
   int _resendCooldownSeconds = 0;
   Timer? _timer;
 
   @override
   void dispose() {
-    for (final c in _otpControllers) c.dispose();
+    for (final c in _otpControllers) {
+      c.dispose();
+    }
+    _passwordController.dispose();
     _timer?.cancel();
     super.dispose();
   }
@@ -38,8 +53,13 @@ class _mailpasswordState extends State<mailpassword> {
   }
 
   Future<void> _initTimers() async {
-    final key = 'forgot:${widget.email}';
-    final expiry = await OtpCooldownService.getRemainingExpiry(key);
+    final key = 'login:${widget.email}';
+    int expiry = widget.initialExpirySeconds ?? 0;
+    if (expiry <= 0) {
+      expiry = await OtpCooldownService.getRemainingExpiry(key);
+    } else {
+      await OtpCooldownService.setExpiry(key, expiry);
+    }
     final cooldown = await OtpCooldownService.getRemainingCooldown(key);
     setState(() {
       _expirySeconds = expiry;
@@ -57,8 +77,27 @@ class _mailpasswordState extends State<mailpassword> {
     });
   }
 
-  void _validateAndSubmit() async {
+  Future<void> _handleAfterLogin(Map<String, dynamic>? user) async {
+    final onboardingCompleted = user?['onboarding_completed'] == true;
+    if (!mounted) return;
+    if (onboardingCompleted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => homepage()),
+        (route) => false,
+      );
+    } else {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => onboarding()),
+        (route) => false,
+      );
+    }
+  }
+
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
     final otp = _otpControllers.map((c) => c.text).join();
     if (otp.length != 4) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -66,41 +105,75 @@ class _mailpasswordState extends State<mailpassword> {
       );
       return;
     }
-    setState(() => _isLoading = true);
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+
+    final body = <String, dynamic>{
+      'email': widget.email.trim(),
+      'otp': otp,
+    };
+    if (_showNewPassword && _passwordController.text.isNotEmpty) {
+      body['new_password'] = _passwordController.text;
+    }
+
     final res = await ApiService.post(
-      '/api/auth/verify-otp',
-      body: {'email': widget.email, 'otp': otp},
+      '/api/auth/login-otp-verify',
+      body: body,
       useAuth: false,
     );
+
     if (!mounted) return;
-    setState(() => _isLoading = false);
+    setState(() => _loading = false);
+
     if (!res.success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message ?? 'Kode OTP tidak valid')),
-      );
+      setState(() {
+        _errorMessage = res.message ?? 'Verifikasi OTP gagal';
+      });
       return;
     }
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => resetpassword(email: widget.email, otp: otp),
-      ),
-    );
+
+    final data = res.data as Map<String, dynamic>?;
+    final token = data?['token'] as String?;
+    final user = data?['user'] as Map<String, dynamic>?;
+    final mustChangePassword = data?['must_change_password'] == true;
+
+    if (token != null && token.isNotEmpty) {
+      await TokenService.saveToken(token);
+    }
+    if (user != null) {
+      await TokenService.saveUser(user);
+    }
+
+    if (mustChangePassword && !_showNewPassword) {
+      setState(() {
+        _showNewPassword = true;
+        _errorMessage = 'OTP terverifikasi. Silakan buat password baru.';
+      });
+      return;
+    }
+
+    await _handleAfterLogin(user);
   }
 
   Future<void> _resendOtp() async {
-    if (_isLoading || _resendCooldownSeconds > 0) return;
-    setState(() => _isLoading = true);
+    if (_loading || _resendCooldownSeconds > 0) return;
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+
     final res = await ApiService.post(
-      '/api/auth/forgot-password',
-      body: {'email': widget.email},
+      '/api/auth/login-otp-resend',
+      body: {'email': widget.email.trim()},
       useAuth: false,
     );
+
     if (!mounted) return;
-    setState(() => _isLoading = false);
+    setState(() => _loading = false);
 
     if (!res.success) {
-      // Jika kena rate limit, gunakan retry_after_seconds
       int? retryAfter;
       if (res.code == 'OTP_SEND_RATE_LIMIT' && res.data is Map<String, dynamic>) {
         final data = res.data as Map<String, dynamic>;
@@ -110,17 +183,16 @@ class _mailpasswordState extends State<mailpassword> {
         }
       }
       if (retryAfter != null) {
-        final key = 'forgot:${widget.email}';
+        final key = 'login:${widget.email}';
         await OtpCooldownService.setCooldown(key, retryAfter);
         setState(() => _resendCooldownSeconds = retryAfter!);
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message ?? 'Gagal mengirim ulang OTP')),
-      );
+      setState(() {
+        _errorMessage = res.message ?? 'Gagal mengirim ulang OTP';
+      });
       return;
     }
 
-    // Sukses kirim OTP baru
     int expirySec = 600;
     if (res.data is Map<String, dynamic>) {
       final data = res.data as Map<String, dynamic>;
@@ -129,28 +201,31 @@ class _mailpasswordState extends State<mailpassword> {
         expirySec = expires.toInt();
       }
     }
-    final key = 'forgot:${widget.email}';
+
+    final key = 'login:${widget.email}';
     await OtpCooldownService.setCooldown(key, 60);
     await OtpCooldownService.setExpiry(key, expirySec);
+
     setState(() {
       _resendCooldownSeconds = 60;
       _expirySeconds = expirySec;
+      _errorMessage = 'Kode OTP baru telah dikirim.';
     });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Kode OTP baru telah dikirim')),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenwidth = MediaQuery.of(context).size.width;
+
+    double basewidth = 430;
+    double scale = screenwidth / basewidth;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           onPressed: () {
             Navigator.pop(context);
           },
-          icon: Icon(Icons.arrow_back_ios_new),
+          icon: const Icon(Icons.arrow_back_ios_new),
         ),
       ),
       body: SingleChildScrollView(
@@ -159,25 +234,25 @@ class _mailpasswordState extends State<mailpassword> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(height: 50),
+              const SizedBox(height: 50),
               Align(
                 alignment: Alignment.center,
                 child: Image.asset('image/mail.png'),
               ),
-              SizedBox(height: 46),
-              Text(
+              const SizedBox(height: 46),
+              const Text(
                 'Check your email',
                 style: TextStyle(fontSize: 30, fontWeight: FontWeight.w600),
               ),
-              SizedBox(height: 14),
+              const SizedBox(height: 14),
               Text.rich(
                 TextSpan(
                   text: "Kami mengirim 4 digit kode ke\n",
-                  style: TextStyle(fontSize: 12),
+                  style: const TextStyle(fontSize: 12),
                   children: [
                     TextSpan(
                       text: widget.email,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
@@ -194,7 +269,7 @@ class _mailpasswordState extends State<mailpassword> {
                     const Text('⏰ '),
                     Text(
                       'Kode akan expired dalam ${OtpCooldownService.formatSeconds(_expirySeconds)}',
-                      style: const TextStyle(fontSize: 12),
+                      style: TextStyle(fontSize: 12 * scale),
                     ),
                   ],
                 ),
@@ -205,9 +280,23 @@ class _mailpasswordState extends State<mailpassword> {
                   textAlign: TextAlign.center,
                 ),
               ],
-              SizedBox(height: 40),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    _errorMessage!,
+                    style: TextStyle(
+                      color: Colors.red.shade700,
+                      fontSize: 12 * scale,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 40),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 40),
+                padding: const EdgeInsets.symmetric(horizontal: 40),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,18 +308,57 @@ class _mailpasswordState extends State<mailpassword> {
                   ],
                 ),
               ),
-              SizedBox(height: 25),
+              if (_showNewPassword) ...[
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscureNewPassword,
+                    decoration: InputDecoration(
+                      labelText: 'Password baru',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureNewPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscureNewPassword = !_obscureNewPassword;
+                          });
+                        },
+                      ),
+                    ),
+                    validator: (value) {
+                      if (!_showNewPassword) return null;
+                      if (value == null || value.isEmpty) {
+                        return 'Password baru wajib diisi';
+                      }
+                      if (value.length < 6) {
+                        return 'Password minimal 6 karakter';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ],
+              const SizedBox(height: 25),
               ElevatedButton(
-                onPressed: _isLoading ? null : _validateAndSubmit,
+                onPressed: _loading ? null : _submit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColor().utama,
-                  padding: EdgeInsets.symmetric(horizontal: 110, vertical: 12),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 110 * scale, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-                child: _isLoading
-                    ? SizedBox(
+                child: _loading
+                    ? const SizedBox(
                         height: 30,
                         width: 30,
                         child: CircularProgressIndicator(
@@ -238,7 +366,7 @@ class _mailpasswordState extends State<mailpassword> {
                           strokeWidth: 3,
                         ),
                       )
-                    : Text(
+                    : const Text(
                         "Verify",
                         style: TextStyle(
                           color: Colors.white,
@@ -250,13 +378,14 @@ class _mailpasswordState extends State<mailpassword> {
               const SizedBox(height: 12),
               TextButton(
                 onPressed:
-                    _isLoading || _resendCooldownSeconds > 0 ? null : _resendOtp,
+                    _loading || _resendCooldownSeconds > 0 ? null : _resendOtp,
                 child: Text(
                   _resendCooldownSeconds > 0
                       ? 'Resend OTP (${_resendCooldownSeconds}s)'
                       : 'Resend OTP',
                 ),
               ),
+              const SizedBox(height: 18),
             ],
           ),
         ),
@@ -270,7 +399,7 @@ class _mailpasswordState extends State<mailpassword> {
       height: 70,
       child: TextFormField(
         controller: _otpControllers[index],
-        enabled: !_isLoading,
+        enabled: !_loading,
         onChanged: (value) {
           if (value.length == 1 && !last) {
             FocusScope.of(context).nextFocus();
@@ -284,13 +413,13 @@ class _mailpasswordState extends State<mailpassword> {
           return null;
         },
         textAlign: TextAlign.center,
-        style: TextStyle(fontSize: 24, fontWeight: FontWeight.normal),
+        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.normal),
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         maxLength: 1,
         decoration: InputDecoration(
           counterText: "",
-          errorStyle: TextStyle(height: 0),
+          errorStyle: const TextStyle(height: 0),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide.none,
@@ -303,10 +432,11 @@ class _mailpasswordState extends State<mailpassword> {
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide.none,
           ),
-          fillColor: Color(0xFFD9D9D9),
+          fillColor: const Color(0xFFD9D9D9),
           filled: true,
         ),
       ),
     );
   }
 }
+

@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/service/api_service.dart';
+import 'package:smartcook/service/otp_cooldown_service.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -23,30 +25,110 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   final _newController = TextEditingController();
   final _confirmController = TextEditingController();
 
+  int _otpCooldownSeconds = 0;
+  Timer? _otpTimer;
+  int _expirySeconds = 0;
+
   @override
   void dispose() {
     _currentController.dispose();
     _otpController.dispose();
     _newController.dispose();
     _confirmController.dispose();
+    _otpTimer?.cancel();
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _initTimers();
+  }
+
+  Future<void> _initTimers() async {
+    // Di profile, email aktif bisa diambil dari TokenService user (kalau mau),
+    // untuk sekarang pakai key global tanpa email agar tetap satu sumber.
+    const key = 'profile_pw';
+    final cooldown = await OtpCooldownService.getRemainingCooldown(key);
+    final expiry = await OtpCooldownService.getRemainingExpiry(key);
+    setState(() {
+      _otpCooldownSeconds = cooldown;
+      _expirySeconds = expiry;
+    });
+    _otpTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        if (_otpCooldownSeconds > 0) _otpCooldownSeconds--;
+        if (_expirySeconds > 0) _expirySeconds--;
+      });
+    });
+  }
+
+  void _startOtpCooldown(int seconds) {
+    _otpTimer?.cancel();
+    setState(() {
+      _otpCooldownSeconds = seconds;
+    });
+    _otpTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        if (_otpCooldownSeconds > 1) {
+          _otpCooldownSeconds--;
+        } else {
+          _otpCooldownSeconds = 0;
+          timer.cancel();
+        }
+      });
+    });
+  }
+
   Future<void> _sendOtp() async {
-    if (_sendingOtp) return;
+    if (_sendingOtp || _otpCooldownSeconds > 0) return;
     setState(() => _sendingOtp = true);
     final res =
         await ApiService.post('/api/user/password/send-otp', useAuth: true);
     if (!mounted) return;
     setState(() => _sendingOtp = false);
+    String baseMessage = res.message ??
+        (res.success
+            ? 'Kode OTP telah dikirim ke email kamu.'
+            : 'Gagal mengirim OTP');
+
+    const key = 'profile_pw';
+
+    if (res.data is Map<String, dynamic>) {
+      final data = res.data as Map<String, dynamic>;
+      final expiresSec = data['expires_in_seconds'];
+      if (expiresSec is num && expiresSec > 0) {
+        final minutes = (expiresSec / 60).ceil();
+        baseMessage =
+            '$baseMessage Kode berlaku sekitar $minutes menit.';
+        await OtpCooldownService.setExpiry(key, expiresSec.toInt());
+        setState(() => _expirySeconds = expiresSec.toInt());
+      }
+
+      int? retryAfter;
+      final ra = data['retry_after_seconds'];
+      if (ra is num && ra > 0) {
+        retryAfter = ra.toInt();
+      }
+      final cooldown = retryAfter ?? 60;
+      await OtpCooldownService.setCooldown(key, cooldown);
+      _startOtpCooldown(cooldown);
+    } else if (res.success) {
+      await OtpCooldownService.setCooldown(key, 60);
+      _startOtpCooldown(60);
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          res.message ??
-              (res.success
-                  ? 'Kode OTP telah dikirim ke email kamu.'
-                  : 'Gagal mengirim OTP'),
-        ),
+        content: Text(baseMessage),
       ),
     );
   }
@@ -176,7 +258,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                           ),
                           SizedBox(width: 12 * scale),
                           ElevatedButton(
-                            onPressed: _sendingOtp ? null : _sendOtp,
+                            onPressed: _sendingOtp || _otpCooldownSeconds > 0
+                                ? null
+                                : _sendOtp,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColor().utama,
                             ),
@@ -189,10 +273,26 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                                       color: Colors.white,
                                     ),
                                   )
-                                : const Text('Kirim OTP'),
+                                : Text(
+                                    _otpCooldownSeconds > 0
+                                        ? 'Kirim OTP (${_otpCooldownSeconds}s)'
+                                        : 'Kirim OTP',
+                                  ),
                           ),
                         ],
                       ),
+                      SizedBox(height: 8 * scale),
+                      if (_expirySeconds > 0)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '⏰ OTP akan expired dalam ${OtpCooldownService.formatSeconds(_expirySeconds)}',
+                            style: TextStyle(
+                              fontSize: 12 * scale,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
                       SizedBox(height: 16 * scale),
                     ],
                     TextFormField(

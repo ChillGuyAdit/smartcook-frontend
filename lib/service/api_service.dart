@@ -32,12 +32,9 @@ class ApiService {
     try {
       body = res.body.isEmpty ? null : jsonDecode(res.body);
     } catch (e) {
-      final preview = res.body.length > 200 
-          ? '${res.body.substring(0, 200)}...' 
-          : res.body;
       return ApiResponse(
         success: false,
-        message: 'Format respons tidak valid: $preview',
+        message: 'Terjadi kesalahan pada server.',
         statusCode: res.statusCode,
       );
     }
@@ -65,6 +62,9 @@ class ApiService {
             ? body['message'].toString()
             : null,
         statusCode: res.statusCode,
+        code: body is Map && body['code'] != null
+            ? body['code'].toString()
+            : null,
       );
     }
     final message = body is Map && body['message'] != null
@@ -72,9 +72,14 @@ class ApiService {
         : 'Terjadi kesalahan (${res.statusCode})';
     return ApiResponse(
       success: false,
-      data: body is Map ? body['data'] : null,
+      // Untuk error, kirim seluruh body agar field seperti
+      // retry_after_seconds, expires_in_seconds, dll bisa dibaca frontend.
+      data: body,
       message: message,
       statusCode: res.statusCode,
+      code: body is Map && body['code'] != null
+          ? body['code'].toString()
+          : null,
     );
   }
 
@@ -96,7 +101,7 @@ class ApiService {
       OfflineManager.setOffline(true);
       return ApiResponse(
         success: false,
-        message: 'Periksa koneksi internet',
+        message: 'Tidak dapat terhubung ke server. Periksa koneksi internet.',
       );
     }
   }
@@ -131,7 +136,7 @@ class ApiService {
       OfflineManager.setOffline(true);
       return ApiResponse(
         success: false,
-        message: 'Periksa koneksi internet: ${e.toString()}',
+        message: 'Tidak dapat terhubung ke server. Periksa koneksi internet.',
       );
     }
   }
@@ -155,7 +160,7 @@ class ApiService {
       OfflineManager.setOffline(true);
       return ApiResponse(
         success: false,
-        message: 'Periksa koneksi internet',
+        message: 'Tidak dapat terhubung ke server. Periksa koneksi internet.',
       );
     }
   }
@@ -174,7 +179,7 @@ class ApiService {
       OfflineManager.setOffline(true);
       return ApiResponse(
         success: false,
-        message: 'Periksa koneksi internet',
+        message: 'Tidak dapat terhubung ke server. Periksa koneksi internet.',
       );
     }
   }
@@ -185,11 +190,13 @@ class ApiResponse {
   final dynamic data;
   final String? message;
   final int? statusCode;
+  final String? code;
 
   ApiResponse({
     required this.success,
     this.data,
     this.message,
     this.statusCode,
+    this.code,
   });
 }
