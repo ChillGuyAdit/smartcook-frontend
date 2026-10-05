@@ -109,6 +109,10 @@ class _UpdateDialog extends StatefulWidget {
 }
 
 class _UpdateDialogState extends State<_UpdateDialog> {
+  // Only the fields we need are read below. Any extra fields the server
+  // adds to `latest.json` (e.g. future title/subtitle overrides) are
+  // intentionally ignored — the dialog degrades gracefully without code
+  // changes.
   _DialogStage _stage = _DialogStage.downloading;
   double? _progress;
   String? _error;

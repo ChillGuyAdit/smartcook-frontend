@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/token_service.dart';
 import 'package:smartcook/view/onboarding/form.dart';
@@ -16,12 +17,20 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? _profile;
   bool _loading = true;
   bool _saving = false;
+  PackageInfo? _pkg;
   final _nameController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadPackageInfo();
+  }
+
+  Future<void> _loadPackageInfo() async {
+    final pkg = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() => _pkg = pkg);
   }
 
   @override
@@ -241,6 +250,17 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              if (_pkg != null)
+                Center(
+                  child: Text(
+                    'Versi ${_pkg!.version} (build ${_pkg!.buildNumber})',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black45,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
