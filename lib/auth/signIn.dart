@@ -9,7 +9,6 @@ import 'package:smartcook/page/homepage.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/auth_service.dart';
 import 'package:smartcook/service/token_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smartcook/view/onboarding/mainBoarding.dart';
 
 class signin extends StatefulWidget {
@@ -505,77 +504,113 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        InkWell(
-          onTap: () async {
-            if (_loading) return;
-            UserCredential? userCredential =
-                await _authService.signinWithGoogle();
-            if (userCredential == null) return;
-            final firebaseUser = userCredential.user;
-            final email = firebaseUser?.email;
-            final name = firebaseUser?.displayName;
-            final uid = firebaseUser?.uid;
-            final photoUrl = firebaseUser?.photoURL;
-            if (email == null || email.isEmpty || uid == null || uid.isEmpty) {
-              if (mounted) {
+        if (AuthService.isEnabled)
+          InkWell(
+            onTap: () async {
+              if (_loading) return;
+              GoogleSignInResult googleResult =
+                  await _authService.signinWithGoogle();
+              final userCredential = googleResult.credential;
+              final firebaseIdToken = googleResult.firebaseIdToken;
+              if (userCredential == null) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text(
+                            'Google sign-in gagal. Coba lagi.')),
+                  );
+                }
+                return;
+              }
+              final firebaseUser = userCredential.user;
+              final email = firebaseUser?.email;
+              final name = firebaseUser?.displayName;
+              final uid = firebaseUser?.uid;
+              final photoUrl = firebaseUser?.photoURL;
+              if (email == null || email.isEmpty || uid == null || uid.isEmpty) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content:
+                            Text('Google sign-in gagal. Coba lagi.')),
+                  );
+                }
+                return;
+              }
+              if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text(
+                            'Tidak bisa mendapatkan token Firebase. Coba lagi.')),
+                  );
+                }
+                return;
+              }
+              setState(() => _loading = true);
+              try {
+                final res = await ApiService.post(
+                  '/api/auth/google',
+                  body: {
+                    'uid': uid,
+                    'email': email,
+                    'name': name,
+                    'photo_url': photoUrl,
+                    'idToken': firebaseIdToken,
+                  },
+                  useAuth: false,
+                );
+                if (!mounted) return;
+                setState(() => _loading = false);
+                if (!res.success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(
+                            res.message ?? 'Google sign-in gagal. Coba lagi.')),
+                  );
+                  return;
+                }
+                final data = res.data as Map<String, dynamic>?;
+                final token = data?['token'] as String?;
+                final backendUser = data?['user'] as Map<String, dynamic>?;
+                final needsPassword = data?['needs_password'] == true;
+                if (token == null || token.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Respons tidak valid')),
+                  );
+                  return;
+                }
+                await TokenService.saveToken(token);
+                if (backendUser != null) await TokenService.saveUser(backendUser);
+
+                if (!mounted) return;
+                if (needsPassword) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => GoogleSetPasswordPage(
+                              email: backendUser?['email'] as String?,
+                            )),
+                  );
+                } else {
+                  await _handleAfterLogin(backendUser);
+                }
+              } catch (e) {
+                if (!mounted) return;
+                setState(() => _loading = false);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Gagal mendapatkan data akun Google')),
+                  SnackBar(
+                      content: Text(
+                          'Google sign-in gagal. Coba lagi. (${e.toString()})')),
                 );
               }
-              return;
-            }
-            setState(() => _loading = true);
-            final res = await ApiService.post(
-              '/api/auth/google',
-              body: {
-                'uid': uid,
-                'email': email,
-                'name': name,
-                'photo_url': photoUrl,
-              },
-              useAuth: false,
-            );
-            if (!mounted) return;
-            setState(() => _loading = false);
-            if (!res.success) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(res.message ?? 'Login Google gagal')),
-              );
-              return;
-            }
-            final data = res.data as Map<String, dynamic>?;
-            final token = data?['token'] as String?;
-            final backendUser = data?['user'] as Map<String, dynamic>?;
-            final needsPassword = data?['needs_password'] == true;
-            if (token == null || token.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Respons tidak valid')),
-              );
-              return;
-            }
-            await TokenService.saveToken(token);
-            if (backendUser != null) await TokenService.saveUser(backendUser);
-
-            if (!mounted) return;
-            if (needsPassword) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => GoogleSetPasswordPage(
-                          email: backendUser?['email'] as String?,
-                        )),
-              );
-            } else {
-              await _handleAfterLogin(backendUser);
-            }
-          },
-          child: Image(
-            image: const AssetImage('image/google.png'),
-            height: 100,
-            width: 100,
+            },
+            child: Image(
+              image: const AssetImage('image/google.png'),
+              height: 100,
+              width: 100,
+            ),
           ),
-        ),
         const SizedBox(width: 40),
         const Image(
           image: AssetImage('image/apple.png'),

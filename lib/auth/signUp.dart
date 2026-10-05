@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:smartcook/auth/signIn.dart';
 import 'package:smartcook/auth/google_set_password.dart';
@@ -278,13 +277,26 @@ class _signupState extends State<signup> {
                        4. Jika variabel 'userCredential' tidak null (login sukses), user otomatis diarahkan ke onBoardingnya.
                        5. pushReplacement digunakan agar user tidak bisa kembali ke halaman signup menggunakan tombol back.
                     */
+                    if (AuthService.isEnabled)
                     InkWell(
                       onTap: () async {
                         if (_loading) return;
                         try {
-                          UserCredential? userCredential =
+                          GoogleSignInResult googleResult =
                               await _authService.signinWithGoogle();
-                          if (userCredential == null) return;
+                          final userCredential = googleResult.credential;
+                          final firebaseIdToken =
+                              googleResult.firebaseIdToken;
+                          if (userCredential == null) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'Google sign-in gagal. Coba lagi.')),
+                              );
+                            }
+                            return;
+                          }
                           final firebaseUser = userCredential.user;
                           final email = firebaseUser?.email;
                           final name = firebaseUser?.displayName;
@@ -297,8 +309,19 @@ class _signupState extends State<signup> {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                    content:
-                                        Text('Gagal mendapatkan data akun Google')),
+                                    content: Text(
+                                        'Google sign-in gagal. Coba lagi.')),
+                              );
+                            }
+                            return;
+                          }
+                          if (firebaseIdToken == null ||
+                              firebaseIdToken.isEmpty) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'Tidak bisa mendapatkan token Firebase. Coba lagi.')),
                               );
                             }
                             return;
@@ -311,6 +334,7 @@ class _signupState extends State<signup> {
                               'email': email,
                               'name': name,
                               'photo_url': photoUrl,
+                              'idToken': firebaseIdToken,
                             },
                             useAuth: false,
                           );
@@ -319,8 +343,8 @@ class _signupState extends State<signup> {
                           if (!res.success) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                  content: Text(
-                                      res.message ?? 'Login Google gagal')),
+                                  content: Text(res.message ??
+                                      'Google sign-in gagal. Coba lagi.')),
                             );
                             return;
                           }
@@ -365,8 +389,8 @@ class _signupState extends State<signup> {
                           setState(() => _loading = false);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                                content:
-                                    Text('Terjadi kesalahan: ${e.toString()}')),
+                                content: Text(
+                                    'Google sign-in gagal. Coba lagi. (${e.toString()})')),
                           );
                         }
                       },
