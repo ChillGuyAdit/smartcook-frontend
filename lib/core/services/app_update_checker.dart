@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../utils/device_abi.dart';
 import 'apk_downloader.dart';
 import 'app_update_fetcher.dart';
 
@@ -149,7 +150,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         token: _token!,
         build: widget.info['latestBuild'] as int? ?? 0,
         expectedSha256: _expectedSha,
-        abi: null,
+        abi: deviceApkAbi(),
         onProgress: (p) {
           if (!mounted) return;
           setState(() => _progress = p);
@@ -253,7 +254,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                   token: _token!,
                   build: widget.info['latestBuild'] as int? ?? 0,
                   expectedSha256: _expectedSha,
-                  abi: null,
+                  abi: deviceApkAbi(),
                 );
               },
               child: const Text('Pasang lagi'),
