@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:smartcook/auth/signIn.dart';
@@ -5,6 +7,7 @@ import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_cache_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/view/splashscreen.dart';
+import 'package:smartcook/core/services/app_update_checker.dart';
 
 import 'firebase_options.dart';
 
@@ -21,6 +24,10 @@ void main() async {
   };
 
   runApp(const MyApp());
+
+  // Auto-update dialog. Same pattern as Kelilink: check at boot, retry every
+  // 30s if offline, then stop. The dialog itself waits for a mounted context.
+  unawaited(AppUpdateChecker.check(() => navigatorKey.currentContext));
 }
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
