@@ -10,6 +10,7 @@ import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/view/splashscreen.dart';
 import 'package:smartcook/core/services/app_session.dart';
 import 'package:smartcook/core/services/app_update_checker.dart';
+import 'package:smartcook/core/services/dev_log.dart';
 import 'package:smartcook/core/theme/app_colors.dart';
 import 'package:smartcook/core/theme/app_theme.dart';
 import 'package:smartcook/core/theme/language_controller.dart';
@@ -35,6 +36,22 @@ void main() async {
     );
   };
 
+  // Developer debug log. Init early so a crash during boot still produces a
+// record, and any events queued by a previous run are flushed.
+await DevLog.init();
+  DevLog.log('app_launch', action: 'cold_start', level: 'info');
+  // Anything that escapes a zone handler is the most valuable signal we get.
+  FlutterError.onError = (details) {
+    DevLog.error(
+      'unhandled_error',
+      details.exception,
+      stack: details.stack,
+      action: 'flutter_error',
+      meta: {'library': details.library ?? 'flutter', 'context': details.context?.toString()},
+    );
+    FlutterError.presentError(details);
+  };
+
   runApp(const MyApp());
 
   // Without this, any render error leaves a bare white screen with no way for
@@ -42,7 +59,13 @@ void main() async {
   // the whole MaterialApp tree; if anything in there throws, this is what the
   // user sees instead of nothing.
   ErrorWidget.builder = (details) {
-    debugPrint('[render] ${details.exceptionAsString()}');
+    DevLog.error(
+      'render_error',
+      details.exception,
+      stack: details.stack,
+      action: 'build',
+      meta: {'context': details.context?.toString()},
+    );
     return _RenderErrorScreen(error: details.exceptionAsString());
   };
 
@@ -62,9 +85,20 @@ void main() async {
 Future<void> _bootstrapSession() async {
   try {
     await AppSession.instance.ensureSession();
+    DevLog.log('session_state', action: 'handshake', meta: {'ok': true});
   } on SessionException catch (e) {
+    // Worth recording precisely: a failed handshake is why the app shows the
+    // login screen (or, before the fix, a blank page) instead of the home.
+    DevLog.log(
+      'session_state',
+      action: 'handshake',
+      level: e.failure == SessionFailure.notOfficial ? 'warn' : 'error',
+      error: e.failure.name,
+      meta: {'ok': false},
+    );
     debugPrint('[session] bootstrap failed: ${e.failure.name}');
   } catch (e) {
+    DevLog.error('session_state', e, action: 'handshake');
     debugPrint('[session] bootstrap error: $e');
   }
 }
@@ -180,6 +214,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // Only on resume: re-checking on pause/inactive would fire a request
     // every time the notification shade was pulled down.
     if (state == AppLifecycleState.resumed) {
+      DevLog.log('app_resume', action: 'resume');
       _checkForUpdate();
     }
   }

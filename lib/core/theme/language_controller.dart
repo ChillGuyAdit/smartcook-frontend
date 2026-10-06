@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/dev_log.dart';
+
 /// App language.
 ///
 /// Indonesian and English are both hand-written (see `l10n/`), so nothing a
@@ -45,6 +47,7 @@ class LanguageController extends ChangeNotifier {
 
   Future<void> set(Locale locale) async {
     if (_locale.languageCode == locale.languageCode) return;
+    final from = _locale.languageCode;
     // Persist before notifying. notifyListeners() rebuilds MaterialApp, which
     // recreates the whole navigator tree; if it happened first and the write
     // failed, the in-memory language and the stored one would disagree and the
@@ -52,7 +55,16 @@ class LanguageController extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kLocale, locale.languageCode);
     _locale = locale;
-    debugPrint('[lang] switched to ${locale.languageCode}');
+    debugPrint('[lang] switched to $from -> ${locale.languageCode}');
+    // Debug log: a language switch rebuilds the whole widget tree, so it is a
+    // prime suspect when a user reports a blank screen "after changing the
+    // language". Recording the action (and, on failure, the error) is what
+    // makes that report diagnosable later.
+    DevLog.log(
+      'locale_change',
+      action: 'switch_locale',
+      meta: {'from': from, 'to': locale.languageCode},
+    );
     notifyListeners();
   }
 

@@ -25,6 +25,8 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "signingCertSha256" -> result.success(signingCertSha256Hex())
                     "versionCode" -> result.success(versionCode())
+                    "versionName" -> result.success(versionName())
+                    "deviceInfo" -> result.success(deviceInfo())
                     "packageName" -> result.success(packageName)
                     "canRequestPackageInstalls" ->
                         result.success(canRequestPackageInstalls())
@@ -88,4 +90,43 @@ class MainActivity : FlutterActivity() {
         } catch (_: Throwable) {
             0
         }
+
+    private fun versionName(): String =
+        try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: ""
+        } catch (_: Throwable) {
+            ""
+        }
+
+    /**
+     * Device facts for the developer debug log. Read from the platform rather
+     * than scraped, so the values are the real ones Android reports.
+     */
+    private fun deviceInfo(): Map<String, Any?> {
+        val abi = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Build.SUPPORTED_ABIS.firstOrNull()
+        } else {
+            null
+        }
+        val locale = try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                resources.configuration.locales[0].toLanguageTag()
+            } else {
+                @Suppress("DEPRECATION")
+                resources.configuration.locale.toLanguageTag()
+            }
+        } catch (_: Throwable) {
+            null
+        }
+        return mapOf(
+            "platform" to "Android",
+            "osVersion" to Build.VERSION.RELEASE,
+            "sdkInt" to Build.VERSION.SDK_INT,
+            "deviceModel" to Build.MODEL,
+            "deviceManufacturer" to Build.MANUFACTURER,
+            "abi" to abi,
+            "deviceLocale" to locale,
+            "appVersion" to versionName(),
+        )
+    }
 }

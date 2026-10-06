@@ -51,6 +51,21 @@ class AppInfoChannel {
       return null;
     }
   }
+
+  /// Device facts for the developer debug log: OS version, SDK level, model,
+  /// manufacturer, ABI and the app version name. Read natively because the
+  /// Dart equivalents are incomplete on Android.
+  static Future<Map<String, dynamic>?> deviceInfo() async {
+    try {
+      final raw = await _channel.invokeMethod<Map<Object?, Object?>>(
+        'deviceInfo',
+      );
+      if (raw == null) return null;
+      return raw.map((k, v) => MapEntry(k.toString(), v));
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 /// Talks to the auto-update endpoints. The cert header is what gates the

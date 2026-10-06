@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:smartcook/config/api_config.dart';
 import 'package:smartcook/core/services/app_session.dart';
+import 'package:smartcook/core/services/dev_log.dart';
 import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/service/token_service.dart';
 
@@ -90,7 +91,7 @@ class ApiService {
     final firstBody = _decode(first);
 
     if (!_isAppTokenFailure(first, firstBody)) {
-      return _handleResponse(first);
+      return _handleResponse(first, path: path);
     }
 
     // A dead refresh token means a full handshake, not just a rotation.
@@ -100,13 +101,13 @@ class ApiService {
     } on SessionException catch (e) {
       debugPrint('[api] re-handshake failed: ${e.failure.name}');
       onSessionUnavailable?.call();
-      return _handleResponse(first);
+      return _handleResponse(first, path: path);
     }
 
     final retry = await call(
       await _headers(requireAppSession: requireAppSession),
     );
-    return _handleResponse(retry);
+    return _handleResponse(retry, path: path);
   }
 
   static dynamic _decode(http.Response res) {
@@ -118,7 +119,10 @@ class ApiService {
     }
   }
 
-  static Future<ApiResponse> _handleResponse(http.Response res) async {
+  static Future<ApiResponse> _handleResponse(
+    http.Response res, {
+    String? path,
+  }) async {
     dynamic body;
     try {
       body = res.body.isEmpty ? null : jsonDecode(res.body);
@@ -182,6 +186,18 @@ class ApiService {
     final message = body is Map && body['message'] != null
         ? body['message'].toString()
         : 'Terjadi kesalahan (${res.statusCode})';
+    final errorCode =
+        body is Map && body['code'] != null ? body['code'].toString() : null;
+    // Debug log: a failing endpoint is the single most useful thing to know
+    // about a bug report, and this is the one place every API call passes
+    // through.
+    DevLog.log(
+      'api_error',
+      action: path == null ? null : 'api:$path',
+      level: res.statusCode >= 500 ? 'error' : 'warn',
+      statusCode: res.statusCode,
+      error: errorCode ?? message,
+    );
     return ApiResponse(
       success: false,
       // Untuk error, kirim seluruh body agar field seperti
