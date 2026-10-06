@@ -72,6 +72,27 @@ abstract class Str {
   String get newBadge;
   String get youAreHere;
   String get noReleaseNotes;
+
+  // Auto-update dialog
+  String get updateMandatoryTitle;
+  String get updateOptionalTitle;
+  String get updateInstalling;
+  String get updateLater;
+  String get updateRetry;
+  String get updateInstallAgain;
+  String get updateDownloading;
+  String get updateNotOfficial;
+  String get updateDownloadOfficial;
+  String get updateExpired;
+  String get updateHashMismatch;
+  String get updateNetwork;
+  String get updateGeneric;
+  String get updateUnknownSourceNotice;
+
+  /// "Versi kamu {from} → {to}". Keep the placeholders exactly like this.
+  String get versionFromTo;
+  /// "{percent} % selesai"
+  String get updatePercentDone;
 }
 
 class StrId implements Str {
@@ -169,6 +190,41 @@ class StrId implements Str {
   String get youAreHere => 'Versi kamu';
   @override
   String get noReleaseNotes => 'Belum ada catatan rilis.';
+
+  @override
+  String get updateMandatoryTitle => 'Update wajib';
+  @override
+  String get updateOptionalTitle => 'Versi terbaru tersedia';
+  @override
+  String get updateInstalling => 'Memasang update';
+  @override
+  String get updateLater => 'Nanti';
+  @override
+  String get updateRetry => 'Coba lagi';
+  @override
+  String get updateInstallAgain => 'Pasang lagi';
+  @override
+  String get updateDownloading => 'Mengunduh…';
+  @override
+  String get updateNotOfficial => 'Build ini tidak resmi.';
+  @override
+  String get updateDownloadOfficial =>
+      'Unduh versi terbaru dari sumber resmi.';
+  @override
+  String get updateExpired => 'Link unduhan sudah kedaluwarsa.';
+  @override
+  String get updateHashMismatch => 'Berkas APK tidak cocok.';
+  @override
+  String get updateNetwork => 'Koneksi terputus.';
+  @override
+  String get updateGeneric => 'Terjadi kesalahan tak terduga.';
+  @override
+  String get updateUnknownSourceNotice =>
+      'Pertama kali, Android meminta izin "Izinkan dari sumber ini". Aktifkan untuk SmartCook, lalu kembali dan tekan "Pasang lagi".';
+  @override
+  String get versionFromTo => 'Versi kamu {from} → {to}';
+  @override
+  String get updatePercentDone => '{percent} % selesai';
 }
 
 class StrEn implements Str {
@@ -266,4 +322,39 @@ class StrEn implements Str {
   String get youAreHere => 'Your version';
   @override
   String get noReleaseNotes => 'No release notes yet.';
+
+  @override
+  String get updateMandatoryTitle => 'Required update';
+  @override
+  String get updateOptionalTitle => 'New version available';
+  @override
+  String get updateInstalling => 'Installing update';
+  @override
+  String get updateLater => 'Later';
+  @override
+  String get updateRetry => 'Try again';
+  @override
+  String get updateInstallAgain => 'Install again';
+  @override
+  String get updateDownloading => 'Downloading…';
+  @override
+  String get updateNotOfficial => 'This build is not official.';
+  @override
+  String get updateDownloadOfficial =>
+      'Download the latest version from the official source.';
+  @override
+  String get updateExpired => 'The download link has expired.';
+  @override
+  String get updateHashMismatch => 'The APK file does not match.';
+  @override
+  String get updateNetwork => 'The connection was dropped.';
+  @override
+  String get updateGeneric => 'Something unexpected went wrong.';
+  @override
+  String get updateUnknownSourceNotice =>
+      'The first time, Android asks permission to "Allow from this source". Enable it for SmartCook, then come back and press "Install again".';
+  @override
+  String get versionFromTo => 'Your version {from} → {to}';
+  @override
+  String get updatePercentDone => '{percent}% complete';
 }

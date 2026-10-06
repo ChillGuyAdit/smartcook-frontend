@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../utils/device_abi.dart';
+import '../l10n/strings.dart';
+import '../theme/language_controller.dart';
 import 'apk_downloader.dart';
 import 'app_update_fetcher.dart';
 
@@ -185,6 +187,15 @@ class _UpdateDialogState extends State<_UpdateDialog> {
   String? get _expectedSha => widget.info['latestApkSha256'] as String?;
   String? get _notes => widget.info['notes'] as String?;
 
+  /// Dialog strings follow the app language, like every other screen.
+  Str get _s => stringsFor(LanguageController.instance.locale);
+
+  String _versionLine(String installed, String latest) =>
+      _s.versionFromTo.replaceFirst('{from}', installed).replaceFirst(
+            '{to}',
+            latest,
+          );
+
   @override
   void dispose() {
     _cancel?.cancel();
@@ -200,7 +211,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
     if (_token == null) {
       setState(() {
         _stage = _DialogStage.failed;
-        _error = 'Build kamu tidak resmi. Unduh versi terbaru dari sumber resmi.';
+        _error = '${_s.updateNotOfficial} ${_s.updateDownloadOfficial}';
       });
       return;
     }
@@ -230,7 +241,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       if (!mounted) return;
       setState(() {
         _stage = _DialogStage.failed;
-        _error = 'Update gagal dipasang. Tekan "Coba lagi".';
+        _error = _s.updateGeneric;
       });
     }
   }
@@ -242,18 +253,15 @@ class _UpdateDialogState extends State<_UpdateDialog> {
   }
 
   String _translateFailure(UpdateFailure f) {
-    switch (f) {
-      case UpdateFailure.notOfficial:
-        return 'Build ini tidak dikenali sebagai SmartCook resmi. Unduh dari sumber resmi.';
-      case UpdateFailure.tokenExpired:
-        return 'Link unduhan sudah kedaluwarsa. Tekan "Coba lagi".';
-      case UpdateFailure.hashMismatch:
-        return 'Berkas APK tidak cocok. Tekan "Coba lagi".';
-      case UpdateFailure.networkError:
-        return 'Koneksi terputus. Tekan "Coba lagi".';
-      case UpdateFailure.unknown:
-        return 'Terjadi kesalahan tak terduga. Tekan "Coba lagi".';
-    }
+    final base = switch (f) {
+      UpdateFailure.notOfficial =>
+        '${_s.updateNotOfficial} ${_s.updateDownloadOfficial}',
+      UpdateFailure.tokenExpired => _s.updateExpired,
+      UpdateFailure.hashMismatch => _s.updateHashMismatch,
+      UpdateFailure.networkError => _s.updateNetwork,
+      UpdateFailure.unknown => _s.updateGeneric,
+    };
+    return '$base ${_s.updateRetry}.';
   }
 
   @override
@@ -264,15 +272,15 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       canPop: !widget.forced && _stage != _DialogStage.downloading,
       child: AlertDialog(
         title: Text(_stage == _DialogStage.installing
-            ? 'Memasang update'
+            ? _s.updateInstalling
             : widget.forced
-                ? 'Update wajib'
-                : 'Versi terbaru tersedia'),
+                ? _s.updateMandatoryTitle
+                : _s.updateOptionalTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Versi kamu ${widget.installedVersion} → $_latestVersion'),
+            Text(_versionLine(widget.installedVersion, _latestVersion)),
             if (_notes != null && _notes!.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(_notes!, style: const TextStyle(fontSize: 13)),
@@ -281,13 +289,15 @@ class _UpdateDialogState extends State<_UpdateDialog> {
             if (_stage == _DialogStage.downloading) ...[
               LinearProgressIndicator(value: _progress),
               const SizedBox(height: 8),
-              Text(percent == null ? 'Mengunduh…' : '$percent % selesai'),
+              Text(percent == null
+                  ? _s.updateDownloading
+                  : _s.updatePercentDone.replaceFirst('{percent}', '$percent')),
             ],
             if (_stage == _DialogStage.installing) ...[
               const SizedBox(height: 12),
-              const Text(
-                'Pertama kali, Android meminta izin "Izinkan dari sumber ini". Aktifkan untuk SmartCook, lalu kembali dan tekan "Pasang lagi".',
-                style: TextStyle(fontSize: 13),
+              Text(
+                _s.updateUnknownSourceNotice,
+                style: const TextStyle(fontSize: 13),
               ),
             ],
             if (_error != null) ...[
@@ -300,12 +310,12 @@ class _UpdateDialogState extends State<_UpdateDialog> {
           if (!widget.forced && _stage != _DialogStage.downloading)
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Nanti'),
+              child: Text(_s.updateLater),
             ),
           if (_stage == _DialogStage.failed)
             ElevatedButton(
               onPressed: _download,
-              child: const Text('Coba lagi'),
+              child: Text(_s.updateRetry),
             ),
           if (_stage == _DialogStage.installing)
             ElevatedButton(
@@ -318,7 +328,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                   abi: deviceApkAbi(),
                 );
               },
-              child: const Text('Pasang lagi'),
+              child: Text(_s.updateInstallAgain),
             ),
         ],
       ),
