@@ -37,6 +37,12 @@ android {
         applicationId = "com.example.smartcook"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
+        // `flutter.versionCode` is the `+N` suffix from pubspec.yaml, and that is
+        // exactly the number published as `build` in latest.json. It must stay
+        // pinned here: when Gradle is free to derive an Android versionCode
+        // from the dotted version name instead (1.0.7 became 2007), the number
+        // the app reported to /api/app/version stopped matching the server, so
+        // `mandatory` was permanently false and the update dialog never showed.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

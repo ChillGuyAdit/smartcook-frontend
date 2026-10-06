@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme_colors.dart';
 import '../core/theme/shadows.dart';
@@ -21,7 +23,7 @@ class homepage extends StatefulWidget {
   State<homepage> createState() => _homepageState();
 }
 
-class _homepageState extends State<homepage> {
+class _homepageState extends State<homepage> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   String _selectedMealTime = "breakfast";
   String _userName = 'Smarty';
@@ -36,7 +38,25 @@ class _homepageState extends State<homepage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _bootstrapAndLoadData();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// The auto-update check is started by the root widget (`main.dart`),
+  /// exactly like Kelilink: it has to run regardless of login state, so
+  /// tying it to a page that only mounts after login was the original bug -
+  /// a logged-out user never saw the dialog even with a mandatory update
+  /// pending. Nothing page-level to do here.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Left empty on purpose: the root widget already re-checks on resume,
+    // and a second check from here would race it.
   }
 
   /// Langkah 1: tampilkan dulu data yang sudah ada di cache (jika ada),

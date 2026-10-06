@@ -88,6 +88,13 @@ class AppUpdateFetcher {
     if (body is! Map<String, dynamic>) {
       throw const FormatException('Unexpected /version payload');
     }
-    return body;
+    // The API wraps every payload as {success, data}. Reading `latestBuild`
+    // off the root returned null, so the checker believed the app was already
+    // up to date and never showed the dialog even with a mandatory update
+    // pending. Unwrap defensively, the same way ApiService does.
+    final payload = body['data'];
+    if (payload is Map<String, dynamic>) return payload;
+    if (body.containsKey('latestBuild')) return body;
+    throw const FormatException('/version payload missing data');
   }
 }

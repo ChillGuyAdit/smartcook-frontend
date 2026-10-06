@@ -36,9 +36,11 @@ void main() async {
 
   runApp(const MyApp());
 
-  // Auto-update dialog. Same pattern as Kelilink: check at boot, retry every
-  // 30s if offline, then stop. The dialog itself waits for a mounted context.
-  unawaited(AppUpdateChecker.check(() => navigatorKey.currentContext));
+  // NOTE: the auto-update check is NOT started here. During the splash
+  // transition `navigatorKey.currentContext` is still null, so the check
+  // would fetch the manifest and then silently give up waiting for a usable
+  // context - the user would never see the dialog. `homepage` starts it from a
+  // mounted page instead, and again on every resume.
 
   // App session (access + refresh token). Started after the first frame so a
   // slow handshake never delays the splash screen. ApiService also lazily
@@ -66,19 +68,62 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   bool _wasOffline = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     OfflineManager.isOffline.addListener(_handleOfflineChange);
+    // Auto-update check now runs from the root widget, exactly like Kelilink.
+    // It used to live on `homepage`, which only mounts after login - so a
+    // logged-out user never got the dialog at all, even with a mandatory
+    // update pending. The 4s delay lets the splash route finish so the dialog
+    // is not orphaned by a route-stack replacement.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future<void>.delayed(const Duration(seconds: 4), _checkForUpdate);
+    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     OfflineManager.isOffline.removeListener(_handleOfflineChange);
     super.dispose();
+  }
+
+  void _checkForUpdate() {
+    if (!mounted) return;
+    unawaited(AppUpdateChecker.check(_stableNavigatorContext));
+  }
+
+  /// The update dialog must not open on splash/sign-in: those routes own the
+  /// stack only until they finish, and they replace it wholesale when they do,
+  /// which silently closes the dialog and lets a mandatory update slip past.
+  /// Mirrors Kelilink's `_stableNavigatorContext`.
+  BuildContext? _stableNavigatorContext() {
+    if (!mounted) return null;
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null || !ctx.mounted) return null;
+    final route = ModalRoute.of(ctx);
+    if (route is PageRoute &&
+        route.settings.name != null &&
+        _transientRoutes.contains(route.settings.name)) {
+      return null;
+    }
+    return ctx;
+  }
+
+  static const _transientRoutes = {'/', '/splash', '/signin', '/onboarding'};
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Only on resume: re-checking on pause/inactive would fire a request
+    // every time the notification shade was pulled down.
+    if (state == AppLifecycleState.resumed) {
+      _checkForUpdate();
+    }
   }
 
   Future<void> _handleOfflineChange() async {
