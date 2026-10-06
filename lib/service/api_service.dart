@@ -3,28 +3,119 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:smartcook/config/api_config.dart';
+import 'package:smartcook/core/services/app_session.dart';
 import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/service/token_service.dart';
 
+/// Error codes the app-token layer returns. A 401 carrying one of these means
+/// "renew the app session", not "the user has to log in again".
+const Set<String> kAppTokenCodes = {
+  'TOKEN_MISSING',
+  'TOKEN_INVALID',
+  'TOKEN_EXPIRED',
+  'REFRESH_MISSING',
+  'REFRESH_INVALID',
+  'REFRESH_EXPIRED',
+  'APP_TOKENS_NOT_CONFIGURED',
+};
+
 class ApiService {
   static String get _baseUrl => ApiConfig.baseUrl;
-  static String get _apiKey => ApiConfig.apiKey;
 
   static void Function()? onUnauthorized;
 
-  static Future<Map<String, String>> _headers({bool useAuth = true}) async {
+  /// Called when even a fresh handshake cannot produce a session (e.g. the
+  /// build is not the official one). The UI can then explain why.
+  static void Function()? onSessionUnavailable;
+
+  /// Builds the header set for one request.
+  ///
+  /// [useAuth] controls the *user* JWT. The app-session access token is
+  /// attached whenever one is available; it is required by every endpoint
+  /// except the bootstrap and auto-update paths.
+  static Future<Map<String, String>> _headers({
+    bool useAuth = true,
+    bool requireAppSession = true,
+    String? appSessionOverride,
+  }) async {
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'x-api-key': _apiKey,
     };
+
+    if (requireAppSession) {
+      final session = AppSession.instance;
+      if (!session.hasSession || session.needsRefresh) {
+        try {
+          await session.ensureSession();
+        } catch (e) {
+          debugPrint('[api] app session unavailable: $e');
+        }
+      }
+      final access = appSessionOverride ?? session.accessToken;
+      if (access != null && access.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $access';
+      }
+    }
+
     if (useAuth) {
       final token = await TokenService.getToken();
       if (token != null && token.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $token';
+        // The user JWT travels as `X-User-Token`; `Authorization` is
+        // reserved for the app session so the two never collide.
+        headers['X-User-Token'] = token;
       }
     }
     return headers;
+  }
+
+  static bool _isAppTokenFailure(http.Response res, dynamic body) {
+    if (res.statusCode != 401) return false;
+    if (body is! Map) return false;
+    final code = body['code'];
+    return code is String && kAppTokenCodes.contains(code);
+  }
+
+  /// Runs [call], and if the server rejects the app session, renews it once
+  /// and retries. A user-JWT rejection is *not* retried here: that means the
+  /// account genuinely needs to sign in again.
+  static Future<ApiResponse> _withSessionRetry(
+    String path,
+    Future<http.Response> Function(Map<String, String> headers) call, {
+    required bool requireAppSession,
+  }) async {
+    final first = await call(
+      await _headers(requireAppSession: requireAppSession),
+    );
+    final firstBody = _decode(first);
+
+    if (!_isAppTokenFailure(first, firstBody)) {
+      return _handleResponse(first);
+    }
+
+    // A dead refresh token means a full handshake, not just a rotation.
+    await AppSession.instance.clearLocal();
+    try {
+      await AppSession.instance.ensureSession();
+    } on SessionException catch (e) {
+      debugPrint('[api] re-handshake failed: ${e.failure.name}');
+      onSessionUnavailable?.call();
+      return _handleResponse(first);
+    }
+
+    final retry = await call(
+      await _headers(requireAppSession: requireAppSession),
+    );
+    return _handleResponse(retry);
+  }
+
+  static dynamic _decode(http.Response res) {
+    if (res.body.isEmpty) return null;
+    try {
+      return jsonDecode(res.body);
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<ApiResponse> _handleResponse(http.Response res) async {
@@ -38,7 +129,26 @@ class ApiService {
         statusCode: res.statusCode,
       );
     }
+
+    // 401 split into two very different situations.
     if (res.statusCode == 401) {
+      final code = body is Map && body['code'] != null
+          ? body['code'].toString()
+          : '';
+
+      if (kAppTokenCodes.contains(code)) {
+        // App session died and could not be renewed: nothing the user did.
+        return ApiResponse(
+          success: false,
+          message: body is Map && body['message'] != null
+              ? body['message'].toString()
+              : 'Sesi aplikasi kedaluwarsa.',
+          statusCode: 401,
+          code: code,
+        );
+      }
+
+      // User JWT rejected: the account must sign in again.
       await TokenService.clearAll();
       onUnauthorized?.call();
       final msg = body is Map && body['message'] != null
@@ -46,6 +156,7 @@ class ApiService {
           : 'Sesi habis, silakan login lagi';
       return ApiResponse(success: false, message: msg, statusCode: 401);
     }
+
     if (res.statusCode >= 200 && res.statusCode < 300) {
       // Jika respons sukses, anggap koneksi online
       OfflineManager.setOffline(false);
@@ -67,6 +178,7 @@ class ApiService {
             : null,
       );
     }
+
     final message = body is Map && body['message'] != null
         ? body['message'].toString()
         : 'Terjadi kesalahan (${res.statusCode})';
@@ -87,16 +199,23 @@ class ApiService {
     String path, {
     Map<String, String>? queryParameters,
     bool useAuth = true,
+    bool requireAppSession = true,
   }) async {
     try {
-      var uri = Uri.parse('$_baseUrl$path');
-      if (queryParameters != null && queryParameters.isNotEmpty) {
-        uri = uri.replace(queryParameters: queryParameters);
-      }
-      final res = await http
-          .get(uri, headers: await _headers(useAuth: useAuth))
-          .timeout(const Duration(seconds: 30));
-      return _handleResponse(res);
+      final response = await _withSessionRetry(
+        path,
+        (headers) async {
+          var uri = Uri.parse('$_baseUrl$path');
+          if (queryParameters != null && queryParameters.isNotEmpty) {
+            uri = uri.replace(queryParameters: queryParameters);
+          }
+          return http
+              .get(uri, headers: headers)
+              .timeout(const Duration(seconds: 30));
+        },
+        requireAppSession: requireAppSession,
+      );
+      return response;
     } catch (e) {
       OfflineManager.setOffline(true);
       return ApiResponse(
@@ -110,28 +229,30 @@ class ApiService {
     String path, {
     Map<String, dynamic>? body,
     bool useAuth = false,
+    bool requireAppSession = true,
   }) async {
     try {
-      final uri = Uri.parse('$_baseUrl$path');
-      final headers = await _headers(useAuth: useAuth);
       final bodyStr = body != null ? jsonEncode(body) : null;
-      if (kDebugMode) {
-        debugPrint('POST $uri');
-        debugPrint('Headers: $headers');
-        debugPrint('Body: $bodyStr');
-      }
-      final res = await http
-          .post(
-            uri,
-            headers: headers,
-            body: bodyStr,
-          )
-          .timeout(const Duration(seconds: 30));
-      if (kDebugMode) {
-        debugPrint('Response status: ${res.statusCode}');
-        debugPrint('Response body: ${res.body}');
-      }
-      return _handleResponse(res);
+      return await _withSessionRetry(
+        path,
+        (headers) async {
+          final uri = Uri.parse('$_baseUrl$path');
+          if (kDebugMode) {
+            debugPrint('POST $uri');
+            debugPrint('Headers: $headers');
+            debugPrint('Body: $bodyStr');
+          }
+          final res = await http
+              .post(uri, headers: headers, body: bodyStr)
+              .timeout(const Duration(seconds: 30));
+          if (kDebugMode) {
+            debugPrint('Response status: ${res.statusCode}');
+            debugPrint('Response body: ${res.body}');
+          }
+          return res;
+        },
+        requireAppSession: requireAppSession,
+      );
     } catch (e) {
       OfflineManager.setOffline(true);
       return ApiResponse(
@@ -145,17 +266,23 @@ class ApiService {
     String path, {
     Map<String, dynamic>? body,
     bool useAuth = true,
+    bool requireAppSession = true,
   }) async {
     try {
-      final uri = Uri.parse('$_baseUrl$path');
-      final res = await http
-          .put(
-            uri,
-            headers: await _headers(useAuth: useAuth),
-            body: body != null ? jsonEncode(body) : null,
-          )
-          .timeout(const Duration(seconds: 30));
-      return _handleResponse(res);
+      return await _withSessionRetry(
+        path,
+        (headers) async {
+          final uri = Uri.parse('$_baseUrl$path');
+          return http
+              .put(
+                uri,
+                headers: headers,
+                body: body != null ? jsonEncode(body) : null,
+              )
+              .timeout(const Duration(seconds: 30));
+        },
+        requireAppSession: requireAppSession,
+      );
     } catch (e) {
       OfflineManager.setOffline(true);
       return ApiResponse(
@@ -168,13 +295,19 @@ class ApiService {
   static Future<ApiResponse> delete(
     String path, {
     bool useAuth = true,
+    bool requireAppSession = true,
   }) async {
     try {
-      final uri = Uri.parse('$_baseUrl$path');
-      final res = await http
-          .delete(uri, headers: await _headers(useAuth: useAuth))
-          .timeout(const Duration(seconds: 30));
-      return _handleResponse(res);
+      return await _withSessionRetry(
+        path,
+        (headers) async {
+          final uri = Uri.parse('$_baseUrl$path');
+          return http
+              .delete(uri, headers: headers)
+              .timeout(const Duration(seconds: 30));
+        },
+        requireAppSession: requireAppSession,
+      );
     } catch (e) {
       OfflineManager.setOffline(true);
       return ApiResponse(

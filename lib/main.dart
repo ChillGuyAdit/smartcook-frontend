@@ -7,6 +7,7 @@ import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_cache_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/view/splashscreen.dart';
+import 'package:smartcook/core/services/app_session.dart';
 import 'package:smartcook/core/services/app_update_checker.dart';
 
 import 'firebase_options.dart';
@@ -28,6 +29,22 @@ void main() async {
   // Auto-update dialog. Same pattern as Kelilink: check at boot, retry every
   // 30s if offline, then stop. The dialog itself waits for a mounted context.
   unawaited(AppUpdateChecker.check(() => navigatorKey.currentContext));
+
+  // App session (access + refresh token). Started after the first frame so a
+  // slow handshake never delays the splash screen. ApiService also lazily
+  // calls ensureSession() on the first request, so a failure here is not
+  // fatal: the user simply stays offline until the next attempt succeeds.
+  unawaited(_bootstrapSession());
+}
+
+Future<void> _bootstrapSession() async {
+  try {
+    await AppSession.instance.ensureSession();
+  } on SessionException catch (e) {
+    debugPrint('[session] bootstrap failed: ${e.failure.name}');
+  } catch (e) {
+    debugPrint('[session] bootstrap error: $e');
+  }
 }
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();

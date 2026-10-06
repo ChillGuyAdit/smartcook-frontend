@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:http/http.dart' as http;
 import 'package:smartcook/config/api_config.dart';
+import 'package:smartcook/core/services/app_session.dart';
 import 'package:smartcook/page/masakan.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
@@ -216,13 +217,28 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
 
     final uri = Uri.parse('${ApiConfig.baseUrl}/api/chat/message-stream');
     final token = await TokenService.getToken();
+
+    // The stream endpoint needs both credentials: the app session in
+    // `Authorization` (it replaced the old static x-api-key) and the user JWT
+    // in `X-User-Token` so the server knows whose history to read.
+    final session = AppSession.instance;
+    if (!session.hasSession || session.needsRefresh) {
+      try {
+        await session.ensureSession();
+      } catch (e) {
+        debugPrint('[bot] session unavailable: $e');
+      }
+    }
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'text/event-stream',
-      'x-api-key': ApiConfig.apiKey,
     };
+    final access = session.accessToken;
+    if (access != null && access.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $access';
+    }
     if (token != null && token.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
+      headers['X-User-Token'] = token;
     }
     final request = http.Request('POST', uri)
       ..headers.addAll(headers)

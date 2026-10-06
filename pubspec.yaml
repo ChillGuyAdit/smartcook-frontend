@@ -4,7 +4,7 @@ description: "A new Flutter project."
 publish_to: 'none' 
 
 
-version: 1.0.3+4
+version: 1.0.4+5
 
 environment:
   sdk: ^3.5.0
@@ -29,6 +29,7 @@ dependencies:
   path_provider: ^2.1.4
   open_filex: ^4.5.0
   crypto: ^3.0.6
+  flutter_secure_storage: ^9.2.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

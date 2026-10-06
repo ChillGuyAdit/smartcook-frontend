@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:smartcook/core/services/app_session.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/token_service.dart';
 import 'package:smartcook/view/onboarding/form.dart';
@@ -77,6 +78,13 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _logout() async {
+    // End the app session server-side first so the token stops working
+    // everywhere, not just on this phone. Never blocks the sign-out.
+    try {
+      await AppSession.instance.revoke();
+    } catch (e) {
+      debugPrint('[logout] revoke failed (ignored): $e');
+    }
     await TokenService.clearAll();
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/signin', (route) => false);
