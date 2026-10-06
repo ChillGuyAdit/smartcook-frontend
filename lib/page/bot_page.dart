@@ -6,6 +6,8 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:http/http.dart' as http;
 import 'package:smartcook/config/api_config.dart';
 import 'package:smartcook/core/services/app_session.dart';
+import 'package:smartcook/core/theme/app_theme_colors.dart';
+import 'package:smartcook/core/theme/shadows.dart';
 import 'package:smartcook/page/masakan.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
@@ -449,31 +451,31 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     if (OfflineManager.isOffline.value) {
       return Scaffold(
-        backgroundColor: const Color(0xFFFAFAFA),
+        backgroundColor: context.colors.background,
         appBar: AppBar(
           title: const Text('SmartChef'),
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black87,
+          backgroundColor: context.colors.surface,
+          foregroundColor: context.colors.textPrimary,
           elevation: 0,
         ),
-        body: const Center(
+        body: Center(
           child: Padding(
-            padding: EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             child: Text(
               'SmartChef tidak tersedia saat offline.\nSilakan sambungkan internet untuk melanjutkan.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.black54),
+              style: TextStyle(color: context.colors.textSecondary),
             ),
           ),
         ),
       );
     }
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: context.colors.background,
       appBar: AppBar(
         title: const Text('SmartChef'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: context.colors.surface,
+        foregroundColor: context.colors.textPrimary,
         elevation: 0,
         actions: [
           if (_messages.isNotEmpty)
@@ -512,14 +514,16 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
+                          children: [
                             Icon(Icons.chat_bubble_outline_rounded,
-                                size: 80, color: Colors.grey),
-                            SizedBox(height: 16),
+                                size: 80,
+                                color: context.colors.textDisabled),
+                            const SizedBox(height: 16),
                             Text(
                               "Tanya apa saja tentang masak",
                               style: TextStyle(
-                                  fontSize: 16, color: Colors.black54),
+                                  fontSize: 16,
+                                  color: context.colors.textSecondary),
                             ),
                           ],
                         ),
@@ -543,13 +547,7 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF4CAF50),
                                   borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 5,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
+                                  boxShadow: context.softShadow,
                                 ),
                                 constraints: BoxConstraints(
                                     maxWidth:
@@ -580,34 +578,28 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 14, vertical: 10),
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(16),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color:
-                                                Colors.black.withOpacity(0.05),
-                                            blurRadius: 5,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
+                                        color: context.colors.surface,
+                                        borderRadius:
+                                            BorderRadius.circular(16),
+                                        boxShadow: context.softShadow,
                                       ),
                                       child: MarkdownBody(
                                         key: ValueKey(
                                             '${index}_${m['content']?.toString().length ?? 0}'),
                                         data: m['content']?.toString() ?? '',
                                         styleSheet: MarkdownStyleSheet(
-                                          p: const TextStyle(
+                                          p: TextStyle(
                                             fontSize: 14,
-                                            color: Colors.black87,
+                                            color: context.colors.textPrimary,
                                             height: 1.4,
                                           ),
-                                          listBullet: const TextStyle(
+                                          listBullet: TextStyle(
                                             fontSize: 14,
-                                            color: Colors.black87,
+                                            color: context.colors.textPrimary,
                                           ),
-                                          strong: const TextStyle(
+                                          strong: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.black87,
+                                            color: context.colors.textPrimary,
                                           ),
                                         ),
                                         shrinkWrap: true,
@@ -629,7 +621,7 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
           ),
           Container(
             padding: const EdgeInsets.all(12),
-            color: Colors.white,
+            color: context.colors.surface,
             child: SafeArea(
               child: Row(
                 children: [
@@ -643,7 +635,7 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor: Colors.grey.shade100,
+                        fillColor: context.colors.surfaceVariant,
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 12),
                       ),

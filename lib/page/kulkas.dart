@@ -3,6 +3,8 @@ import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_cache_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
 
+import '../core/theme/app_theme_colors.dart';
+import '../core/theme/shadows.dart';
 import 'tambahkan_bahan.dart';
 
 class KulkasPage extends StatefulWidget {
@@ -157,15 +159,9 @@ class _KulkasPageState extends State<KulkasPage> {
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.colors.surface,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                )
-              ],
+              boxShadow: context.floatShadow,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -175,10 +171,10 @@ class _KulkasPageState extends State<KulkasPage> {
                 const SizedBox(height: 15),
                 Text(
                   message,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87),
+                      color: context.colors.textPrimary),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -201,15 +197,9 @@ class _KulkasPageState extends State<KulkasPage> {
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.colors.surface,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                )
-              ],
+              boxShadow: context.floatShadow,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -224,18 +214,19 @@ class _KulkasPageState extends State<KulkasPage> {
                       color: Colors.redAccent, size: 40),
                 ),
                 const SizedBox(height: 15),
-                const Text(
+                Text(
                   "Hapus Bahan?",
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87),
+                      color: context.colors.textPrimary),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   "Yakin ingin menghapus '$itemName' dari kulkasmu?",
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  style: TextStyle(
+                      color: context.colors.textSecondary, fontSize: 14),
                 ),
                 const SizedBox(height: 25),
                 Row(
@@ -243,10 +234,11 @@ class _KulkasPageState extends State<KulkasPage> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text(
+                      child: Text(
                         "Batal",
                         style: TextStyle(
-                            color: Colors.grey, fontWeight: FontWeight.bold),
+                            color: context.colors.textSecondary,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                     ElevatedButton(
@@ -293,15 +285,9 @@ class _KulkasPageState extends State<KulkasPage> {
                 width: 280, // Sedikit dilebarkan agar chip filter muat
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.colors.surface,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 15,
-                      spreadRadius: 2,
-                    )
-                  ],
+                  boxShadow: context.floatShadow,
                 ),
                 child: StatefulBuilder(
                   builder: (context, setPopupState) {
@@ -309,14 +295,18 @@ class _KulkasPageState extends State<KulkasPage> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("Urutkan & Filter",
+                        Text("Urutkan & Filter",
                             style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16)),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: context.colors.textPrimary)),
                         const Divider(),
 
                         // --- SORTING STOK ---
-                        const Text("Urutkan Berdasarkan",
-                            style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text("Urutkan Berdasarkan",
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: context.colors.textSecondary)),
                         const SizedBox(height: 8),
                         Row(
                           children: [
@@ -330,7 +320,7 @@ class _KulkasPageState extends State<KulkasPage> {
                                   decoration: BoxDecoration(
                                     color: _sortOption == "Terbanyak"
                                         ? _themeColors[0]
-                                        : Colors.grey.shade200,
+                                        : context.colors.surfaceVariant,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   alignment: Alignment.center,
@@ -339,7 +329,7 @@ class _KulkasPageState extends State<KulkasPage> {
                                     style: TextStyle(
                                       color: _sortOption == "Terbanyak"
                                           ? Colors.white
-                                          : Colors.black54,
+                                          : context.colors.textSecondary,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
                                     ),
@@ -358,7 +348,7 @@ class _KulkasPageState extends State<KulkasPage> {
                                   decoration: BoxDecoration(
                                     color: _sortOption == "Terdikit"
                                         ? _themeColors[0]
-                                        : Colors.grey.shade200,
+                                        : context.colors.surfaceVariant,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   alignment: Alignment.center,
@@ -367,7 +357,7 @@ class _KulkasPageState extends State<KulkasPage> {
                                     style: TextStyle(
                                       color: _sortOption == "Terdikit"
                                           ? Colors.white
-                                          : Colors.black54,
+                                          : context.colors.textSecondary,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
                                     ),
@@ -380,8 +370,10 @@ class _KulkasPageState extends State<KulkasPage> {
                         const SizedBox(height: 16),
 
                         // --- FILTER KADALUARSA (BARU) ---
-                        const Text("Filter Kadaluarsa",
-                            style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text("Filter Kadaluarsa",
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: context.colors.textSecondary)),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
@@ -399,14 +391,14 @@ class _KulkasPageState extends State<KulkasPage> {
                                     fontSize: 11,
                                     color: isSelected
                                         ? Colors.white
-                                        : Colors.black87,
+                                        : context.colors.textPrimary,
                                     fontWeight: isSelected
                                         ? FontWeight.bold
                                         : FontWeight.normal,
                                   )),
                               selected: isSelected,
                               selectedColor: _themeColors[0],
-                              backgroundColor: Colors.grey.shade100,
+                              backgroundColor: context.colors.surfaceVariant,
                               showCheckmark: false,
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8)),
@@ -419,8 +411,10 @@ class _KulkasPageState extends State<KulkasPage> {
                         const SizedBox(height: 16),
 
                         // --- FILTER MAKSIMAL STOK ---
-                        const Text("Maksimal Stok",
-                            style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text("Maksimal Stok",
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: context.colors.textSecondary)),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -431,8 +425,10 @@ class _KulkasPageState extends State<KulkasPage> {
                                   _maxStock = (_maxStock - 10).clamp(5, 1000)),
                             ),
                             Text("$_maxStock",
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 18)),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: context.colors.textPrimary)),
                             IconButton(
                               icon: const Icon(Icons.add_circle_outline,
                                   color: Colors.green),
@@ -485,7 +481,7 @@ class _KulkasPageState extends State<KulkasPage> {
       context: context,
       elevation: 5,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: context.colors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
@@ -500,20 +496,20 @@ class _KulkasPageState extends State<KulkasPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Edit Bahan Kulkas',
               style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87),
+                  color: context.colors.textPrimary),
             ),
             const SizedBox(height: 20),
             TextField(
               controller: _nameController,
-              style: const TextStyle(color: Colors.black87),
+              style: TextStyle(color: context.colors.textPrimary),
               decoration: InputDecoration(
                 labelText: 'Nama Bahan',
-                labelStyle: const TextStyle(color: Colors.black54),
+                labelStyle: TextStyle(color: context.colors.textSecondary),
                 prefixIcon:
                     const Icon(Icons.restaurant_menu, color: Color(0xFF4CAF50)),
                 focusedBorder: OutlineInputBorder(
@@ -529,10 +525,10 @@ class _KulkasPageState extends State<KulkasPage> {
             TextField(
               controller: _qtyController,
               keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.black87),
+              style: TextStyle(color: context.colors.textPrimary),
               decoration: InputDecoration(
                 labelText: 'Jumlah',
-                labelStyle: const TextStyle(color: Colors.black54),
+                labelStyle: TextStyle(color: context.colors.textSecondary),
                 prefixIcon: const Icon(Icons.format_list_numbered,
                     color: Color(0xFF4CAF50)),
                 focusedBorder: OutlineInputBorder(
@@ -634,7 +630,7 @@ class _KulkasPageState extends State<KulkasPage> {
     final safeAreaTop = MediaQuery.of(context).padding.top;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.colors.background,
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await Navigator.push(
@@ -667,27 +663,22 @@ class _KulkasPageState extends State<KulkasPage> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: context.colors.surface,
                         borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          )
-                        ],
-                        border: Border.all(color: Colors.grey.shade200),
+                        boxShadow: context.softShadow,
+                        border: Border.all(color: context.colors.border),
                       ),
                       child: TextField(
                         onChanged: (value) {
                           _searchQuery = value;
                           _applyFilters();
                         },
-                        style: const TextStyle(color: Colors.black87),
+                        style: TextStyle(color: context.colors.textPrimary),
                         decoration: InputDecoration(
                           hintText: "Cari bahan di kulkas...",
                           hintStyle: TextStyle(
-                              color: Colors.grey.shade400, fontSize: 14),
+                              color: context.colors.textDisabled,
+                              fontSize: 14),
                           border: InputBorder.none,
                           icon: Icon(Icons.search, color: _themeColors[0]),
                         ),
@@ -704,7 +695,7 @@ class _KulkasPageState extends State<KulkasPage> {
                         borderRadius: BorderRadius.circular(15),
                         boxShadow: [
                           BoxShadow(
-                            color: _themeColors[1].withOpacity(0.3),
+                            color: _themeColors[1].withValues(alpha: 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           )
@@ -740,7 +731,8 @@ class _KulkasPageState extends State<KulkasPage> {
                               "Bahan tidak ditemukan 😥\nCoba ubah filter atau tambahkan bahan.",
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                  color: Colors.grey.shade500, fontSize: 16),
+                                  color: context.colors.textSecondary,
+                                  fontSize: 16),
                             ),
                           ),
                         ),
@@ -772,17 +764,13 @@ class _KulkasPageState extends State<KulkasPage> {
       decoration: BoxDecoration(
         color: isExpired
             ? Colors.red.shade50
-            : Colors.white, // Berubah merah jika expired
+            : context.colors.surface, // Berubah merah jika expired
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-            color: isExpired ? Colors.red.shade100 : Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
+            color: isExpired
+                ? Colors.red.shade100
+                : context.colors.border),
+        boxShadow: context.softShadow,
       ),
       child: Row(
         children: [
@@ -793,7 +781,7 @@ class _KulkasPageState extends State<KulkasPage> {
             decoration: BoxDecoration(
               color: isExpired
                   ? Colors.red.shade100
-                  : _themeColors[0].withOpacity(0.1),
+                  : _themeColors[0].withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(15),
             ),
             child: Icon(Icons.kitchen_rounded,
@@ -809,10 +797,10 @@ class _KulkasPageState extends State<KulkasPage> {
                 // Nama Bahan
                 Text(
                   item['name'],
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: context.colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -825,10 +813,10 @@ class _KulkasPageState extends State<KulkasPage> {
                     const SizedBox(width: 4),
                     Text(
                       "Stok: ${item['qty']}",
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.blueGrey,
+                        color: context.colors.textSecondary,
                       ),
                     ),
                   ],
@@ -866,11 +854,11 @@ class _KulkasPageState extends State<KulkasPage> {
                   padding: const EdgeInsets.all(8),
                   margin: const EdgeInsets.only(right: 8),
                   decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: context.colors.surface,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey.shade300)),
-                  child: const Icon(Icons.edit_note_rounded,
-                      size: 20, color: Colors.black87),
+                      border: Border.all(color: context.colors.border)),
+                  child: Icon(Icons.edit_note_rounded,
+                      size: 20, color: context.colors.textPrimary),
                 ),
               ),
               GestureDetector(
@@ -950,8 +938,8 @@ class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white
-                      .withOpacity(0.2), // Background bulat transparan
+                  color: Colors.white.withValues(alpha: 0.2),
+                  // Background bulat transparan
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -998,10 +986,10 @@ class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
                     // Ukuran mengecil agar muat di atas saat collapsed
                     fontSize: Tween<double>(begin: 12.0, end: 10.0)
                         .transform(percent),
+                    color: Colors.white.withValues(alpha: 0.85),
                     // Line height (jarak antar baris) disesuaikan saat mengecil
                     height: 1.2,
                   ),

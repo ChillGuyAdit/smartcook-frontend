@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/auth/signIn.dart';
 import 'package:smartcook/auth/signUp.dart';
+import 'package:smartcook/core/theme/app_theme_colors.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/page/homepage.dart';
 import 'package:smartcook/service/api_service.dart';
@@ -143,6 +144,7 @@ class _splashscreenState extends State<splashscreen> {
     double scale = screenWidth / baseWidth;
 
     return Scaffold(
+      backgroundColor: context.colors.background,
       body: Stack(
         children: [
           AnimatedAlign(

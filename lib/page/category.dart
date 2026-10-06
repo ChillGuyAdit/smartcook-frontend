@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/service/api_service.dart';
 
+import '../core/theme/app_theme_colors.dart';
+import '../core/theme/shadows.dart';
 import 'masakan.dart';
 
 class CategoryPage extends StatefulWidget {
@@ -106,15 +108,9 @@ class _CategoryPageState extends State<CategoryPage> {
                 width: 250,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.colors.surface,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 15,
-                      spreadRadius: 2,
-                    )
-                  ],
+                  boxShadow: context.floatShadow,
                 ),
                 // Gunakan StatefulBuilder agar UI +/- di dalam popup bisa berubah
                 child: StatefulBuilder(
@@ -123,14 +119,18 @@ class _CategoryPageState extends State<CategoryPage> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("Filter Pencarian",
+                        Text("Filter Pencarian",
                             style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16)),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: context.colors.textPrimary)),
                         const Divider(),
 
                         // --- FILTER KALORI ---
-                        const Text("Maks. Kalori (Kal)",
-                            style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text("Maks. Kalori (Kal)",
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: context.colors.textSecondary)),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -142,8 +142,10 @@ class _CategoryPageState extends State<CategoryPage> {
                                       (_maxCalories - 50).clamp(50, 1000)),
                             ),
                             Text("$_maxCalories",
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 16)),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: context.colors.textPrimary)),
                             IconButton(
                               icon: const Icon(Icons.add_circle_outline,
                                   color: Colors.green),
@@ -155,8 +157,10 @@ class _CategoryPageState extends State<CategoryPage> {
                         ),
 
                         // --- FILTER WAKTU ---
-                        const Text("Maks. Waktu (Menit)",
-                            style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text("Maks. Waktu (Menit)",
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: context.colors.textSecondary)),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -167,8 +171,10 @@ class _CategoryPageState extends State<CategoryPage> {
                                   _maxTime = (_maxTime - 5).clamp(5, 120)),
                             ),
                             Text("$_maxTime",
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 16)),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: context.colors.textPrimary)),
                             IconButton(
                               icon: const Icon(Icons.add_circle_outline,
                                   color: Colors.green),
@@ -211,7 +217,7 @@ class _CategoryPageState extends State<CategoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: context.colors.background,
       // MENGGANTI Column MENJADI CustomScrollView AGAR HEADER BISA MENGECIL SAAT SCROLL
       body: CustomScrollView(
         slivers: [
@@ -265,7 +271,7 @@ class _CategoryPageState extends State<CategoryPage> {
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -313,7 +319,8 @@ class _CategoryPageState extends State<CategoryPage> {
                                 maxLines: percent > 0.5 ? 1 : 3,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Colors.white
+                                      .withValues(alpha: 0.8),
                                   fontSize: 12 - (1 * percent),
                                 ),
                               ),
@@ -339,15 +346,9 @@ class _CategoryPageState extends State<CategoryPage> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: context.colors.surface,
                         borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.03),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          )
-                        ],
+                        boxShadow: context.softShadow,
                       ),
                       child: TextField(
                         onChanged: (value) {
@@ -357,7 +358,8 @@ class _CategoryPageState extends State<CategoryPage> {
                         decoration: InputDecoration(
                           hintText: "Cari resep...",
                           hintStyle: TextStyle(
-                              color: Colors.grey.shade400, fontSize: 14),
+                              color: context.colors.textDisabled,
+                              fontSize: 14),
                           border: InputBorder.none,
                           icon:
                               Icon(Icons.search, color: widget.themeColors[1]),
@@ -376,7 +378,8 @@ class _CategoryPageState extends State<CategoryPage> {
                         borderRadius: BorderRadius.circular(15),
                         boxShadow: [
                           BoxShadow(
-                            color: widget.themeColors[1].withOpacity(0.3),
+                            color: widget.themeColors[1]
+                                .withValues(alpha: 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           )
@@ -411,7 +414,8 @@ class _CategoryPageState extends State<CategoryPage> {
                             child: Text(
                               "Resep tidak ditemukan 😥\nCoba ubah filter atau pencarianmu.",
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.grey.shade500),
+                              style: TextStyle(
+                                  color: context.colors.textSecondary),
                             ),
                           ),
                         ),
@@ -459,15 +463,9 @@ class _CategoryPageState extends State<CategoryPage> {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.colors.surface,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            )
-          ],
+          boxShadow: context.softShadow,
         ),
         child: Row(
           children: [
@@ -475,7 +473,7 @@ class _CategoryPageState extends State<CategoryPage> {
               height: 80,
               width: 80,
               decoration: BoxDecoration(
-                color: widget.themeColors[0].withOpacity(0.1),
+                color: widget.themeColors[0].withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(15),
               ),
               child: ClipRRect(
@@ -497,10 +495,10 @@ class _CategoryPageState extends State<CategoryPage> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: context.colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -510,15 +508,17 @@ class _CategoryPageState extends State<CategoryPage> {
                           size: 16, color: Colors.orange),
                       const SizedBox(width: 4),
                       Text("$cal Kal",
-                          style: const TextStyle(
-                              fontSize: 13, color: Colors.black54)),
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: context.colors.textSecondary)),
                       const SizedBox(width: 12),
                       const Icon(Icons.access_time_rounded,
                           size: 16, color: Colors.blueGrey),
                       const SizedBox(width: 4),
                       Text(timeStr.toString(),
-                          style: const TextStyle(
-                              fontSize: 13, color: Colors.black54)),
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: context.colors.textSecondary)),
                     ],
                   ),
                 ],
@@ -527,7 +527,7 @@ class _CategoryPageState extends State<CategoryPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: context.colors.surfaceVariant,
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.arrow_forward_ios_rounded,

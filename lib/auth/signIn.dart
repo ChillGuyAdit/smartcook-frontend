@@ -379,12 +379,17 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
         onFieldSubmitted: (v) =>
             FocusScope.of(context).requestFocus(_focusNode2),
         validator: (value) {
-          if (value == null || value.isEmpty) return "Wajib isi bray";
-          if (!value.contains("@") ||
-              !value.contains("gmail") ||
-              !value.contains(".com")) {
-            return "Email ngga valid bray";
-          }
+          if (value == null || value.isEmpty) return "Wajib isi email";
+          final email = value.trim();
+          // Accept any real address shape. The previous check demanded the
+          // literal substring "gmail", so every non-Gmail account was
+          // rejected before the request ever left the phone.
+          final ok = RegExp(
+            r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9]"
+            r"(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
+            r"(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$",
+          ).hasMatch(email);
+          if (!ok) return "Format email tidak valid";
           return null;
         },
         decoration: InputDecoration(

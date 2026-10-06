@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_theme_colors.dart';
+import '../core/theme/shadows.dart';
 import 'reusable/bottom_navbar.dart';
 import 'category.dart';
 import 'kulkas.dart';
@@ -217,7 +219,7 @@ class _homepageState extends State<homepage> {
     double cardWidth = screenWidth > 350 ? 260 : screenWidth * 0.85;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: context.colors.background,
       body: _selectedIndex == 0
           ? _loading
               ? const Center(child: CircularProgressIndicator())
@@ -273,18 +275,19 @@ class _homepageState extends State<homepage> {
                         Row(
                           children: [
                             Text("Hallo, $_userName! ",
-                                style: const TextStyle(
-                                    fontSize: 14, color: Colors.black54)),
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    color: context.colors.textSecondary)),
                             const Icon(Icons.auto_awesome,
                                 color: Colors.amber, size: 16),
                           ],
                         ),
                         const SizedBox(height: 2),
-                        const Text("Masak apa hari ini?",
+                        Text("Masak apa hari ini?",
                             style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black87)),
+                                color: context.colors.textPrimary)),
                       ],
                     ),
                   ],
@@ -292,29 +295,23 @@ class _homepageState extends State<homepage> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: context.colors.surface,
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.15),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    boxShadow: context.softShadow,
                   ),
-                  child: const Icon(Icons.notifications_outlined,
-                      size: 26, color: Colors.black87),
+                  child: Icon(Icons.notifications_outlined,
+                      size: 26, color: context.colors.textPrimary),
                 ),
               ],
             ),
             const SizedBox(height: 30),
 
             // --- CATEGORY SECTION ---
-            const Text("Kategori selera memasak",
+            Text("Kategori selera memasak",
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87)),
+                    color: context.colors.textPrimary)),
             const SizedBox(height: 15),
             SizedBox(
               height: 160,
@@ -386,18 +383,12 @@ class _homepageState extends State<homepage> {
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 15,
-                    offset: const Offset(0, 8),
-                  )
-                ],
+                boxShadow: context.cardShadow,
                 image: DecorationImage(
                   image: const AssetImage('image/bg_kulkas.png'),
                   fit: BoxFit.cover,
                   colorFilter: ColorFilter.mode(
-                    Colors.black.withOpacity(0.4),
+                    Colors.black.withValues(alpha: 0.4),
                     BlendMode.darken,
                   ),
                 ),
@@ -435,7 +426,7 @@ class _homepageState extends State<homepage> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 10),
                             decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.25),
+                                color: Colors.white.withValues(alpha: 0.25),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: Colors.white30)),
                             child: Row(
@@ -459,7 +450,9 @@ class _homepageState extends State<homepage> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 15),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
+                      // Scrim gelap di atas gambar kulkas; teks putih di atasnya
+                      // harus tetap kontras di kedua mode.
+                      color: Colors.black.withValues(alpha: 0.7),
                       borderRadius: const BorderRadius.only(
                           bottomLeft: Radius.circular(20),
                           bottomRight: Radius.circular(20)),
@@ -515,12 +508,12 @@ class _homepageState extends State<homepage> {
             const SizedBox(height: 35),
 
             // --- MEAL MODE SECTION (UPDATED) ---
-            const Center(
+            Center(
                 child: Text("Pilih Waktu Makan",
                     style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87))),
+                        color: context.colors.textPrimary))),
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -549,17 +542,17 @@ class _homepageState extends State<homepage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Disimpan untukmu",
+                      Text("Disimpan untukmu",
                           style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.black87)),
+                              color: context.colors.textPrimary)),
                       const SizedBox(height: 4),
                       Text(
                         _buildAllergySubtitle(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: Colors.black54,
+                          color: context.colors.textSecondary,
                         ),
                       ),
                     ],
@@ -632,11 +625,11 @@ class _homepageState extends State<homepage> {
 
             // --- POPULAR RECIPES SECTION ---
             if (_popularRecipes.isNotEmpty) ...[
-              const Text("10 Resep Terpopuler",
+              Text("10 Resep Terpopuler",
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87)),
+                      color: context.colors.textPrimary)),
               const SizedBox(height: 15),
               Column(
                 children: _popularRecipes.take(10).map((r) {
@@ -677,11 +670,11 @@ class _homepageState extends State<homepage> {
             ],
 
             // --- RECOMMENDATION SECTION ---
-            const Text("5 Rekomendasi Masakan",
+            Text("5 Rekomendasi Masakan",
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87)),
+                    color: context.colors.textPrimary)),
             const SizedBox(height: 15),
 
             ...(_recommendations.map((r) {
@@ -747,7 +740,8 @@ class _homepageState extends State<homepage> {
             child: Column(
               key: ValueKey(_selectedMealTime),
               children: [
-                Icon(activeIcon, color: activeColor.withOpacity(0.8), size: 40),
+                Icon(activeIcon,
+                    color: activeColor.withValues(alpha: 0.8), size: 40),
                 const SizedBox(height: 5),
                 Container(
                   height: 3,
@@ -823,13 +817,13 @@ class _homepageState extends State<homepage> {
             duration: const Duration(milliseconds: 300),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isSelected ? iconColor : Colors.white,
+              color: isSelected ? iconColor : context.colors.surface,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
                   color: isSelected
-                      ? iconColor.withOpacity(0.3)
-                      : Colors.black.withOpacity(0.04),
+                      ? iconColor.withValues(alpha: 0.3)
+                      : context.colors.shadow,
                   blurRadius: 10,
                   spreadRadius: 2,
                   offset: const Offset(0, 4),
@@ -844,7 +838,9 @@ class _homepageState extends State<homepage> {
               style: TextStyle(
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                   fontSize: 13,
-                  color: isSelected ? iconColor : Colors.black87)),
+                  color: isSelected
+                      ? iconColor
+                      : context.colors.textPrimary)),
         ],
       ),
     );
@@ -869,7 +865,7 @@ class _homepageState extends State<homepage> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.4),
+              color: color.withValues(alpha: 0.4),
               blurRadius: 8,
               offset: const Offset(0, 4),
             )
@@ -925,7 +921,7 @@ class _homepageState extends State<homepage> {
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.bolt_rounded,
@@ -960,15 +956,9 @@ class _homepageState extends State<homepage> {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.colors.surface,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            )
-          ],
+          boxShadow: context.cardShadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -986,7 +976,7 @@ class _homepageState extends State<homepage> {
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Container(
                             height: 180,
-                            color: Colors.grey.shade200,
+                            color: context.colors.surfaceVariant,
                             child: Image.asset('image/jagung_bowl.png',
                                 fit: BoxFit.cover),
                           ),
@@ -1004,7 +994,7 @@ class _homepageState extends State<homepage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF4CAF50).withOpacity(0.9),
+                        color: const Color(0xFF4CAF50).withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
@@ -1030,16 +1020,17 @@ class _homepageState extends State<homepage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title ?? "Resep",
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87)),
+                          color: context.colors.textPrimary)),
                   const SizedBox(height: 4),
                   Text(
                     subtitle ?? "",
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13, color: Colors.black54),
+                    style: TextStyle(
+                        fontSize: 13, color: context.colors.textSecondary),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -1047,21 +1038,21 @@ class _homepageState extends State<homepage> {
                       const Icon(Icons.local_fire_department_rounded,
                           size: 18, color: Colors.orange),
                       Text(" ${calories ?? '0'} Kal",
-                          style: const TextStyle(
-                              color: Colors.black54,
+                          style: TextStyle(
+                              color: context.colors.textSecondary,
                               fontWeight: FontWeight.w500)),
                       const SizedBox(width: 15),
                       const Icon(Icons.access_time_rounded,
                           size: 18, color: Colors.blueGrey),
                       Text(" ${time ?? 0} menit",
-                          style: const TextStyle(
-                              color: Colors.black54,
+                          style: TextStyle(
+                              color: context.colors.textSecondary,
                               fontWeight: FontWeight.w500)),
                       const Spacer(),
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: Colors.orange.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.bookmark_rounded,
@@ -1094,7 +1085,7 @@ class _homepageState extends State<homepage> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: colors[1].withOpacity(0.3),
+              color: colors[1].withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
             )
@@ -1125,7 +1116,7 @@ class _homepageState extends State<homepage> {
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.star_rounded,
@@ -1135,7 +1126,7 @@ class _homepageState extends State<homepage> {
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.bookmark_outline_rounded,

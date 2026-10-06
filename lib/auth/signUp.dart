@@ -485,8 +485,21 @@ class _signupState extends State<signup> {
           }
         },
         validator: (value) {
-          if (value == null || value.isEmpty) return "Wajib isi bray";
-          if (isPassword && value.length < 6) return "Minimal 6 karakter";
+          if (value == null || value.isEmpty) return "Wajib diisi";
+          if (isPassword) {
+            if (value.length < 6) return "Minimal 6 karakter";
+            return null;
+          }
+          // Email field: validate the shape, not the provider. Previously
+          // there was no email check at all, so a typo only surfaced as an
+          // opaque server error.
+          final email = value.trim();
+          final ok = RegExp(
+            r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9]"
+            r"(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
+            r"(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$",
+          ).hasMatch(email);
+          if (!ok) return "Format email tidak valid";
           return null;
         },
         decoration: InputDecoration(

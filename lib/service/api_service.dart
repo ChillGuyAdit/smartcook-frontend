@@ -294,6 +294,7 @@ class ApiService {
 
   static Future<ApiResponse> delete(
     String path, {
+    Map<String, dynamic>? body,
     bool useAuth = true,
     bool requireAppSession = true,
   }) async {
@@ -303,7 +304,11 @@ class ApiService {
         (headers) async {
           final uri = Uri.parse('$_baseUrl$path');
           return http
-              .delete(uri, headers: headers)
+              .delete(
+                uri,
+                headers: headers,
+                body: body != null ? jsonEncode(body) : null,
+              )
               .timeout(const Duration(seconds: 30));
         },
         requireAppSession: requireAppSession,

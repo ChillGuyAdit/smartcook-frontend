@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_cache_service.dart';
 
+import '../core/theme/app_theme_colors.dart';
 import 'masakan.dart';
 
 class SearchPage extends StatefulWidget {
@@ -175,7 +176,7 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: context.colors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -197,7 +198,7 @@ class _SearchPageState extends State<SearchPage> {
                               borderSide: BorderSide.none,
                             ),
                             filled: true,
-                            fillColor: Colors.white,
+                            fillColor: context.colors.surface,
                             contentPadding:
                                 const EdgeInsets.symmetric(vertical: 12),
                           ),
@@ -216,10 +217,11 @@ class _SearchPageState extends State<SearchPage> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text(
+                          Text(
                             'Global',
                             style: TextStyle(
-                                fontSize: 11, color: Colors.black54),
+                                fontSize: 11,
+                                color: context.colors.textSecondary),
                           ),
                           Switch(
                             value: _useGlobalSearch,
@@ -238,12 +240,13 @@ class _SearchPageState extends State<SearchPage> {
                     ],
                   ),
                   if (_useGlobalSearch)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 4),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
                       child: Text(
                         'Mode global: menampilkan resep yang sudah ada di database dari semua user (tetap disesuaikan alergi dan preferensimu).',
-                        style:
-                            TextStyle(fontSize: 11, color: Colors.black54),
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: context.colors.textSecondary),
                       ),
                     ),
                 ],
@@ -256,7 +259,8 @@ class _SearchPageState extends State<SearchPage> {
                       ? Center(
                           child: Text(
                             'Tidak ada hasil untuk "$_query"',
-                            style: const TextStyle(color: Colors.black54),
+                            style: TextStyle(
+                                color: context.colors.textSecondary),
                           ),
                         )
                       : _results.isEmpty
@@ -337,23 +341,27 @@ class _SearchPageState extends State<SearchPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
         const SizedBox(height: 4),
-        const Text('Pencarian terbaru',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+        Text('Pencarian terbaru',
+            style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: context.colors.textPrimary)),
         const SizedBox(height: 10),
         if (_recent.isEmpty)
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
+              children: [
                 SizedBox(height: 40),
-                Icon(Icons.search_rounded, size: 80, color: Colors.grey),
+                Icon(Icons.search_rounded,
+                    size: 80, color: context.colors.textDisabled),
                 SizedBox(height: 16),
                 Text(
                   "Cari resep favoritmu",
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black54),
+                      color: context.colors.textSecondary),
                 ),
               ],
             ),
@@ -377,11 +385,12 @@ class _SearchPageState extends State<SearchPage> {
             }).toList(),
           ),
         if (_isOfflineFallback)
-          const Padding(
-            padding: EdgeInsets.only(top: 16),
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
             child: Text(
               'Menampilkan data dari cache (offline)',
-              style: TextStyle(color: Colors.black45, fontSize: 12),
+              style: TextStyle(
+                  color: context.colors.textDisabled, fontSize: 12),
             ),
           ),
       ],

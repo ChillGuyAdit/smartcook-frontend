@@ -4,6 +4,9 @@ import 'package:smartcook/service/offline_cache_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/page/masakan.dart';
 
+import '../core/theme/app_theme_colors.dart';
+import '../core/theme/shadows.dart';
+
 class SavePage extends StatefulWidget {
   const SavePage({super.key});
 
@@ -72,12 +75,14 @@ class _SavePageState extends State<SavePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Disimpan",
           style: TextStyle(
-              color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 24),
+              color: context.colors.textPrimary,
+              fontWeight: FontWeight.bold,
+              fontSize: 24),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -109,15 +114,16 @@ class _SavePageState extends State<SavePage> {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.bookmark_outline_rounded, size: 80, color: Colors.grey),
-          SizedBox(height: 16),
+        children: [
+          Icon(Icons.bookmark_outline_rounded,
+              size: 80, color: context.colors.textDisabled),
+          const SizedBox(height: 16),
           Text(
             "Belum ada resep yang disimpan",
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: Colors.grey,
+              color: context.colors.textSecondary,
             ),
           ),
         ],
@@ -154,15 +160,9 @@ class _SavePageState extends State<SavePage> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.colors.surface,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            ),
-          ],
+          boxShadow: context.cardShadow,
         ),
         padding: const EdgeInsets.all(12),
         child: Row(
@@ -187,10 +187,10 @@ class _SavePageState extends State<SavePage> {
                     title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: context.colors.textPrimary,
                       height: 1.2,
                     ),
                   ),
@@ -210,8 +210,8 @@ class _SavePageState extends State<SavePage> {
             // Icon Panah
             Container(
               padding: const EdgeInsets.only(left: 8),
-              child: const Icon(Icons.arrow_forward_ios_rounded,
-                  size: 16, color: Colors.grey),
+child: Icon(Icons.arrow_forward_ios_rounded,
+                size: 16, color: context.colors.textDisabled),
             ),
           ],
         ),
@@ -229,7 +229,7 @@ class _SavePageState extends State<SavePage> {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade600,
+            color: context.colors.textSecondary,
             fontWeight: FontWeight.w500,
           ),
         ),

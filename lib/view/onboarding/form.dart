@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:smartcook/core/theme/app_theme_colors.dart';
+import 'package:smartcook/core/theme/shadows.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/page/homepage.dart';
 import 'package:smartcook/service/api_service.dart';
@@ -64,6 +66,7 @@ class _formState extends State<form> {
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
+      backgroundColor: context.colors.background,
       body: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
@@ -168,7 +171,9 @@ class _formState extends State<form> {
         child: Column(
           children: [
             Image.asset('image/personalInformation.png'),
-            Text('Personal Information', style: TextStyle(fontSize: 25)),
+            Text('Personal Information',
+                style: TextStyle(
+                    fontSize: 25, color: context.colors.textPrimary)),
             SizedBox(height: 24),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 35),
@@ -293,12 +298,16 @@ class _formState extends State<form> {
             SizedBox(height: 32),
             Text(
               'Apa Selera Masakanmu ?',
-              style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  fontSize: 25,
+                  fontWeight: FontWeight.bold,
+                  color: context.colors.textPrimary),
             ),
             SizedBox(height: 6),
             Text(
               'Pilih minimal 3 agar kami bisa kasih saran resep yang pas buat kamu',
-              style: TextStyle(fontSize: 15),
+              style:
+                  TextStyle(fontSize: 15, color: context.colors.textSecondary),
             ),
             SizedBox(height: 30),
             Center(
@@ -342,12 +351,16 @@ class _formState extends State<form> {
             SizedBox(height: 32),
             Text(
               'Lengkapi Senjatamu',
-              style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  fontSize: 25,
+                  fontWeight: FontWeight.bold,
+                  color: context.colors.textPrimary),
             ),
             SizedBox(height: 6),
             Text(
               'Pilih berbagai macam alat yang ada di dalam dapurmu agar kami bisa kasih resep yang cocok',
-              style: TextStyle(fontSize: 15),
+              style:
+                  TextStyle(fontSize: 15, color: context.colors.textSecondary),
             ),
             SizedBox(height: 30),
             Center(
@@ -422,16 +435,9 @@ class _formState extends State<form> {
         width: isWide ? (sw * 0.84 + 15) : sw * 0.42,
         height: sw * 0.42,
         decoration: BoxDecoration(
-          color: isSelected ? Colors.amber : Colors.white,
+          color: isSelected ? Colors.amber : context.colors.surface,
           borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.25),
-              blurRadius: 15,
-              spreadRadius: 1,
-              offset: Offset(0, 10),
-            )
-          ],
+          boxShadow: context.cardShadow,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -459,7 +465,9 @@ class _formState extends State<form> {
       alignment: Alignment.topLeft,
       child: Padding(
           padding: EdgeInsets.only(left: sw * 0.09),
-          child: Text(text, style: TextStyle(fontSize: 15))),
+          child: Text(text,
+              style: TextStyle(
+                  fontSize: 15, color: context.colors.textPrimary))),
     );
   }
 
@@ -470,11 +478,13 @@ class _formState extends State<form> {
         padding: EdgeInsets.only(left: sw * 0.09),
         child: RichText(
           text: TextSpan(
-            style: TextStyle(fontSize: 15, color: Colors.black),
+            style: TextStyle(fontSize: 15, color: context.colors.textPrimary),
             children: [
               TextSpan(text: t1),
               TextSpan(
-                  text: t2, style: TextStyle(color: Colors.grey, fontSize: 12))
+                  text: t2,
+                  style: TextStyle(
+                      color: context.colors.textDisabled, fontSize: 12))
             ],
           ),
         ),
@@ -498,7 +508,10 @@ class _formState extends State<form> {
             child: Text(label,
                 style: TextStyle(
                     fontSize: 15,
-                    color: isSelected ? Colors.white : Colors.black))),
+                    color: isSelected
+                        ? Colors.white
+                        : context.colors.textPrimary)),
+        ),
       ),
     );
   }
@@ -511,10 +524,14 @@ class _formState extends State<form> {
         height: 107,
         width: 164,
         decoration: BoxDecoration(
-          color: isSelected ? borderColor.withOpacity(0.1) : Colors.transparent,
+          color: isSelected
+              ? borderColor.withValues(alpha: 0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color: isSelected ? borderColor : borderColor.withOpacity(0.3),
+              color: isSelected
+                  ? borderColor
+                  : borderColor.withValues(alpha: 0.3),
               width: isSelected ? 3 : 1),
           image: DecorationImage(image: AssetImage(imagePath)),
         ),
@@ -539,7 +556,10 @@ class _formState extends State<form> {
             child: Text(label,
                 style: TextStyle(
                     fontSize: 15,
-                    color: isSelected ? Colors.white : Colors.black))),
+                    color: isSelected
+                        ? Colors.white
+                        : context.colors.textPrimary)),
+        ),
       ),
     );
   }
@@ -565,7 +585,9 @@ class _formState extends State<form> {
               child: Text(label,
                   style: TextStyle(
                       fontSize: 15,
-                      color: isSelected ? Colors.white : Colors.black)),
+                      color: isSelected
+                          ? Colors.white
+                          : context.colors.textPrimary)),
             ),
           ),
         ),

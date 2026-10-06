@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme_colors.dart';
+
 class CustomBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
@@ -12,20 +15,22 @@ class CustomBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = Theme.of(context).extension<AppThemeColors>()!;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white, // Ubah jadi putih bersih agar lebih elegan
+        color: palette.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        border: Border(top: BorderSide(color: palette.divider)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06), // Shadow lembut di bagian atas
+            color: palette.shadow,
             blurRadius: 20,
-            spreadRadius: 2,
             offset: const Offset(0, -5),
           ),
         ],
       ),
-      // SafeArea ditambahkan agar UI tidak bertabrakan dengan garis navigasi di bawah layar HP modern
+      // SafeArea prevents the bar colliding with the gesture area on modern
+      // phones.
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
@@ -33,30 +38,43 @@ class CustomBottomNavBar extends StatelessWidget {
             currentIndex: currentIndex,
             onTap: onTap,
             type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.transparent, // Background transparent agar ikut Container
+            // Transparent so the container colour shows through.
+            backgroundColor: Colors.transparent,
             elevation: 0,
-            selectedItemColor: const Color(0xFF2A9D8F), // Warna Teal/Hijau modern (sesuai tema kartu)
-            unselectedItemColor: Colors.grey.shade400, // Abu-abu yang lebih soft
+            selectedItemColor: AppColors.primary,
+            unselectedItemColor: palette.textDisabled,
             showUnselectedLabels: true,
             selectedLabelStyle: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 12,
+              color: AppColors.primary,
             ),
-            unselectedLabelStyle: const TextStyle(
+            unselectedLabelStyle: TextStyle(
               fontWeight: FontWeight.normal,
               fontSize: 11,
+              color: palette.textDisabled,
             ),
             items: const [
               BottomNavigationBarItem(
-                  icon: Icon(Icons.home_rounded), label: 'Home'), // Pakai icon _rounded
+                icon: Icon(Icons.home_rounded),
+                label: 'Home',
+              ),
               BottomNavigationBarItem(
-                  icon: Icon(Icons.search_rounded), label: 'Search'),
+                icon: Icon(Icons.search_rounded),
+                label: 'Search',
+              ),
               BottomNavigationBarItem(
-                  icon: Icon(Icons.chat_bubble_outline_rounded), label: 'Bot'),
+                icon: Icon(Icons.chat_bubble_outline_rounded),
+                label: 'Bot',
+              ),
               BottomNavigationBarItem(
-                  icon: Icon(Icons.bookmark_border_rounded), label: 'Save'),
+                icon: Icon(Icons.bookmark_border_rounded),
+                label: 'Save',
+              ),
               BottomNavigationBarItem(
-                  icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
+                icon: Icon(Icons.person_outline_rounded),
+                label: 'Profile',
+              ),
             ],
           ),
         ),

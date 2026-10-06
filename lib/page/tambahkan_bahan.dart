@@ -4,6 +4,8 @@ import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_cache_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
 
+import '../core/theme/app_theme_colors.dart';
+
 class TambahkanBahanPage extends StatefulWidget {
   const TambahkanBahanPage({super.key});
 
@@ -371,21 +373,22 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
     double scale = screenWidth / baseWidth;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: Colors.black),
+          icon: Icon(Icons.arrow_back_ios,
+              color: context.colors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Tambahkan Bahan',
           style: TextStyle(
-            color: Colors.black,
+            color: context.colors.textPrimary,
             fontSize: 22 * scale,
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: context.colors.background,
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -403,11 +406,12 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                       decoration: InputDecoration(
                         hintText:
                             'Cari atau ketik nama bahan baru (mis. \"Daun bawang\")',
-                        hintStyle: const TextStyle(color: Colors.grey),
-                        prefixIcon:
-                            const Icon(Icons.search, color: Colors.grey),
+                        hintStyle:
+                            TextStyle(color: context.colors.textDisabled),
+                        prefixIcon: Icon(Icons.search,
+                            color: context.colors.textDisabled),
                         filled: true,
-                        fillColor: Colors.grey[200],
+                        fillColor: context.colors.surfaceVariant,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
                           borderSide: BorderSide.none,
@@ -443,7 +447,9 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
               Text(
                 'Berdasarkan Kategori:',
                 style: TextStyle(
-                    fontSize: 18 * scale, fontWeight: FontWeight.w500),
+                    fontSize: 18 * scale,
+                    fontWeight: FontWeight.w500,
+                    color: context.colors.textPrimary),
               ),
               SizedBox(height: 20 * scale),
               Row(
@@ -471,7 +477,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                           'Bahan baru: "${_searchController.text.trim()}" akan disimpan sebagai ${selectedCategory.toLowerCase()}.',
                           style: TextStyle(
                             fontSize: 12 * scale,
-                            color: Colors.black54,
+                            color: context.colors.textSecondary,
                           ),
                         ),
                       ),
@@ -481,7 +487,9 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
               Text(
                 'Daftar:',
                 style: TextStyle(
-                    fontSize: 18 * scale, fontWeight: FontWeight.w500),
+                    fontSize: 18 * scale,
+                    fontWeight: FontWeight.w500,
+                    color: context.colors.textPrimary),
               ),
               SizedBox(height: 15 * scale),
               if (selectedCategory.isNotEmpty) ..._buildListCards(scale),
@@ -738,7 +746,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                     decoration: BoxDecoration(
                       color: AppColor().utama,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: context.colors.surface, width: 2),
                     ),
                     child: Icon(Icons.check,
                         size: 10 * scale, color: Colors.white),
@@ -751,7 +759,9 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
             label,
             style: TextStyle(
               fontSize: 14 * scale,
-              color: isSelected ? activeColor : Colors.grey[700],
+              color: isSelected
+                  ? activeColor
+                  : context.colors.textSecondary,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -872,7 +882,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                             padding: EdgeInsets.symmetric(
                                 horizontal: 12 * scale, vertical: 4 * scale),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: Colors.white70),
                             ),
@@ -972,7 +982,11 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                   SizedBox(width: 20),
                   Text(
                     '${item['count']}',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: context.colors.textPrimary,
+                    ),
                   ),
                   SizedBox(width: 20),
                   IconButton(

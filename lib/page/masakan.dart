@@ -6,6 +6,9 @@ import 'package:smartcook/service/offline_cache_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/theme/app_theme_colors.dart';
+import '../core/theme/shadows.dart';
+
 class MasakanPage extends StatefulWidget {
   final String? recipeId;
   final String? title;
@@ -329,7 +332,7 @@ class _MasakanPageState extends State<MasakanPage> {
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        backgroundColor: const Color(0xFFFAFAFA),
+        backgroundColor: context.colors.background,
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -339,7 +342,7 @@ class _MasakanPageState extends State<MasakanPage> {
     final headerHeight = isVeryLongTitle ? 380.0 : (isLongTitle ? 350.0 : 320.0);
     final titleFontSize = isVeryLongTitle ? 20.0 : (isLongTitle ? 22.0 : 26.0);
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: context.colors.background,
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,7 +365,7 @@ class _MasakanPageState extends State<MasakanPage> {
                       filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
                       child: Container(
                         // Lapisan gelap agar teks putih terbaca jelas
-                        color: Colors.black.withOpacity(0.4),
+                        color: Colors.black.withValues(alpha: 0.4),
                       ),
                     ),
                   ),
@@ -384,7 +387,7 @@ class _MasakanPageState extends State<MasakanPage> {
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: Colors.white.withValues(alpha: 0.2),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
@@ -398,7 +401,7 @@ class _MasakanPageState extends State<MasakanPage> {
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: Colors.white.withValues(alpha: 0.2),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
@@ -465,7 +468,8 @@ class _MasakanPageState extends State<MasakanPage> {
                                     Border.all(color: Colors.white, width: 3),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
+                                    color: Colors.black
+                                        .withValues(alpha: 0.2),
                                     blurRadius: 10,
                                     offset: const Offset(0, 5),
                                   )
@@ -489,20 +493,21 @@ class _MasakanPageState extends State<MasakanPage> {
             Transform.translate(
               offset: const Offset(0, -20),
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFAFAFA),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                decoration: BoxDecoration(
+                  color: context.colors.background,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       "Bahan yang dibutuhkan",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: context.colors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 15),
@@ -511,23 +516,19 @@ class _MasakanPageState extends State<MasakanPage> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: context.colors.surface,
                         borderRadius: BorderRadius.circular(22),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.03),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          )
-                        ],
+                        boxShadow: context.softShadow,
                       ),
                       child: Column(
                         children: _ingredients.isEmpty
                             ? [
-                                const Padding(
-                                  padding: EdgeInsets.all(12),
+                                Padding(
+                                  padding: const EdgeInsets.all(12),
                                   child: Text('Tidak ada data bahan',
-                                      style: TextStyle(color: Colors.black54)),
+                                      style: TextStyle(
+                                          color:
+                                              context.colors.textSecondary)),
                                 )
                               ]
                             : _ingredients.map((bahan) {
@@ -549,9 +550,10 @@ class _MasakanPageState extends State<MasakanPage> {
                                       Expanded(
                                         child: Text(
                                           text,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               fontSize: 14,
-                                              color: Colors.black87),
+                                              color: context
+                                                  .colors.textPrimary),
                                         ),
                                       ),
                                       Icon(
@@ -628,12 +630,12 @@ class _MasakanPageState extends State<MasakanPage> {
                     const SizedBox(height: 35),
 
                     // Bagian Cara Membuat
-                    const Text(
+                    Text(
                       "Cara Membuat",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: context.colors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 15),
@@ -642,10 +644,11 @@ class _MasakanPageState extends State<MasakanPage> {
                     Column(
                       children: _steps.isEmpty
                           ? [
-                              const Padding(
-                                padding: EdgeInsets.all(12),
+                              Padding(
+                                padding: const EdgeInsets.all(12),
                                 child: Text('Tidak ada langkah',
-                                    style: TextStyle(color: Colors.black54)),
+                                    style: TextStyle(
+                                        color: context.colors.textSecondary)),
                               )
                             ]
                           : List.generate(_steps.length, (index) {
@@ -661,7 +664,7 @@ class _MasakanPageState extends State<MasakanPage> {
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF4CAF50)
-                                            .withOpacity(0.1),
+                                            .withValues(alpha: 0.1),
                                         shape: BoxShape.circle,
                                       ),
                                       child: Text(
@@ -679,9 +682,9 @@ class _MasakanPageState extends State<MasakanPage> {
                                         padding: const EdgeInsets.only(top: 6),
                                         child: Text(
                                           text,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 14,
-                                            color: Colors.black87,
+                                            color: context.colors.textPrimary,
                                             height: 1.5,
                                           ),
                                         ),
@@ -725,12 +728,12 @@ class _MasakanPageState extends State<MasakanPage> {
                     const SizedBox(height: 20),
 
                     // REKOMENDASI MAKANAN (TAMBAHAN BARU)
-                    const Text(
+                    Text(
                       "Rekomendasi Lainnya",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: context.colors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -761,9 +764,10 @@ class _MasakanPageState extends State<MasakanPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+        border: Border.all(
+            color: Colors.white.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -790,15 +794,9 @@ class _MasakanPageState extends State<MasakanPage> {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.colors.surface,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            )
-          ],
+          boxShadow: context.cardShadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -821,7 +819,8 @@ class _MasakanPageState extends State<MasakanPage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF4CAF50).withOpacity(0.9),
+                        color: const Color(0xFF4CAF50)
+                            .withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
@@ -846,15 +845,16 @@ class _MasakanPageState extends State<MasakanPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Jagung Sayur Kentang Bowl",
+                  Text("Jagung Sayur Kentang Bowl",
                       style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87)),
+                          color: context.colors.textPrimary)),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     "Cocok Untuk Diet, Diabetes, rendah gula, tinggi serat",
-                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                    style: TextStyle(
+                        fontSize: 13, color: context.colors.textSecondary),
                   ),
                   const SizedBox(height: 12),
                   Wrap(
@@ -874,22 +874,22 @@ class _MasakanPageState extends State<MasakanPage> {
                     children: [
                       const Icon(Icons.local_fire_department_rounded,
                           size: 18, color: Colors.orange),
-                      const Text(" 220 Kal",
+                      Text(" 220 Kal",
                           style: TextStyle(
-                              color: Colors.black54,
+                              color: context.colors.textSecondary,
                               fontWeight: FontWeight.w500)),
                       const SizedBox(width: 15),
                       const Icon(Icons.access_time_rounded,
                           size: 18, color: Colors.blueGrey),
-                      const Text(" 10 menit",
+                      Text(" 10 menit",
                           style: TextStyle(
-                              color: Colors.black54,
+                              color: context.colors.textSecondary,
                               fontWeight: FontWeight.w500)),
                       const Spacer(),
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: Colors.orange.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.bookmark_rounded,

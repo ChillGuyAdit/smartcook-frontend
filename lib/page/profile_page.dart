@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:smartcook/core/services/app_session.dart';
-import 'package:smartcook/service/api_service.dart';
-import 'package:smartcook/service/token_service.dart';
-import 'package:smartcook/view/onboarding/form.dart';
-import 'package:smartcook/page/change_password_page.dart';
-import 'package:smartcook/page/change_email_page.dart';
+
+import '../core/l10n/strings.dart';
+import '../core/services/app_session.dart';
+import '../core/theme/app_colors.dart';
+import '../core/theme/app_theme_colors.dart';
+import '../core/theme/language_controller.dart';
+import '../core/theme/shadows.dart';
+import '../core/theme/theme_provider.dart';
+import '../service/api_service.dart';
+import '../service/token_service.dart';
+import '../view/onboarding/form.dart';
+import 'change_email_page.dart';
+import 'change_password_page.dart';
+import 'delete_account_page.dart';
+import 'faq_sheet.dart';
+import 'version_sheet.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -65,14 +75,14 @@ class _ProfilePageState extends State<ProfilePage> {
     );
     if (!mounted) return;
     setState(() => _saving = false);
+    final s = stringsFor(Localizations.localeOf(context));
     if (res.success) {
       _profile = res.data as Map<String, dynamic>?;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profil diperbarui')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(s.profileUpdated)));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message ?? 'Gagal menyimpan')),
+        SnackBar(content: Text(res.message ?? s.saveFailed)),
       );
     }
   }
@@ -90,189 +100,359 @@ class _ProfilePageState extends State<ProfilePage> {
     Navigator.pushNamedAndRemoveUntil(context, '/signin', (route) => false);
   }
 
+  void _showThemePicker(BuildContext context) {
+    final s = stringsFor(Localizations.localeOf(context));
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(s.theme),
+        children: [
+          for (final mode in ThemeMode.values)
+            RadioListTile<ThemeMode>(
+              value: mode,
+              groupValue: ThemeProvider.instance.mode,
+              onChanged: (value) {
+                if (value == null) return;
+                ThemeProvider.instance.set(value);
+                Navigator.pop(ctx);
+              },
+              title: Text(switch (mode) {
+                ThemeMode.system => s.themeSystem,
+                ThemeMode.light => s.themeLight,
+                ThemeMode.dark => s.themeDark,
+              }),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showLanguagePicker(BuildContext context) {
+    final s = stringsFor(Localizations.localeOf(context));
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(s.language),
+        children: [
+          for (final locale in LanguageController.supportedLocales)
+            RadioListTile<Locale>(
+              value: locale,
+              groupValue: LanguageController.instance.locale,
+              onChanged: (value) {
+                if (value == null) return;
+                LanguageController.instance.set(value);
+                Navigator.pop(ctx);
+              },
+              title: Text(locale.languageCode == 'en'
+                  ? s.languageEnglish
+                  : s.languageIndonesian),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _themeLabel(dynamic s) {
+    switch (ThemeProvider.instance.mode) {
+      case ThemeMode.light:
+        return s.themeLight;
+      case ThemeMode.dark:
+        return s.themeDark;
+      case ThemeMode.system:
+        return s.themeSystem;
+    }
+  }
+
+  String _languageLabel(dynamic s) =>
+      LanguageController.instance.isIndonesian ? 'Indonesia' : 'English';
+
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFFAFAFA),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-    final name = _profile?['name']?.toString() ?? '';
-    final email = _profile?['email']?.toString() ?? '';
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              const CircleAvatar(
-                radius: 50,
-                backgroundImage: AssetImage('image/mainLogo.jpg'),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                name.isEmpty ? 'Pengguna' : name,
-                style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87),
-              ),
-              if (email.isNotEmpty)
-                Text(
-                  email,
-                  style: const TextStyle(fontSize: 14, color: Colors.black54),
-                ),
-              const SizedBox(height: 32),
-              TextField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: 'Nama',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _saving ? null : _save,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4CAF50),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: _saving
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Simpan Profil'),
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => form(
-                          initialData: _profile,
-                          editFromProfile: true,
+    final palette = Theme.of(context).extension<AppThemeColors>()!;
+    final s = stringsFor(Localizations.localeOf(context));
+
+    return AnimatedBuilder(
+      // Settings rows read live values, so a change from the dialog is
+      // reflected without rebuilding the page from the server.
+      animation: Listenable.merge([
+        ThemeProvider.instance,
+        LanguageController.instance,
+      ]),
+      builder: (context, _) {
+        if (_loading) {
+          return Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final name = _profile?['name']?.toString() ?? '';
+        final email = _profile?['email']?.toString() ?? '';
+
+        return Scaffold(
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Column(
+                      children: [
+                        const CircleAvatar(
+                          radius: 50,
+                          backgroundImage: AssetImage('image/mainLogo.jpg'),
                         ),
+                        const SizedBox(height: 16),
+                        Text(
+                          name.isEmpty ? s.profile : name,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (email.isNotEmpty)
+                          Text(
+                            email,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  TextField(
+                    controller: _nameController,
+                    decoration: InputDecoration(labelText: s.name),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: _saving ? null : _save,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ).then((_) => _load());
-                  },
-                  icon: const Icon(Icons.tune_rounded),
-                  label: const Text('Edit preferensi & data diri'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF4CAF50),
-                    side: const BorderSide(color: Color(0xFF4CAF50)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
                     ),
+                    child: _saving
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            s.saveProfile,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Ubah password
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ChangePasswordPage(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.lock_reset),
-                  label: const Text('Ubah password'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF4CAF50),
-                    side: const BorderSide(color: Color(0xFF4CAF50)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+
+                  const SizedBox(height: 28),
+                  _SectionHeader(title: s.appearance),
+                  _SettingTile(
+                    icon: Icons.dark_mode_outlined,
+                    label: s.theme,
+                    trailing: _themeLabel(s),
+                    onTap: () => _showThemePicker(context),
+                  ),
+                  _SettingTile(
+                    icon: Icons.language,
+                    label: s.language,
+                    trailing: _languageLabel(s),
+                    onTap: () => _showLanguagePicker(context),
+                  ),
+
+                  const SizedBox(height: 8),
+                  _SectionHeader(title: s.editProfile),
+                  _SettingTile(
+                    icon: Icons.tune_rounded,
+                    label: s.editPreferences,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => form(
+                            initialData: _profile,
+                            editFromProfile: true,
+                          ),
+                        ),
+                      ).then((_) => _load());
+                    },
+                  ),
+                  _SettingTile(
+                    icon: Icons.lock_reset,
+                    label: s.changePassword,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ChangePasswordPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  _SettingTile(
+                    icon: Icons.alternate_email_rounded,
+                    label: s.changeEmail,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ChangeEmailPage(),
+                        ),
+                      ).then((changed) {
+                        if (changed == true) _load();
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 8),
+                  _SectionHeader(title: s.other),
+                  _SettingTile(
+                    icon: Icons.help_outline,
+                    label: s.faq,
+                    onTap: () => showFaqSheet(context),
+                  ),
+                  if (_pkg != null)
+                    _SettingTile(
+                      icon: Icons.info_outline_rounded,
+                      label: s.version,
+                      trailing:
+                          '${_pkg!.version} (${_pkg!.buildNumber})',
+                      onTap: () => showVersionSheet(context, _pkg!),
                     ),
+
+                  const SizedBox(height: 8),
+                  _SectionHeader(title: s.danger),
+                  _SettingTile(
+                    icon: Icons.delete_forever_outlined,
+                    label: s.deleteAccount,
+                    subtitle: s.deleteAccountSubtitle,
+                    destructive: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const DeleteAccountPage(),
+                        ),
+                      ).then((deleted) {
+                        if (deleted == true) _logout();
+                      });
+                    },
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Ganti email
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ChangeEmailPage(),
-                      ),
-                    ).then((changed) {
-                      if (changed == true) {
-                        _load();
-                      }
-                    });
-                  },
-                  icon: const Icon(Icons.alternate_email_rounded),
-                  label: const Text('Ganti email (OTP)'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF4CAF50),
-                    side: const BorderSide(color: Color(0xFF4CAF50)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+
+                  const SizedBox(height: 8),
+                  _SettingTile(
+                    icon: Icons.logout_rounded,
+                    label: s.logout,
+                    destructive: true,
+                    onTap: _logout,
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _logout,
-                  icon: const Icon(Icons.logout_rounded),
-                  label: const Text('Keluar'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (_pkg != null)
-                Center(
-                  child: Text(
-                    'Versi ${_pkg!.version} (build ${_pkg!.buildNumber})',
-                    style: const TextStyle(
+
+                  const SizedBox(height: 24),
+                  Text(
+                    'SmartCook · v${_pkg?.version ?? '-'} (${_pkg?.buildNumber ?? '-'})',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Colors.black45,
+                      color: palette.textDisabled,
                     ),
                   ),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
+        );
+      },
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 8, left: 4),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+          color: palette.textSecondary,
         ),
       ),
+    );
+  }
+}
+
+class _SettingTile extends StatelessWidget {
+  const _SettingTile({
+    required this.icon,
+    required this.label,
+    this.subtitle,
+    this.trailing,
+    this.destructive = false,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String? subtitle;
+  final String? trailing;
+  final bool destructive;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.colors;
+    final tint = destructive ? AppColors.error : AppColors.primary;
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(vertical: 4),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: tint.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: tint, size: 20),
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: destructive ? AppColors.error : palette.textPrimary,
+          fontWeight: FontWeight.w600,
+          fontSize: 15,
+        ),
+      ),
+      subtitle: subtitle == null
+          ? null
+          : Text(
+              subtitle!,
+              style: TextStyle(color: palette.textSecondary, fontSize: 12),
+            ),
+      trailing: trailing == null
+          ? Icon(Icons.chevron_right_rounded, color: palette.textDisabled)
+          : Text(
+              trailing!,
+              style: TextStyle(color: palette.textSecondary, fontSize: 13),
+            ),
+      onTap: onTap,
     );
   }
 }
