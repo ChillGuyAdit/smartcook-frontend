@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show PlatformDispatcher;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -44,10 +45,15 @@ class LanguageController extends ChangeNotifier {
 
   Future<void> set(Locale locale) async {
     if (_locale.languageCode == locale.languageCode) return;
-    _locale = locale;
-    notifyListeners();
+    // Persist before notifying. notifyListeners() rebuilds MaterialApp, which
+    // recreates the whole navigator tree; if it happened first and the write
+    // failed, the in-memory language and the stored one would disagree and the
+    // app could come back in the wrong language after a restart.
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kLocale, locale.languageCode);
+    _locale = locale;
+    debugPrint('[lang] switched to ${locale.languageCode}');
+    notifyListeners();
   }
 
   Future<void> toggle() =>

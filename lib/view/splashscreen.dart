@@ -77,64 +77,74 @@ class _splashscreenState extends State<splashscreen> {
 
     Future.delayed(Duration(milliseconds: 4600), () async {
       if (!mounted) return;
-      final token = await TokenService.getToken();
-      if (token == null || token.isEmpty) {
+      try {
+        await _decideWhereToGo();
+      } catch (e, st) {
+        debugPrint('[splash] decide failed: $e\n$st');
+        // Never strand the user on the splash screen. If anything goes wrong
+        // here the app used to stay blank forever with no way forward, which
+        // is what "white screen after launch" turned out to be.
         if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (context, anim1, anim2) => signup(),
-            transitionDuration: Duration.zero,
-            reverseTransitionDuration: Duration.zero,
-          ),
-        );
-        return;
+        _go(signin());
       }
-      final res = await ApiService.get('/api/user/profile', useAuth: true);
-      if (!mounted) return;
-      if (!res.success) {
-        // Jika gagal tapi kelihatannya karena offline, jangan paksa login ulang
-        final isMaybeOffline =
-            res.statusCode == null || (res.message ?? '').contains('koneksi');
-        if (isMaybeOffline) {
-          OfflineManager.setOffline(true);
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => homepage()),
-          );
-          return;
-        }
-        if (res.statusCode == 401) await TokenService.clearAll();
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (context, anim1, anim2) => signin(),
-            transitionDuration: Duration.zero,
-            reverseTransitionDuration: Duration.zero,
-          ),
-        );
-        return;
-      }
-      OfflineManager.setOffline(false);
-      final data = res.data as Map<String, dynamic>?;
-      final onboardingCompleted = data?['onboarding_completed'] == true;
-      if (!mounted) return;
-      if (onboardingCompleted) {
+    });
+  }
+
+  /// Never let two navigations race: both ApiService's global 401 handler and
+  /// this screen want to redirect, and the loser used to fire against an
+  /// unmounted context.
+  bool _navigated = false;
+
+  void _go(Widget page) {
+    if (_navigated || !mounted) return;
+    _navigated = true;
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, _, __) => page,
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      ),
+    );
+  }
+
+  Future<void> _decideWhereToGo() async {
+    final token = await TokenService.getToken();
+    if (token == null || token.isEmpty) {
+      _go(signup());
+      return;
+    }
+    final res = await ApiService.get('/api/user/profile', useAuth: true);
+    if (!mounted) return;
+    if (!res.success) {
+      // Offline is not a reason to log the user out; keep them in the app
+      // with the offline banner and cached data.
+      final isMaybeOffline =
+          res.statusCode == null || (res.message ?? '').contains('koneksi');
+      if (isMaybeOffline) {
+        OfflineManager.setOffline(true);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => homepage()),
         );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (context, anim1, anim2) => onboarding(),
-            transitionDuration: Duration.zero,
-            reverseTransitionDuration: Duration.zero,
-          ),
-        );
+        return;
       }
-    });
+      if (res.statusCode == 401) await TokenService.clearAll();
+      _go(signin());
+      return;
+    }
+    OfflineManager.setOffline(false);
+    final data = res.data as Map<String, dynamic>?;
+    final onboardingCompleted = data?['onboarding_completed'] == true;
+    if (!mounted) return;
+    if (onboardingCompleted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => homepage()),
+      );
+    } else {
+      _go(onboarding());
+    }
   }
 
   @override

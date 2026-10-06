@@ -93,6 +93,11 @@ abstract class Str {
   String get versionFromTo;
   /// "{percent} % selesai"
   String get updatePercentDone;
+
+  // Shown when the server refuses this build (wrong or rebuilt signature).
+  String get buildNotOfficialTitle;
+  String get buildNotOfficialBody;
+  String get buildNotOfficialAction;
 }
 
 class StrId implements Str {
@@ -225,6 +230,14 @@ class StrId implements Str {
   String get versionFromTo => 'Versi kamu {from} → {to}';
   @override
   String get updatePercentDone => '{percent} % selesai';
+
+  @override
+  String get buildNotOfficialTitle => 'Aplikasi ini tidak resmi';
+  @override
+  String get buildNotOfficialBody =>
+      'SmartCook yang kamu buka tidak ditandatangani dengan sertifikat resmi, jadi server tidak mengizinkannya terhubung. Unduh ulang dari sumber resmi.';
+  @override
+  String get buildNotOfficialAction => 'Unduh versi resmi';
 }
 
 class StrEn implements Str {
@@ -357,4 +370,12 @@ class StrEn implements Str {
   String get versionFromTo => 'Your version {from} → {to}';
   @override
   String get updatePercentDone => '{percent}% complete';
+
+  @override
+  String get buildNotOfficialTitle => 'This app is not official';
+  @override
+  String get buildNotOfficialBody =>
+      'This SmartCook build is not signed with the official certificate, so the server will not let it connect. Download it again from the official source.';
+  @override
+  String get buildNotOfficialAction => 'Get the official version';
 }

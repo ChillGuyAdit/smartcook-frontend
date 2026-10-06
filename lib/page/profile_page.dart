@@ -6,7 +6,6 @@ import '../core/services/app_session.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_theme_colors.dart';
 import '../core/theme/language_controller.dart';
-import '../core/theme/shadows.dart';
 import '../core/theme/theme_provider.dart';
 import '../service/api_service.dart';
 import '../service/token_service.dart';
@@ -140,8 +139,14 @@ class _ProfilePageState extends State<ProfilePage> {
               groupValue: LanguageController.instance.locale,
               onChanged: (value) {
                 if (value == null) return;
-                LanguageController.instance.set(value);
+                // Close the dialog first, then switch. Doing both in the same
+                // frame raced MaterialApp's locale rebuild: the dialog was
+                // torn down by the locale change while Navigator.pop was still
+                // running against it, which left the screen blank.
                 Navigator.pop(ctx);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  LanguageController.instance.set(value);
+                });
               },
               title: Text(locale.languageCode == 'en'
                   ? s.languageEnglish

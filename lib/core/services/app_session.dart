@@ -49,6 +49,13 @@ class AppSession {
       baseUrl: ApiConfig.baseUrl,
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 20),
+      // Accept 4xx as a normal outcome instead of throwing. The handshake
+      // distinguishes "this APK is not official" (403 FORBIDDEN_CLIENT) from
+      // a genuine network fault, and it can only read that code from the
+      // body - which Dio discards when it throws on the status code. Without
+      // this, a rejected build was reported as a network error and the app
+      // silently retried forever, showing nothing to the user.
+      validateStatus: (status) => status != null && status < 500,
     ),
   );
 
@@ -110,19 +117,19 @@ class AppSession {
         '/api/auth/refresh',
         data: {'refresh': refresh},
       );
-      final data = res.data?['data'];
+      final Map<String, dynamic>? raw = res.data;
+      final data = raw?['data'];
       if (res.statusCode == 200 && data is Map<String, dynamic>) {
         await _persist(data);
         _lastFailure = null;
         return true;
       }
-      debugPrint(
-        '[session] refresh rejected: ${res.statusCode} '
-        'code=${res.data?['code']}',
-      );
+      // Errors are {success, code, message} at the root; `res.data?['code']`
+      // throws NoSuchMethodError when the body is not a map.
+      final code = raw?['code']?.toString();
+      debugPrint('[session] refresh rejected: ${res.statusCode} code=$code');
       // A dead refresh token means we must handshake. Anything else
       // (rate limit, 5xx) leaves the stored pair alone so we can retry.
-      final code = res.data?['code'];
       if (res.statusCode == 401) {
         await SecureStore.clear();
         _access = null;
@@ -159,7 +166,8 @@ class AppSession {
         options: Options(headers: {'X-Smartcook-Cert': cert}),
       );
 
-      final data = res.data?['data'];
+      final Map<String, dynamic>? raw = res.data;
+      final data = raw?['data'];
       if (res.statusCode == 201 && data is Map<String, dynamic>) {
         await _persist(data);
         _lastFailure = null;
@@ -170,9 +178,14 @@ class AppSession {
         return;
       }
 
-      final code = res.data?['code'];
-      if (code == 'FORBIDDEN_CLIENT') {
+      // Errors arrive as {success, code, message} at the root, not wrapped.
+      final code = raw?['code']?.toString();
+      if (code == 'FORBIDDEN_CLIENT' || res.statusCode == 403) {
         _lastFailure = SessionFailure.notOfficial;
+        debugPrint(
+          '[session] handshake rejected: ${res.statusCode} code=$code '
+          '(this APK is not the official signed build)',
+        );
         throw const SessionException(SessionFailure.notOfficial);
       }
       if (code == 'HANDSHAKE_RATE_LIMITED' || res.statusCode == 429) {
@@ -183,8 +196,13 @@ class AppSession {
       debugPrint('[session] handshake rejected: ${res.statusCode} code=$code');
       throw SessionException(_lastFailure!);
     } on DioException catch (e) {
+      // Reached only for transport-level problems now that 4xx is accepted
+      // as a normal response. A server-side 5xx still arrives here.
       _lastFailure = SessionFailure.network;
-      debugPrint('[session] handshake network failure: ${e.type}');
+      debugPrint(
+        '[session] handshake failed: ${e.type}'
+        '${e.response?.statusCode != null ? ' status=${e.response?.statusCode}' : ''}',
+      );
       throw const SessionException(SessionFailure.network);
     }
   }

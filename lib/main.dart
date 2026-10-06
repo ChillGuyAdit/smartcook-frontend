@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:smartcook/auth/signIn.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_cache_service.dart';
@@ -36,6 +37,15 @@ void main() async {
 
   runApp(const MyApp());
 
+  // Without this, any render error leaves a bare white screen with no way for
+  // the user to understand or recover. Turning language, for example, rebuilds
+  // the whole MaterialApp tree; if anything in there throws, this is what the
+  // user sees instead of nothing.
+  ErrorWidget.builder = (details) {
+    debugPrint('[render] ${details.exceptionAsString()}');
+    return _RenderErrorScreen(error: details.exceptionAsString());
+  };
+
   // NOTE: the auto-update check is NOT started here. During the splash
   // transition `navigatorKey.currentContext` is still null, so the check
   // would fetch the manifest and then silently give up waiting for a usable
@@ -60,6 +70,54 @@ Future<void> _bootstrapSession() async {
 }
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+/// Last-resort screen for a render failure. Keeps the app usable instead of
+/// showing a white void, and puts the error in the log for diagnosis.
+class _RenderErrorScreen extends StatelessWidget {
+  const _RenderErrorScreen({required this.error});
+  final String error;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: ColoredBox(
+        color: const Color(0xFF12161A),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, color: Color(0xFF4CAF50), size: 46),
+                const SizedBox(height: 14),
+                const Text(
+                  'SmartCook',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Something went wrong while drawing the screen.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                const SizedBox(height: 18),
+                FilledButton(
+                  onPressed: () => SystemNavigator.pop(),
+                  child: const Text('Close app'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});

@@ -4,12 +4,59 @@ import 'package:smartcook/auth/forgotpassword.dart';
 import 'package:smartcook/auth/signUp.dart';
 import 'package:smartcook/auth/login_otp.dart';
 import 'package:smartcook/auth/google_set_password.dart';
+import 'package:smartcook/core/l10n/strings.dart';
+import 'package:smartcook/core/services/app_session.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/page/homepage.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/auth_service.dart';
 import 'package:smartcook/service/token_service.dart';
 import 'package:smartcook/view/onboarding/mainBoarding.dart';
+
+/// Explains, in the user's own language, why this build cannot talk to the
+/// server. Without it a non-official APK looks identical to a broken app.
+class _NotOfficialBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final s = stringsFor(Localizations.localeOf(context));
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 46, 16, 0),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4E5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFF0A64B)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            s.buildNotOfficialTitle,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF8A4B00),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            s.buildNotOfficialBody,
+            style: const TextStyle(fontSize: 13, color: Color(0xFF6B4A2A)),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            s.buildNotOfficialAction,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF8A4B00),
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class signin extends StatefulWidget {
   const signin({super.key});
@@ -181,6 +228,12 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
       resizeToAvoidBottomInset: false,
       body: Column(
         children: [
+          // The server rejects APKs that are not signed with the release
+          // certificate. That used to be invisible: the handshake failed
+          // quietly and the user was dumped on a blank white screen with no
+          // idea why. Say it out loud instead.
+          if (AppSession.instance.lastFailure == SessionFailure.notOfficial)
+            _NotOfficialBanner(),
           Expanded(
             child: SingleChildScrollView(
               physics: NeverScrollableScrollPhysics(),
