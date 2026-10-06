@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../utils/device_abi.dart';
@@ -68,6 +69,8 @@ class AppUpdateChecker {
         throw StateError('installed build number unknown');
       }
       info = await AppUpdateFetcher.fetchVersion(installedBuild);
+      // Clean up APKs from older releases that can never be installed again.
+      await ApkDownloader.deleteStaleDownloads(installedBuild);
       debugPrint(
         '[update] installed=$installedBuild (v$installedVersion) '
         'server latestBuild=${info['latestBuild']} '
@@ -148,7 +151,29 @@ if (context == null || !context.mounted) {
   }
 }
 
-enum _DialogStage { downloading, installing, failed }
+enum _DialogStage { ready, downloading, installing, failed }
+
+/// One entry from the server's `history`, shown in the full release notes.
+class _ReleaseNote {
+  final String version;
+  final int build;
+  final String? date;
+  final String notes;
+
+  const _ReleaseNote({
+    required this.version,
+    required this.build,
+    this.date,
+    required this.notes,
+  });
+
+  factory _ReleaseNote.fromJson(Map<String, dynamic> j) => _ReleaseNote(
+        version: j['version'] as String? ?? '',
+        build: (j['build'] as num?)?.toInt() ?? 0,
+        date: j['date'] as String?,
+        notes: j['notes'] as String? ?? '',
+      );
+}
 
 class _UpdateDialog extends StatefulWidget {
   const _UpdateDialog({
@@ -172,29 +197,105 @@ class _UpdateDialogState extends State<_UpdateDialog> {
   // adds to `latest.json` (e.g. future title/subtitle overrides) are
   // intentionally ignored — the dialog degrades gracefully without code
   // changes.
-  _DialogStage _stage = _DialogStage.downloading;
+  //
+  // Starts at `ready`, NOT `downloading`: the user sees the release notes and
+  // chooses. Auto-downloading the moment a dialog appears burns mobile data
+  // without consent and leaves no chance to read what changed.
+  _DialogStage _stage = _DialogStage.ready;
   double? _progress;
+  bool _waitingForNetwork = false;
   String? _error;
   CancelToken? _cancel;
 
-  String get _latestVersion =>
-      widget.info['latestVersion']?.toString() ?? '?';
+  // Replaced wholesale when a fresh token is fetched after an expired link.
+  late Map<String, dynamic> _info = widget.info;
+
+  String get _latestVersion => _info['latestVersion']?.toString() ?? '?';
 
   String get _downloadUrl =>
-      widget.info['downloadPath']?.toString() ?? '/api/app/download';
+      _info['downloadPath']?.toString() ?? '/api/app/download';
 
-  String? get _token => widget.info['token'] as String?;
-  String? get _expectedSha => widget.info['latestApkSha256'] as String?;
-  String? get _notes => widget.info['notes'] as String?;
+  String? get _token => _info['token'] as String?;
+  Map<String, String> get _expectedShas {
+    final raw = _info['apkSha256'];
+    if (raw is Map) {
+      return raw.map((k, v) => MapEntry(k.toString(), v.toString()));
+    }
+    // Backward compat with the previous single-hash shape.
+    final single = _info['latestApkSha256'];
+    if (single is String && single.isNotEmpty) {
+      return {deviceApkAbi() ?? 'arm64': single};
+    }
+    return const {};
+  }
+
+  String? get _expectedSha {
+    final abi = deviceApkAbi();
+    if (abi == null) return null;
+    return _expectedShas[abi];
+  }
+
+  String? get _notes => _info['notes'] as String?;
+  int get _latestBuild => (_info['latestBuild'] as num?)?.toInt() ?? 0;
+
+  List<_ReleaseNote> get _releases => [
+        for (final r in (_info['history'] as List? ?? const []))
+          if (r is Map) _ReleaseNote.fromJson(Map<String, dynamic>.from(r)),
+      ];
 
   /// Dialog strings follow the app language, like every other screen.
   Str get _s => stringsFor(LanguageController.instance.locale);
 
-  String _versionLine(String installed, String latest) =>
-      _s.versionFromTo.replaceFirst('{from}', installed).replaceFirst(
-            '{to}',
-            latest,
-          );
+  /// Build numbers always rise, but a version *name* can go down (a rollback
+  /// after a bad release). Saying "1.0.11 → 1.0.9" would look like a mistake,
+  /// so it is phrased as an official update instead.
+  String _versionLine() {
+    if (_compareVersions(_latestVersion, widget.installedVersion) < 0) {
+      return _s.updateOfficialRollback.replaceFirst(
+        '{to}',
+        _latestVersion,
+      );
+    }
+    return _s.versionFromTo
+        .replaceFirst('{from}', widget.installedVersion)
+        .replaceFirst('{to}', _latestVersion);
+  }
+
+  static int _compareVersions(String a, String b) {
+    List<int> parts(String v) =>
+        v.split('.').map((p) => int.tryParse(p) ?? 0).toList();
+    final x = parts(a), y = parts(b);
+    for (var i = 0; i < 3; i++) {
+      final d = (i < x.length ? x[i] : 0) - (i < y.length ? y[i] : 0);
+      if (d != 0) return d;
+    }
+    return 0;
+  }
+
+  /// How many versions the user gains by updating. "Naik 3 versi sekaligus"
+  /// is far more informative than a single line of notes.
+  int get _versionsBehind {
+    final newer =
+        _releases.where((r) => r.build > widget.installedBuild).length;
+    return newer > 0 ? newer : 1;
+  }
+
+  void _showAllNotes() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.7,
+        maxChildSize: 0.95,
+        builder: (ctx, scroll) => _ReleaseNotesList(
+          controller: scroll,
+          releases: _releases,
+          installedBuild: widget.installedBuild,
+        ),
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -202,11 +303,12 @@ class _UpdateDialogState extends State<_UpdateDialog> {
     super.dispose();
   }
 
-  Future<void> _download() async {
+  Future<void> _download({bool refreshedToken = false}) async {
     setState(() {
       _stage = _DialogStage.downloading;
       _progress = null;
       _error = null;
+      _waitingForNetwork = false;
     });
     if (_token == null) {
       setState(() {
@@ -215,41 +317,88 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       });
       return;
     }
+
+    final build = _latestBuild;
     _cancel = CancelToken();
     try {
-      await ApkDownloader.downloadAndOpen(
+      // Cached file, so an install the user abandoned is not downloaded twice.
+      final target = await ApkDownloader.cachedApk(build);
+      final file = await ApkDownloader(
+        retryDelays: const [
+          Duration(seconds: 2),
+          Duration(seconds: 5),
+          Duration(seconds: 10),
+          Duration(seconds: 20),
+          Duration(seconds: 30),
+          Duration(seconds: 60),
+        ],
+      ).download(
         relativeUrl: _downloadUrl,
         token: _token!,
-        build: widget.info['latestBuild'] as int? ?? 0,
-        expectedSha256: _expectedSha,
         abi: deviceApkAbi(),
+        build: build,
+        target: target,
+        headers: await AppUpdateFetcher.clientHeaders(widget.installedBuild),
+        expectedSha256: _expectedSha,
         onProgress: (p) {
           if (!mounted) return;
           setState(() => _progress = p);
         },
+        onWaitingForNetwork: (waiting) {
+          if (mounted) setState(() => _waitingForNetwork = waiting);
+        },
         cancelToken: _cancel,
       );
+
       if (!mounted) return;
       setState(() => _stage = _DialogStage.installing);
+
+      final result = await ApkDownloader.openForInstall(file);
+      // Android always asks the user to confirm; anything other than `done`
+      // means the installer was cancelled or refused, and the file stays
+      // cached so the next attempt installs without downloading again.
+      if (result.type != ResultType.done) {
+        debugPrint('[update] installer result: ${result.type} ${result.message}');
+      }
     } on ApkDownloadException catch (e) {
       if (!mounted) return;
-      setState(() {
-        _stage = _DialogStage.failed;
-        _error = _translateFailure(e.failure);
-      });
+      if (e.failure == UpdateFailure.tokenExpired && !refreshedToken) {
+        // The link is older than its TTL, or a newer release replaced it.
+        // Get a fresh one silently and continue; any partial bytes are kept.
+        try {
+          final fresh =
+              await AppUpdateFetcher.fetchVersion(widget.installedBuild);
+          if (!mounted) return;
+          setState(() => _info = fresh);
+          return _download(refreshedToken: true);
+        } catch (_) {
+          // fall through to the failure message below
+        }
+      }
+      _fail(_translateFailure(e.failure));
     } catch (e) {
+      if (e is DioException && CancelToken.isCancel(e)) return;
       if (!mounted) return;
-      setState(() {
-        _stage = _DialogStage.failed;
-        _error = _s.updateGeneric;
-      });
+      debugPrint('[update] failed: $e');
+      _fail(_s.updateGeneric);
     }
+  }
+
+  void _fail(String message) {
+    if (!mounted) return;
+    setState(() {
+      _stage = _DialogStage.failed;
+      _waitingForNetwork = false;
+      _error = message;
+    });
   }
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _download());
+    // Deliberately no download here. The dialog opens at the `ready` stage so
+    // the user reads the notes and presses the button. Starting the transfer
+    // automatically would spend mobile data without asking.
   }
 
   String _translateFailure(UpdateFailure f) {
@@ -257,9 +406,11 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       UpdateFailure.notOfficial =>
         '${_s.updateNotOfficial} ${_s.updateDownloadOfficial}',
       UpdateFailure.tokenExpired => _s.updateExpired,
-      UpdateFailure.hashMismatch => _s.updateHashMismatch,
-      UpdateFailure.networkError => _s.updateNetwork,
-      UpdateFailure.unknown => _s.updateGeneric,
+      UpdateFailure.rateLimited => _s.updateRateLimited,
+      UpdateFailure.corrupted => _s.updateHashMismatch,
+      // Says the partial file is kept, so the user knows "Lanjutkan" will not
+      // start from zero.
+      UpdateFailure.networkError => _s.updateNetworkResume,
     };
     return '$base ${_s.updateRetry}.';
   }
@@ -276,61 +427,205 @@ class _UpdateDialogState extends State<_UpdateDialog> {
             : widget.forced
                 ? _s.updateMandatoryTitle
                 : _s.updateOptionalTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(_versionLine(widget.installedVersion, _latestVersion)),
-            if (_notes != null && _notes!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(_notes!, style: const TextStyle(fontSize: 13)),
-            ],
-            const SizedBox(height: 12),
-            if (_stage == _DialogStage.downloading) ...[
-              LinearProgressIndicator(value: _progress),
-              const SizedBox(height: 8),
-              Text(percent == null
-                  ? _s.updateDownloading
-                  : _s.updatePercentDone.replaceFirst('{percent}', '$percent')),
-            ],
-            if (_stage == _DialogStage.installing) ...[
-              const SizedBox(height: 12),
+        // Scrollable so the progress bar and buttons stay reachable when the
+        // release notes are long on a small screen.
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                _s.updateUnknownSourceNotice,
-                style: const TextStyle(fontSize: 13),
+                _versionLine(),
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
+              if (_versionsBehind > 1) ...[
+                const SizedBox(height: 4),
+                Text(
+                  _s.updateVersionsBehind.replaceFirst(
+                    '{count}',
+                    '$_versionsBehind',
+                  ),
+                  style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                ),
+              ],
+              if (_notes != null && _notes!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(_notes!),
+              ],
+              if (_releases.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                    onPressed: _showAllNotes,
+                    child: Text(_releases.length > 1
+                        ? _s.updateShowAllNotes
+                        : _s.updateShowFullNotes),
+                  ),
+                ),
+              if (widget.forced) ...[
+                const SizedBox(height: 8),
+                Text(_s.updateForcedNotice),
+              ],
+              if (_stage == _DialogStage.downloading) ...[
+                const SizedBox(height: 16),
+                LinearProgressIndicator(value: _progress),
+                const SizedBox(height: 6),
+                Text(_waitingForNetwork
+                    ? _s.updateWaitingForNetwork
+                    : percent == null
+                        ? _s.updatePreparing
+                        : _s.updatePercentDone.replaceFirst(
+                            '{percent}',
+                            '$percent',
+                          )),
+              ],
+              if (_stage == _DialogStage.installing) ...[
+                const SizedBox(height: 16),
+                Text(_s.updateConfirmInAndroid),
+                const SizedBox(height: 8),
+                Text(
+                  _s.updateUnknownSourceNotice,
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ],
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
             ],
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-            ],
-          ],
+          ),
         ),
         actions: [
+          // "Nanti" only on optional updates: a mandatory one cannot be
+          // dismissed, so offering a way out would be a lie.
           if (!widget.forced && _stage != _DialogStage.downloading)
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(_s.updateLater),
             ),
-          if (_stage == _DialogStage.failed)
-            ElevatedButton(
-              onPressed: _download,
-              child: Text(_s.updateRetry),
-            ),
-          if (_stage == _DialogStage.installing)
-            ElevatedButton(
-              onPressed: () async {
-                await ApkDownloader.downloadAndOpen(
-                  relativeUrl: _downloadUrl,
-                  token: _token!,
-                  build: widget.info['latestBuild'] as int? ?? 0,
-                  expectedSha256: _expectedSha,
-                  abi: deviceApkAbi(),
-                );
+          if (_stage == _DialogStage.downloading)
+            TextButton(
+              onPressed: () {
+                _cancel?.cancel();
+                setState(() => _stage = _DialogStage.ready);
               },
-              child: Text(_s.updateInstallAgain),
+              child: Text(_s.updateCancelDownload),
+            ),
+          if (_stage != _DialogStage.downloading)
+            FilledButton(
+              onPressed: _download,
+              child: Text(switch (_stage) {
+                // After a network drop the partial file is intact, so the
+                // button offers to continue rather than to start over.
+                _DialogStage.failed =>
+                  (_error ?? '').contains(_s.updateResumeCta)
+                      ? _s.updateResumeCta
+                      : _s.updateRetry,
+                _DialogStage.installing => _s.updateInstallAgain,
+                _ => _s.updateNow,
+              }),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Scrollable history of every release. The installed version is labelled
+/// "Versi kamu", versions the update brings are labelled "Baru". Notes only -
+/// an older APK can never be downloaded from here.
+class _ReleaseNotesList extends StatelessWidget {
+  final ScrollController controller;
+  final List<_ReleaseNote> releases;
+  final int installedBuild;
+
+  const _ReleaseNotesList({
+    required this.controller,
+    required this.releases,
+    required this.installedBuild,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final s = stringsFor(Localizations.localeOf(context));
+    return ListView.separated(
+      controller: controller,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      itemCount: releases.length + 1,
+      separatorBuilder: (_, i) =>
+          i == 0 ? const SizedBox(height: 8) : const Divider(height: 24),
+      itemBuilder: (context, i) {
+        if (i == 0) {
+          return Text(
+            s.changelogTitle,
+            style: Theme.of(context).textTheme.titleLarge,
+          );
+        }
+        final r = releases[i - 1];
+        final isNew = r.build > installedBuild;
+        final isCurrent = r.build == installedBuild;
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isNew ? scheme.primary.withValues(alpha: 0.08) : null,
+            borderRadius: BorderRadius.circular(12),
+            border: isCurrent ? Border.all(color: scheme.outline) : null,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    '${s.version} ${r.version}',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(width: 8),
+                  if (isNew) _Chip(label: s.newBadge, color: scheme.primary),
+                  if (isCurrent)
+                    _Chip(label: s.youAreHere, color: scheme.outline),
+                  const Spacer(),
+                  if (r.date != null)
+                    Text(r.date!, style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+              if (r.notes.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(r.notes),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _Chip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

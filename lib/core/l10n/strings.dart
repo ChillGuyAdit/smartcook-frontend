@@ -94,6 +94,21 @@ abstract class Str {
   /// "{percent} % selesai"
   String get updatePercentDone;
 
+  // Update dialog: ready state, release notes, resume
+  String get updateNow;
+  String get updateCancelDownload;
+  String get updatePreparing;
+  String get updateWaitingForNetwork;
+  String get updateResumeCta;
+  String get updateNetworkResume;
+  String get updateRateLimited;
+  String get updateShowAllNotes;
+  String get updateShowFullNotes;
+  String get updateForcedNotice;
+  String get updateConfirmInAndroid;
+  String get updateVersionsBehind;
+  String get updateOfficialRollback;
+
   // Shown when the server refuses this build (wrong or rebuilt signature).
   String get buildNotOfficialTitle;
   String get buildNotOfficialBody;
@@ -230,6 +245,38 @@ class StrId implements Str {
   String get versionFromTo => 'Versi kamu {from} → {to}';
   @override
   String get updatePercentDone => '{percent} % selesai';
+
+  @override
+  String get updateNow => 'Update sekarang';
+  @override
+  String get updateCancelDownload => 'Batal';
+  @override
+  String get updatePreparing => 'Menyiapkan unduhan…';
+  @override
+  String get updateWaitingForNetwork =>
+      'Menunggu koneksi internet… unduhan akan dilanjutkan otomatis.';
+  @override
+  String get updateResumeCta => 'Lanjutkan';
+  @override
+  String get updateNetworkResume =>
+      'Koneksi terputus. Unduhan tersimpan, tidak perlu mengulang dari awal.';
+  @override
+  String get updateRateLimited =>
+      'Terlalu banyak percobaan dari jaringan ini. Coba lagi beberapa saat.';
+  @override
+  String get updateShowAllNotes => 'Lihat semua catatan rilis';
+  @override
+  String get updateShowFullNotes => 'Lihat catatan lengkap';
+  @override
+  String get updateForcedNotice =>
+      'Versi ini wajib dipasang untuk melanjutkan.';
+  @override
+  String get updateConfirmInAndroid =>
+      'Pilih "Perbarui" di jendela pemasangan, lalu "Buka" untuk menjalankan versi baru.';
+  @override
+  String get updateVersionsBehind => 'Naik {count} versi sekaligus';
+  @override
+  String get updateOfficialRollback => 'Pembaruan resmi SmartCook {to}';
 
   @override
   String get buildNotOfficialTitle => 'Aplikasi ini tidak resmi';
@@ -370,6 +417,38 @@ class StrEn implements Str {
   String get versionFromTo => 'Your version {from} → {to}';
   @override
   String get updatePercentDone => '{percent}% complete';
+
+  @override
+  String get updateNow => 'Update now';
+  @override
+  String get updateCancelDownload => 'Cancel';
+  @override
+  String get updatePreparing => 'Preparing download…';
+  @override
+  String get updateWaitingForNetwork =>
+      'Waiting for a connection… the download will resume automatically.';
+  @override
+  String get updateResumeCta => 'Resume';
+  @override
+  String get updateNetworkResume =>
+      'The connection dropped. The download is saved, no need to start over.';
+  @override
+  String get updateRateLimited =>
+      'Too many attempts from this network. Try again in a moment.';
+  @override
+  String get updateShowAllNotes => 'See all release notes';
+  @override
+  String get updateShowFullNotes => 'See full notes';
+  @override
+  String get updateForcedNotice =>
+      'This version must be installed to continue.';
+  @override
+  String get updateConfirmInAndroid =>
+      'Choose "Update" in the install prompt, then "Open" to run the new version.';
+  @override
+  String get updateVersionsBehind => 'Jumping {count} versions at once';
+  @override
+  String get updateOfficialRollback => 'Official SmartCook update {to}';
 
   @override
   String get buildNotOfficialTitle => 'This app is not official';

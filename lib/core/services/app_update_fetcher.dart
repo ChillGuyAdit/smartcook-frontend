@@ -5,30 +5,9 @@ import 'package:flutter/services.dart';
 
 import '../../config/api_config.dart';
 
-/// Why a forced / step failed end-to-end. Each maps to a clear message.
-enum UpdateFailure {
-  /// The server says this is not an official SmartCook build.
-  notOfficial,
-
-  /// The download link expired or a newer release replaced it.
-  tokenExpired,
-
-  /// The APK on disk did not match the SHA-256 from the manifest.
-  hashMismatch,
-
-  /// Network or HTTP error; the dialog retries the request.
-  networkError,
-
-  /// Range-resume parse failed; treated as dropped connection.
-  unknown,
-}
-
-class UpdateFailureCode implements Exception {
-  UpdateFailureCode(this.failure);
-  final UpdateFailure failure;
-  @override
-  String toString() => 'UpdateFailure.${failure.name}';
-}
+// `UpdateFailure` now lives in apk_downloader.dart, which is the only place
+// that can actually produce these outcomes. It used to be declared here too,
+// and the duplicate made every reference ambiguous.
 
 /// Bridge to `MainActivity.kt` to read the APK signing certificate.
 class AppInfoChannel {
