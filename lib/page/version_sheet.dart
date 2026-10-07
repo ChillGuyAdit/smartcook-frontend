@@ -9,6 +9,13 @@ import '../core/theme/app_theme_colors.dart';
 class _Release {
   final String version;
   final int buildNumber;
+
+  /// Android versionCode for this release. Same role as the equivalent
+  /// field in the update-checker's _ReleaseNote - a v1.0.12 device has
+  /// Android versionCode=13 while the manifest's `build` is 27, and using
+  /// the manifest `build` here would mark every old release as "newer than
+  /// you" and the changelog sheet as a wall of red "Baru" badges.
+  final int androidVersionCode;
   final String? date;
   final String headline;
   final List<String> newBullets;
@@ -18,6 +25,7 @@ class _Release {
   const _Release({
     required this.version,
     required this.buildNumber,
+    required this.androidVersionCode,
     this.date,
     required this.headline,
     this.newBullets = const [],
@@ -66,9 +74,17 @@ class _Release {
           .map((l) => l.replaceFirst('•', '').trim())
           .where((l) => l.isNotEmpty));
     }
+    final buildNumber = (j['build'] as num?)?.toInt() ?? 0;
+    // Same Android-versionCode fallback as the update checker: the
+    // manifest's monotonic `build` is not the number the device reports,
+    // so we use `androidVersionCode` (falling back to `build`) to decide
+  // what is actually newer than the installed app.
+    final androidVersionCode =
+        (j['androidVersionCode'] as num?)?.toInt() ?? buildNumber;
     return _Release(
       version: j['version'] as String? ?? '',
-      buildNumber: (j['build'] as num?)?.toInt() ?? 0,
+      buildNumber: buildNumber,
+      androidVersionCode: androidVersionCode,
       date: j['date'] as String?,
       headline: headline.split('\n').first.trim(),
       newBullets: newBullets,
@@ -166,8 +182,8 @@ Future<void> showVersionSheet(BuildContext context, PackageInfo pkg) async {
                       final r = releases[index];
                       return _ReleaseCard(
                         release: r,
-                        isCurrent: r.buildNumber == installedBuild,
-                        isNew: r.buildNumber > installedBuild,
+                        isCurrent: r.androidVersionCode == installedBuild,
+                        isNew: r.androidVersionCode > installedBuild,
                         currentLabel: s.youAreHere,
                         newLabel: s.newBadge,
                         s: s,

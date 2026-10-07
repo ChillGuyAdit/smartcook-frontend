@@ -157,22 +157,43 @@ enum _DialogStage { ready, downloading, installing, failed }
 class _ReleaseNote {
   final String version;
   final int build;
+
+  /// Android PackageInfo versionCode for this release. Defaults to [build]
+  /// for the few releases where the manifest `build` and Android `versionCode`
+  /// matched, but is set explicitly for old releases (1.0.0 .. 1.0.4) that
+  /// were built before the versionCode==pubspec-build rule. The client uses
+  /// this field to decide whether a history entry is actually newer than the
+  /// installed app - older manifests always look newer than the installed
+  /// build number otherwise, and a v1.0.12 device sees "9 versions behind"
+  /// even though it is current.
+  final int androidVersionCode;
   final String? date;
   final String notes;
 
   const _ReleaseNote({
     required this.version,
     required this.build,
+    required this.androidVersionCode,
     this.date,
     required this.notes,
   });
 
-  factory _ReleaseNote.fromJson(Map<String, dynamic> j) => _ReleaseNote(
-        version: j['version'] as String? ?? '',
-        build: (j['build'] as num?)?.toInt() ?? 0,
-        date: j['date'] as String?,
-        notes: j['notes'] as String? ?? '',
-      );
+  factory _ReleaseNote.fromJson(Map<String, dynamic> j) {
+    final build = (j['build'] as num?)?.toInt() ?? 0;
+    // `androidVersionCode` is the field the client actually compares against;
+    // `build` is the manifest's monotonic counter. Fall back to `build` for
+    // new manifests that pre-date the field, so the picker is correct
+    // whether or not the field is present.
+    final androidVersionCode =
+        (j['androidVersionCode'] as num?)?.toInt() ?? build;
+    return _ReleaseNote(
+      version: j['version'] as String? ?? '',
+      build: build,
+      androidVersionCode: androidVersionCode,
+      date: j['date'] as String?,
+      notes: j['notes'] as String? ?? '',
+    );
+  }
 }
 
 class _UpdateDialog extends StatefulWidget {
@@ -274,9 +295,17 @@ class _UpdateDialogState extends State<_UpdateDialog> {
 
   /// How many versions the user gains by updating. "Naik 3 versi sekaligus"
   /// is far more informative than a single line of notes.
+  ///
+  /// Uses `androidVersionCode`, not the manifest `build`, to count - the
+  /// manifest `build` is the server's own monotonic counter, while
+  /// `androidVersionCode` is what the installed app actually reports. The
+  /// two diverged for releases before v1.0.5 (Android `versionCode` was
+  /// assigned independently), so counting on `build` made a v1.0.12
+  /// device look like it was 9 versions behind.
   int get _versionsBehind {
-    final newer =
-        _releases.where((r) => r.build > widget.installedBuild).length;
+    final newer = _releases
+        .where((r) => r.androidVersionCode > widget.installedBuild)
+        .length;
     return newer > 0 ? newer : 1;
   }
 

@@ -77,6 +77,29 @@ def load_notes():
             build = int(info["build"])
         except ValueError:
             continue
+        # `build` is the manifest's own monotonic version counter (what
+        # history[i].build is sorted by). `androidVersionCode` is what an
+        # Android device actually reports through PackageInfo / the
+        # build.gradle versionCode field; they are the same for builds made
+        # by `scripts/build_android_release.ps1`, but the very first release
+        # (1.0.0) used 17 as its Android versionCode while the manifest build
+        # was 17 too, so the older history entries need both numbers made
+        # explicit. Without `androidVersionCode`, a v1.0.12 device
+        # (Android versionCode=13) would treat every history entry as newer
+        # and report "jumping 9 versions at once" because the Android
+        # numbering and the manifest build are out of sync.
+        # The release notes file's frontmatter should carry it explicitly:
+        # "androidVersionCode: 13". When it's missing - old release notes or
+        # an in-progress PR - fall back to the manifest `build`, which is the
+        # right answer for every release that follows the rule.
+        raw_android = info.get("androidVersionCode")
+        if raw_android is None or raw_android == "":
+            android_version_code = build
+        else:
+            try:
+                android_version_code = int(raw_android)
+            except ValueError:
+                android_version_code = build
         body = md_body(open(path).read())
         # Read all four localised fields straight from the frontmatter so the
         # client gets a properly translated copy for each. The bare `notes`
@@ -92,6 +115,7 @@ def load_notes():
         out.append({
             "version": info["version"],
             "build": build,
+            "androidVersionCode": android_version_code,
             "date": info.get("date", ""),
             "type": info.get("type", "patch"),
             "mandatory": info.get("mandatory", "false").lower() == "true",
