@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 
 import '../../config/api_config.dart';
+import '../theme/language_controller.dart';
 
 // `UpdateFailure` now lives in apk_downloader.dart, which is the only place
 // that can actually produce these outcomes. It used to be declared here too,
@@ -55,6 +56,14 @@ class AppUpdateFetcher {
 
   static String? _cachedCert;
 
+  static String get _clientLocale {
+    try {
+      return LanguageController.instance.locale.languageCode;
+    } catch (_) {
+      return 'id';
+    }
+  }
+
   static Future<Map<String, String>> clientHeaders(int build) async {
     _cachedCert ??= await AppInfoChannel.signingCertSha256();
     return {
@@ -73,10 +82,16 @@ class AppUpdateFetcher {
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 20),
     ));
+    final headers2 = {
+      ...headers,
+      // The server uses this to pick the right localised release notes for
+      // every entry in `history`, and for `notes` / `headline`.
+      'X-Smartcook-Locale': _clientLocale,
+    };
     final res = await dio.get<Map<String, dynamic>>(
       '/api/app/version',
       queryParameters: {'build': build},
-      options: Options(headers: headers),
+      options: Options(headers: headers2),
     );
     final body = res.data;
     if (body is! Map<String, dynamic>) {

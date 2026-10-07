@@ -48,6 +48,7 @@ abstract class Str {
   String get contactUs;
   String get faqLoadFailed;
   String get version;
+  String get versionNumberLabel;
   String get releaseNotes;
 
   // Danger
@@ -72,6 +73,10 @@ abstract class Str {
   String get newBadge;
   String get youAreHere;
   String get noReleaseNotes;
+
+  /// "Yang baru" / "Perbaikan" section headings in the in-app changelog.
+  String get releaseNotesSectionNew;
+  String get releaseNotesSectionFix;
 
   // Auto-update dialog
   String get updateMandatoryTitle;
@@ -173,6 +178,8 @@ class StrId implements Str {
   @override
   String get version => 'Versi Aplikasi';
   @override
+  String get versionNumberLabel => 'Versi';
+  @override
   String get releaseNotes => 'Lihat catatan rilis';
   @override
   String get danger => 'Bahaya';
@@ -210,6 +217,10 @@ class StrId implements Str {
   String get youAreHere => 'Versi kamu';
   @override
   String get noReleaseNotes => 'Belum ada catatan rilis.';
+  @override
+  String get releaseNotesSectionNew => 'Yang baru';
+  @override
+  String get releaseNotesSectionFix => 'Perbaikan';
 
   @override
   String get updateMandatoryTitle => 'Update wajib';
@@ -345,6 +356,8 @@ class StrEn implements Str {
   @override
   String get version => 'App version';
   @override
+  String get versionNumberLabel => 'Version';
+  @override
   String get releaseNotes => 'See release notes';
   @override
   String get danger => 'Danger';
@@ -382,6 +395,10 @@ class StrEn implements Str {
   String get youAreHere => 'Your version';
   @override
   String get noReleaseNotes => 'No release notes yet.';
+  @override
+  String get releaseNotesSectionNew => 'What\'s new';
+  @override
+  String get releaseNotesSectionFix => 'Fixes';
 
   @override
   String get updateMandatoryTitle => 'Required update';

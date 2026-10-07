@@ -61,6 +61,38 @@ class DevLog {
   static const _kStatus = 'c';
   static const _kMeta = 'q';
 
+  // Extended device facts. Mirror WIRE in src/modules/devlog/service.js;
+  // change one and change both.
+  static const _kDeviceBrand = 'xb';
+  static const _kDeviceBoard = 'xbb';
+  static const _kDeviceHardware = 'xh';
+  static const _kDeviceSoc = 'xso';
+  static const _kDeviceHost = 'xho';
+  static const _kDeviceFingerprint = 'xfp';
+  static const _kSupportedAbis = 'xab';
+  static const _kInstaller = 'xin';
+  static const _kInstallerPackage = 'xip';
+  static const _kFirstInstall = 'xfi';
+  static const _kLastUpdate = 'xlu';
+  static const _kTargetSdk = 'xtg';
+  static const _kMinSdk = 'xmn';
+  static const _kTimezone = 'xtz';
+  static const _kCountry = 'xco';
+  static const _kScreenWidth = 'xsw';
+  static const _kScreenHeight = 'xsh';
+  static const _kScreenDensity = 'xsd';
+  static const _kTotalMemory = 'xrm';
+  static const _kAvailableMemory = 'xam';
+  static const _kTotalStorage = 'xrt';
+  static const _kFreeStorage = 'xrf';
+  static const _kLowStorage = 'xls';
+  static const _kBatteryLevel = 'xbl';
+  static const _kIsCharging = 'xch';
+  static const _kNetworkType = 'xnt';
+  static const _kCarrier = 'xcn';
+  static const _kSimCountry = 'xsi';
+  static const _kHasFineLocation = 'xfl';
+
   /// Never let the collector break the app it is measuring.
   static void _guard(String what, void Function() body) {
     try {
@@ -177,20 +209,66 @@ class DevLog {
 
       final info = await AppInfoChannel.deviceInfo();
       if (info != null) {
-        final plat = info['platform'];
-        if (plat is String) out[_kPlat] = plat;
-        final os = info['osVersion'];
-        if (os is String) out[_kOs] = os;
-        final sdk = info['sdkInt'];
-        if (sdk is int) out[_kSdk] = sdk;
-        final model = info['deviceModel'];
-        if (model is String) out[_kModel] = model;
-        final maker = info['deviceManufacturer'];
-        if (maker is String) out[_kMaker] = maker;
-        final abi = info['abi'];
-        if (abi is String) out[_kAbi] = abi;
-        final ver = info['appVersion'];
-        if (ver is String && ver.isNotEmpty) out[_kVer] = ver;
+        void put(String key, String dst) {
+          final v = info[key];
+          if (v is String && v.isNotEmpty) out[dst] = v;
+        }
+        void putInt(String key, String dst) {
+          final v = info[key];
+          if (v is int) out[dst] = v;
+        }
+        void putBool(String key, String dst) {
+          final v = info[key];
+          if (v is bool) out[dst] = v;
+        }
+        void putList(String key, String dst) {
+          final v = info[key];
+          if (v is List) out[dst] = v.cast<String>().take(8).toList();
+        }
+
+        put('platform', _kPlat);
+        put('osVersion', _kOs);
+        putInt('sdkInt', _kSdk);
+        put('deviceModel', _kModel);
+        put('deviceManufacturer', _kMaker);
+        put('abi', _kAbi);
+        put('appVersion', _kVer);
+
+        // Extended fields. None of these are PII: brand/board/SoC identify
+        // the device class but not the individual, install source identifies
+        // how the user got the app, and storage/network/battery describe the
+        // environment a bug happened in.
+        put('deviceBrand', _kDeviceBrand);
+        put('deviceBoard', _kDeviceBoard);
+        put('deviceHardware', _kDeviceHardware);
+        put('deviceSoc', _kDeviceSoc);
+        put('deviceHost', _kDeviceHost);
+        put('deviceFingerprint', _kDeviceFingerprint);
+        putList('supportedAbis', _kSupportedAbis);
+        put('installer', _kInstaller);
+        put('installerPackage', _kInstallerPackage);
+        final first = info['firstInstallTime'];
+        if (first is int && first > 0) out[_kFirstInstall] = DateTime.fromMillisecondsSinceEpoch(first).toUtc().toIso8601String();
+        final last = info['lastUpdateTime'];
+        if (last is int && last > 0) out[_kLastUpdate] = DateTime.fromMillisecondsSinceEpoch(last).toUtc().toIso8601String();
+        putInt('targetSdk', _kTargetSdk);
+        putInt('minSdk', _kMinSdk);
+        put('timezone', _kTimezone);
+        put('country', _kCountry);
+        putInt('screenWidthPx', _kScreenWidth);
+        putInt('screenHeightPx', _kScreenHeight);
+        putInt('screenDensity', _kScreenDensity);
+        putInt('totalMemoryBytes', _kTotalMemory);
+        putInt('availableMemoryBytes', _kAvailableMemory);
+        putInt('totalInternalStorageBytes', _kTotalStorage);
+        putInt('freeInternalStorageBytes', _kFreeStorage);
+        putBool('lowStorage', _kLowStorage);
+        putInt('batteryLevel', _kBatteryLevel);
+        putBool('isCharging', _kIsCharging);
+        putInt('networkType', _kNetworkType);
+        put('carrierName', _kCarrier);
+        put('simCountryIso', _kSimCountry);
+        putBool('hasFineLocation', _kHasFineLocation);
       }
 
       final build = await AppInfoChannel.versionCode();

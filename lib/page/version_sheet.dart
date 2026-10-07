@@ -8,23 +8,74 @@ import '../core/theme/app_theme_colors.dart';
 
 class _Release {
   final String version;
-  final int build;
+  final int buildNumber;
   final String? date;
-  final String notes;
+  final String headline;
+  final List<String> newBullets;
+  final List<String> fixBullets;
+  final String type;
 
   const _Release({
     required this.version,
-    required this.build,
+    required this.buildNumber,
     this.date,
-    required this.notes,
+    required this.headline,
+    this.newBullets = const [],
+    this.fixBullets = const [],
+    this.type = 'patch',
   });
 
-  factory _Release.fromJson(Map<String, dynamic> j) => _Release(
-        version: (j['version'] ?? '').toString(),
-        build: (j['build'] as num?)?.toInt() ?? 0,
-        date: j['date'] as String?,
-        notes: (j['notes'] ?? '').toString(),
-      );
+  factory _Release.fromJson(Map<String, dynamic> j) {
+    // New manifests (added by this release) send a `headline` plus a
+    // `sections` array. Old manifests still in the history (1.0.10 / 1.0.9
+    // etc.) send a single `notes` string. Parse both shapes here.
+    final headline = (j['headline'] as String?)?.trim() ??
+        (j['notes'] as String?)?.trim() ??
+        '';
+    final sections = (j['sections'] as List?)
+            ?.whereType<Map<String, dynamic>>()
+            .toList() ??
+        const <Map<String, dynamic>>[];
+    final newBullets = <String>[];
+    final fixBullets = <String>[];
+    for (final s in sections) {
+      final items = (s['items'] as List? ?? const []).whereType<String>();
+      switch ((s['kind'] as String?) ?? 'notes') {
+        case 'new':
+        case 'feature':
+          newBullets.addAll(items);
+          break;
+        case 'fix':
+        case 'fixed':
+        case 'bugfix':
+          fixBullets.addAll(items);
+          break;
+        default:
+          newBullets.addAll(items);
+      }
+    }
+    // Empty array: fall back to the legacy single-string `notes` so older
+    // manifests still render reasonably until they roll out of the
+    // history window.
+    if (newBullets.isEmpty && fixBullets.isEmpty && headline.isNotEmpty) {
+      final lines = headline.split('\n').toList();
+      while (lines.isNotEmpty && !lines.first.trimLeft().startsWith('•')) {
+        lines.removeAt(0);
+      }
+      newBullets.addAll(lines
+          .map((l) => l.replaceFirst('•', '').trim())
+          .where((l) => l.isNotEmpty));
+    }
+    return _Release(
+      version: j['version'] as String? ?? '',
+      buildNumber: (j['build'] as num?)?.toInt() ?? 0,
+      date: j['date'] as String?,
+      headline: headline.split('\n').first.trim(),
+      newBullets: newBullets,
+      fixBullets: fixBullets,
+      type: j['type'] as String? ?? 'patch',
+    );
+  }
 }
 
 /// Release history, straight from `/api/app/version`. Every published build
@@ -115,10 +166,11 @@ Future<void> showVersionSheet(BuildContext context, PackageInfo pkg) async {
                       final r = releases[index];
                       return _ReleaseCard(
                         release: r,
-                        isCurrent: r.build == installedBuild,
-                        isNew: r.build > installedBuild,
+                        isCurrent: r.buildNumber == installedBuild,
+                        isNew: r.buildNumber > installedBuild,
                         currentLabel: s.youAreHere,
                         newLabel: s.newBadge,
+                        s: s,
                       );
                     },
                   );
@@ -150,6 +202,7 @@ class _ReleaseCard extends StatelessWidget {
     required this.isNew,
     required this.currentLabel,
     required this.newLabel,
+    required this.s,
   });
 
   final _Release release;
@@ -157,6 +210,7 @@ class _ReleaseCard extends StatelessWidget {
   final bool isNew;
   final String currentLabel;
   final String newLabel;
+  final Str s;
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +232,7 @@ class _ReleaseCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                'Versi ${release.version}',
+                '${s.versionNumberLabel} ${release.version}',
                 style: TextStyle(
                   color: palette.textPrimary,
                   fontWeight: FontWeight.w700,
@@ -198,19 +252,103 @@ class _ReleaseCard extends StatelessWidget {
                 ),
             ],
           ),
-          if (release.notes.isNotEmpty) ...[
+          if (release.headline.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
-              release.notes,
+              release.headline,
               style: TextStyle(
-                color: palette.textSecondary,
-                fontSize: 13,
-                height: 1.5,
+                color: palette.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
               ),
+            ),
+          ],
+          if (release.newBullets.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _BulletSection(
+              title: s.releaseNotesSectionNew,
+              items: release.newBullets,
+              color: AppColors.primary,
+              palette: palette,
+            ),
+          ],
+          if (release.fixBullets.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _BulletSection(
+              title: s.releaseNotesSectionFix,
+              items: release.fixBullets,
+              color: AppColors.success,
+              palette: palette,
             ),
           ],
         ],
       ),
+    );
+  }
+}
+
+/// "Yang baru" / "Fixes" block. Headings use the section colour so the eye
+/// can tell at a glance which kind of change a release brings.
+class _BulletSection extends StatelessWidget {
+  const _BulletSection({
+    required this.title,
+    required this.items,
+    required this.color,
+    required this.palette,
+  });
+
+  final String title;
+  final List<String> items;
+  final Color color;
+  final dynamic palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+            letterSpacing: 0.4,
+          ),
+        ),
+        const SizedBox(height: 4),
+        for (final item in items)
+          Padding(
+            padding: const EdgeInsets.only(left: 6, top: 2, bottom: 2),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, right: 8),
+                  child: Container(
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    item,
+                    style: TextStyle(
+                      color: palette.textSecondary,
+                      fontSize: 13,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
