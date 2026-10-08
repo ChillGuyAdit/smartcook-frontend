@@ -51,4 +51,3 @@ app.*.map.json
 
 # Release environment (SSH target, server paths)
 /.release.env
-/release-notes/
