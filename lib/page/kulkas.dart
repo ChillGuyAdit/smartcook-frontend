@@ -31,6 +31,13 @@ class _KulkasPageState extends State<KulkasPage> {
   ];
 
   @override
+  void dispose() {
+    _nameController.dispose();
+    _qtyController.dispose();
+    super.dispose();
+  }
+
+  @override
   void initState() {
     super.initState();
     _loadFridge();

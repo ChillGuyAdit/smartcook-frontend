@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -233,12 +234,26 @@ class ApiService {
       );
       return response;
     } catch (e) {
+      return _failure(e);
+    }
+  }
+
+  /// Only a connectivity problem means "offline". Any other exception (a bad
+  /// JSON body, a bug in a callback) used to flip the whole app to offline
+  /// mode and show "check your connection" for something unrelated.
+  static ApiResponse _failure(Object e) {
+    if (e is TimeoutException || e is http.ClientException) {
       OfflineManager.setOffline(true);
       return ApiResponse(
         success: false,
         message: 'Tidak dapat terhubung ke server. Periksa koneksi internet.',
       );
     }
+    debugPrint('[api] unexpected error: $e');
+    return ApiResponse(
+      success: false,
+      message: 'Terjadi kesalahan. Coba lagi.',
+    );
   }
 
   static Future<ApiResponse> post(
@@ -270,11 +285,7 @@ class ApiService {
         requireAppSession: requireAppSession,
       );
     } catch (e) {
-      OfflineManager.setOffline(true);
-      return ApiResponse(
-        success: false,
-        message: 'Tidak dapat terhubung ke server. Periksa koneksi internet.',
-      );
+      return _failure(e);
     }
   }
 
@@ -300,11 +311,7 @@ class ApiService {
         requireAppSession: requireAppSession,
       );
     } catch (e) {
-      OfflineManager.setOffline(true);
-      return ApiResponse(
-        success: false,
-        message: 'Tidak dapat terhubung ke server. Periksa koneksi internet.',
-      );
+      return _failure(e);
     }
   }
 
@@ -330,11 +337,7 @@ class ApiService {
         requireAppSession: requireAppSession,
       );
     } catch (e) {
-      OfflineManager.setOffline(true);
-      return ApiResponse(
-        success: false,
-        message: 'Tidak dapat terhubung ke server. Periksa koneksi internet.',
-      );
+      return _failure(e);
     }
   }
 }

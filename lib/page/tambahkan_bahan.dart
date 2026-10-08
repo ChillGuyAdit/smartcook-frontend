@@ -266,6 +266,12 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
   };
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   void initState() {
     super.initState();
     _initData();
