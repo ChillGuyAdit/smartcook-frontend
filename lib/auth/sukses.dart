@@ -12,7 +12,6 @@ class sukses extends StatefulWidget {
 class _suksesState extends State<sukses> {
   @override
   Widget build(BuildContext context) {
-    final screenheight = MediaQuery.of(context).size.height;
     final screenwidth = MediaQuery.of(context).size.width;
 
     double basewidth = 430;

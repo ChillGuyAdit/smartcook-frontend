@@ -188,7 +188,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
         ? dinnerOnline
         : await OfflineCacheService.getRecipeList('by_meal_dinner');
 
-    setState(() {
+    if (mounted) setState(() {
       OfflineManager.setOffline(maybeOffline);
       _favorites = favorites;
       _fridgePreview =

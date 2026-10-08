@@ -41,7 +41,7 @@ class _mailpasswordState extends State<mailpassword> {
     final key = 'forgot:${widget.email}';
     final expiry = await OtpCooldownService.getRemainingExpiry(key);
     final cooldown = await OtpCooldownService.getRemainingCooldown(key);
-    setState(() {
+    if (mounted) setState(() {
       _expirySeconds = expiry;
       _resendCooldownSeconds = cooldown;
     });
@@ -112,7 +112,7 @@ class _mailpasswordState extends State<mailpassword> {
       if (retryAfter != null) {
         final key = 'forgot:${widget.email}';
         await OtpCooldownService.setCooldown(key, retryAfter);
-        setState(() => _resendCooldownSeconds = retryAfter!);
+        if (mounted) setState(() => _resendCooldownSeconds = retryAfter!);
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(res.message ?? 'Gagal mengirim ulang OTP')),
@@ -132,7 +132,7 @@ class _mailpasswordState extends State<mailpassword> {
     final key = 'forgot:${widget.email}';
     await OtpCooldownService.setCooldown(key, 60);
     await OtpCooldownService.setExpiry(key, expirySec);
-    setState(() {
+    if (mounted) setState(() {
       _resendCooldownSeconds = 60;
       _expirySeconds = expirySec;
     });

@@ -61,7 +61,7 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
       await OtpCooldownService.setExpiry(key, expiry);
     }
     final cooldown = await OtpCooldownService.getRemainingCooldown(key);
-    setState(() {
+    if (mounted) setState(() {
       _expirySeconds = expiry;
       _resendCooldownSeconds = cooldown;
     });
@@ -147,7 +147,7 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
     }
 
     if (mustChangePassword && !_showNewPassword) {
-      setState(() {
+      if (mounted) setState(() {
         _showNewPassword = true;
         _errorMessage = 'OTP terverifikasi. Silakan buat password baru.';
       });
@@ -185,9 +185,9 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
       if (retryAfter != null) {
         final key = 'login:${widget.email}';
         await OtpCooldownService.setCooldown(key, retryAfter);
-        setState(() => _resendCooldownSeconds = retryAfter!);
+        if (mounted) setState(() => _resendCooldownSeconds = retryAfter!);
       }
-      setState(() {
+      if (mounted) setState(() {
         _errorMessage = res.message ?? 'Gagal mengirim ulang OTP';
       });
       return;
@@ -206,7 +206,7 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
     await OtpCooldownService.setCooldown(key, 60);
     await OtpCooldownService.setExpiry(key, expirySec);
 
-    setState(() {
+    if (mounted) setState(() {
       _resendCooldownSeconds = 60;
       _expirySeconds = expirySec;
       _errorMessage = 'Kode OTP baru telah dikirim.';

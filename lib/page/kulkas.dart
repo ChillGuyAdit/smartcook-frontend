@@ -616,7 +616,7 @@ class _KulkasPageState extends State<KulkasPage> {
       _showSuccessPopup('Bahan berhasil dihapus!');
     } else if (OfflineManager.isOffline.value) {
       // Fallback: anggap offline, hapus lokal & antrikan operasi
-      setState(() {
+      if (mounted) setState(() {
         _fridgeItems.removeWhere((e) => e['id'] == id);
         _applyFilters();
       });

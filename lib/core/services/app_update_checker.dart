@@ -12,6 +12,7 @@ import '../l10n/strings.dart';
 import '../theme/language_controller.dart';
 import 'apk_downloader.dart';
 import 'app_update_fetcher.dart';
+import 'dev_log.dart';
 
 /// Compiled-in release build number, straight from the `+N` in pubspec.yaml.
 /// The release build number, read from the native side.
@@ -80,6 +81,7 @@ class AppUpdateChecker {
       // 404 until a release is published, 403 on unofficial builds, or
       // offline: never block the app on an update check.
       debugPrint('[app] check skipped: $e');
+      DevLog.error('update_check', e, action: 'fetch');
       if (e is DioException &&
           e.type != DioExceptionType.connectionError &&
           e.type != DioExceptionType.connectionTimeout) {
@@ -99,6 +101,12 @@ class AppUpdateChecker {
 
     final latest = (info['latestBuild'] as num?)?.toInt() ?? 0;
     final minBuild = (info['minBuild'] as num?)?.toInt() ?? 0;
+    DevLog.log('update_check', action: 'compared', meta: {
+      'installed': installedBuild,
+      'latest': latest,
+      'minBuild': minBuild,
+      'mandatory': info['mandatory'] == true,
+    });
     if (latest <= installedBuild) {
       debugPrint(
         '[update] up to date: installed=$installedBuild latest=$latest',
@@ -245,15 +253,13 @@ class _UpdateDialogState extends State<_UpdateDialog> {
     // Backward compat with the previous single-hash shape.
     final single = _info['latestApkSha256'];
     if (single is String && single.isNotEmpty) {
-      return {deviceApkAbi() ?? 'arm64': single};
+      return {deviceApkAbi(): single};
     }
     return const {};
   }
 
   String? get _expectedSha {
-    final abi = deviceApkAbi();
-    if (abi == null) return null;
-    return _expectedShas[abi];
+    return _expectedShas[deviceApkAbi()];
   }
 
   String? get _notes => _info['notes'] as String?;
@@ -386,10 +392,18 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       // Android always asks the user to confirm; anything other than `done`
       // means the installer was cancelled or refused, and the file stays
       // cached so the next attempt installs without downloading again.
+      DevLog.log('update_result', action: 'installer', meta: {
+        'result': result.type.name,
+        'build': build,
+      });
       if (result.type != ResultType.done) {
         debugPrint('[update] installer result: ${result.type} ${result.message}');
       }
     } on ApkDownloadException catch (e) {
+      DevLog.log('update_result', action: 'download', level: 'warn', meta: {
+        'failure': e.failure.name,
+        'build': build,
+      });
       if (!mounted) return;
       if (e.failure == UpdateFailure.tokenExpired && !refreshedToken) {
         // The link is older than its TTL, or a newer release replaced it.

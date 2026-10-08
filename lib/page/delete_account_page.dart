@@ -108,7 +108,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
       return;
     }
 
-    setState(() => _error = res.message ?? 'Gagal mengirim kode OTP');
+    if (mounted) setState(() => _error = res.message ?? 'Gagal mengirim kode OTP');
   }
 
   Future<void> _confirmAndDelete() async {
@@ -133,7 +133,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
       return;
     }
 
-    setState(() {
+    if (mounted) setState(() {
       _deleting = false;
       _error = res.message ?? 'Kode salah atau sudah kedaluwarsa';
     });

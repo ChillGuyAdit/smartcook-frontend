@@ -90,7 +90,7 @@ class _SearchPageState extends State<SearchPage> {
             results.map((e) => Map<String, dynamic>.from(e as Map)).toList();
         final key = 'search_${_norm(q)}${_useGlobalSearch ? "_global" : ""}';
         await OfflineCacheService.saveRecipeList(key, list);
-        setState(() {
+        if (mounted) setState(() {
           _results = list;
           _isOfflineFallback = false;
         });
@@ -129,7 +129,7 @@ class _SearchPageState extends State<SearchPage> {
       await OfflineCacheService.saveRecipeList(key, list);
       await OfflineCacheService.addRecentQuery(query);
       await _loadRecents();
-      setState(() {
+      if (mounted) setState(() {
         _results = list;
         _loading = false;
       });
@@ -167,7 +167,7 @@ class _SearchPageState extends State<SearchPage> {
       await OfflineCacheService.addRecentQuery(query);
       await _loadRecents();
 
-      setState(() {
+      if (mounted) setState(() {
         _results = list;
         _loading = false;
       });
@@ -227,7 +227,7 @@ class _SearchPageState extends State<SearchPage> {
                           Switch(
                             value: _useGlobalSearch,
                             onChanged: (v) {
-                              setState(() {
+                              if (mounted) setState(() {
                                 _useGlobalSearch = v;
                               });
                               if (_controller.text.trim().isNotEmpty) {

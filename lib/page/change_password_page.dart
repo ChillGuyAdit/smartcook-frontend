@@ -51,7 +51,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     const key = 'profile_pw';
     final cooldown = await OtpCooldownService.getRemainingCooldown(key);
     final expiry = await OtpCooldownService.getRemainingExpiry(key);
-    setState(() {
+    if (mounted) setState(() {
       _otpCooldownSeconds = cooldown;
       _expirySeconds = expiry;
     });
@@ -110,7 +110,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         baseMessage =
             '$baseMessage Kode berlaku sekitar $minutes menit.';
         await OtpCooldownService.setExpiry(key, expiresSec.toInt());
-        setState(() => _expirySeconds = expiresSec.toInt());
+        if (mounted) setState(() => _expirySeconds = expiresSec.toInt());
       }
 
       int? retryAfter;

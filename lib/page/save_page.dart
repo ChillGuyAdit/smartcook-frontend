@@ -59,7 +59,7 @@ class _SavePageState extends State<SavePage> {
     } else {
       // Jika gagal (kemungkinan offline), coba baca dari cache lokal
       final cached = await OfflineCacheService.getLocalFavoriteRecipes();
-      setState(() {
+      if (mounted) setState(() {
         _savedRecipes = cached;
         _isLoading = false;
       });

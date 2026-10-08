@@ -262,7 +262,7 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
           final j = jsonDecode(body) as Map?;
           if (j?['message'] != null) errMsg = j!['message'].toString();
         } catch (_) {}
-        setState(() {
+        if (mounted) setState(() {
           _messages.removeLast();
           _recipeEmbeds.remove(modelMessageIndex);
           _sending = false;

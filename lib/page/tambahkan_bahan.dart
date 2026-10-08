@@ -915,7 +915,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                             final key = _buildHiddenKey(name, backendCategory);
                             await OfflineCacheService.addHiddenIngredientKey(
                                 key);
-                            setState(() {
+                            if (mounted) setState(() {
                               _hiddenIngredientKeys.add(key);
                               items.removeAt(index);
                             });

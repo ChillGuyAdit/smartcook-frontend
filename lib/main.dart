@@ -216,6 +216,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       DevLog.log('app_resume', action: 'resume');
       _checkForUpdate();
+    } else if (state == AppLifecycleState.paused) {
+      DevLog.log('app_pause', action: 'pause');
     }
   }
 

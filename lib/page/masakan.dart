@@ -69,7 +69,7 @@ class _MasakanPageState extends State<MasakanPage> {
     if (res.success && res.data != null) {
       final r = res.data as Map<String, dynamic>;
       await OfflineCacheService.saveRecipe(r);
-      setState(() {
+      if (mounted) setState(() {
         _displayTitle = r['title']?.toString() ?? 'Resep';
         _displayImage = r['image_url']?.toString() ?? 'image/soup.png';
         final cal = r['nutrition_info'] is Map
@@ -109,7 +109,7 @@ class _MasakanPageState extends State<MasakanPage> {
           ? await OfflineCacheService.getRecipeById(widget.recipeId!)
           : null;
       if (cached != null) {
-        setState(() {
+        if (mounted) setState(() {
           _displayTitle = cached['title']?.toString() ?? 'Resep';
           _displayImage = cached['image_url']?.toString() ?? 'image/soup.png';
           final cal = cached['nutrition_info'] is Map
@@ -148,7 +148,7 @@ class _MasakanPageState extends State<MasakanPage> {
         return;
       }
 
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(res.message ?? 'Gagal memuat resep')),
@@ -227,7 +227,7 @@ class _MasakanPageState extends State<MasakanPage> {
 
     if (isOffline) {
       // Mode offline penuh: update UI + cache lokal + antrian operasi
-      setState(() => isSaved = goingToBeSaved);
+      if (mounted) setState(() => isSaved = goingToBeSaved);
       await OfflineCacheService.addPendingOperation(
         method: goingToBeSaved ? 'POST' : 'DELETE',
         path: '/api/favorites/${widget.recipeId}',
@@ -261,7 +261,7 @@ class _MasakanPageState extends State<MasakanPage> {
         );
       } else if (OfflineManager.isOffline.value) {
         // Fallback: anggap offline, simpan perubahan sebagai operasi tertunda
-        setState(() => isSaved = false);
+        if (mounted) setState(() => isSaved = false);
         await OfflineCacheService.addPendingOperation(
           method: 'DELETE',
           path: '/api/favorites/${widget.recipeId}',
@@ -298,7 +298,7 @@ class _MasakanPageState extends State<MasakanPage> {
         );
       } else if (OfflineManager.isOffline.value) {
         // Fallback: anggap offline, simpan perubahan sebagai operasi tertunda
-        setState(() => isSaved = true);
+        if (mounted) setState(() => isSaved = true);
         await OfflineCacheService.addPendingOperation(
           method: 'POST',
           path: '/api/favorites/${widget.recipeId}',

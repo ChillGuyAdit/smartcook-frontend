@@ -1,3 +1,4 @@
+import 'package:smartcook/core/services/dev_log.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart' as gSign;
 import 'package:smartcook/core/network/env.dart';
@@ -90,6 +91,10 @@ class AuthService {
     } catch (e, st) {
       // ignore: avoid_print
       print('Google sign-in error: $e');
+      // The usual failure here (ApiException 10 = signing SHA-1 not registered
+      // in Firebase) happens on the phone, before any request reaches the
+      // server, so this is the only place it can be seen.
+      DevLog.error('action', e, action: 'google_signin', stack: st);
       // ignore: avoid_print
       print(st);
       return const GoogleSignInResult();
