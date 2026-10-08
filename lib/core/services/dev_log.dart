@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/api_config.dart';
+import '../../service/token_service.dart';
 import 'app_update_fetcher.dart';
 
 /// Developer debug log.
@@ -303,12 +304,25 @@ class DevLog {
         connectTimeout: const Duration(seconds: 8),
         receiveTimeout: const Duration(seconds: 8),
       ));
+      // The server resolves the account from this verified token (never from
+      // the payload). Without it every row was anonymous, so a report could not
+      // be tied to "which account".
+      String? userToken;
+      try {
+        userToken = await TokenService.getToken();
+      } catch (_) {}
       // Accept 4xx: a rejected batch must not retry forever, because the batch
       // is a diagnostic, not something the user is waiting on.
       await dio.post<Map<String, dynamic>>(
         '/api/devlog/ingest',
         data: {'events': enriched},
-        options: Options(validateStatus: (s) => s != null && s < 500),
+        options: Options(
+          validateStatus: (s) => s != null && s < 500,
+          headers: {
+            if (userToken != null && userToken.isNotEmpty)
+              'X-User-Token': userToken,
+          },
+        ),
       );
       await _persist(_queue);
       debugPrint('[devlog] flushed ${enriched.length} event(s)');
