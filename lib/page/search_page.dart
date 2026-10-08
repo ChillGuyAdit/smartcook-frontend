@@ -5,6 +5,7 @@ import 'package:smartcook/service/offline_cache_service.dart';
 
 import '../core/theme/app_theme_colors.dart';
 import 'masakan.dart';
+import 'reusable/net_image.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -292,7 +293,7 @@ class _SearchPageState extends State<SearchPage> {
                                       borderRadius: BorderRadius.circular(10),
                                       child: imageUrl != null &&
                                               imageUrl.isNotEmpty
-                                          ? Image.network(imageUrl,
+                                          ? NetImage(imageUrl,
                                               width: 56,
                                               height: 56,
                                               fit: BoxFit.cover,

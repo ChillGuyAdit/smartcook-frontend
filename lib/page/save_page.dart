@@ -6,6 +6,7 @@ import 'package:smartcook/page/masakan.dart';
 
 import '../core/theme/app_theme_colors.dart';
 import '../core/theme/shadows.dart';
+import 'reusable/net_image.dart';
 
 class SavePage extends StatefulWidget {
   const SavePage({super.key});
@@ -240,7 +241,7 @@ child: Icon(Icons.arrow_forward_ios_rounded,
   Widget _buildThumbnail(String imagePath) {
     const fallback = 'image/jagung_bowl.png';
     if (imagePath.startsWith('http')) {
-      return Image.network(
+      return NetImage(
         imagePath,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Image.asset(

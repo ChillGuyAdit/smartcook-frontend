@@ -4,6 +4,7 @@ import 'package:smartcook/service/api_service.dart';
 import '../core/theme/app_theme_colors.dart';
 import '../core/theme/shadows.dart';
 import 'masakan.dart';
+import 'reusable/net_image.dart';
 
 class CategoryPage extends StatefulWidget {
   final String categoryName;
@@ -479,7 +480,7 @@ class _CategoryPageState extends State<CategoryPage> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(15),
                 child: imageUrl != null && imageUrl.isNotEmpty
-                    ? Image.network(imageUrl,
+                    ? NetImage(imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Icon(Icons.restaurant,
                             color: widget.themeColors[1]))

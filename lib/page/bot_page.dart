@@ -12,6 +12,7 @@ import 'package:smartcook/page/masakan.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/service/token_service.dart';
+import 'reusable/net_image.dart';
 
 class BotPage extends StatefulWidget {
   const BotPage({super.key});
@@ -407,7 +408,7 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(10),
           child: imageUrl != null && imageUrl.isNotEmpty
-              ? Image.network(
+              ? NetImage(
                   imageUrl,
                   width: 56,
                   height: 56,

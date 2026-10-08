@@ -15,6 +15,7 @@ import 'profile_page.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_cache_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
+import 'reusable/net_image.dart';
 
 class homepage extends StatefulWidget {
   const homepage({super.key});
@@ -954,7 +955,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
               right: imageRight,
               bottom: imageBottom,
               child: imageUrl != null && imageUrl.isNotEmpty
-                  ? Image.network(imageUrl, width: 75, height: 75, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.restaurant, color: Colors.white54, size: 40))
+                  ? NetImage(imageUrl, width: 75, height: 75, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.restaurant, color: Colors.white54, size: 40))
                   : Image.asset(imagePath.isNotEmpty ? imagePath : 'image/soup.png', width: 75),
             )
           ],
@@ -989,7 +990,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
               child: Stack(
                 children: [
                   imageUrl != null && imageUrl.isNotEmpty
-                      ? Image.network(
+                      ? NetImage(
                           imageUrl,
                           height: 180,
                           width: double.infinity,
