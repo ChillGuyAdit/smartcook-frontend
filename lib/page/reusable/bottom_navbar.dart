@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme_colors.dart';
+import '../../core/l10n/strings.dart';
 
 class CustomBottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -58,26 +59,26 @@ class CustomBottomNavBar extends StatelessWidget {
               fontSize: 11,
               color: palette.textDisabled,
             ),
-            items: const [
+            items: [
               BottomNavigationBarItem(
                 icon: Icon(Icons.home_rounded),
-                label: 'Home',
+                label: context.s.home,
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.search_rounded),
-                label: 'Search',
+                label: context.s.search,
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.chat_bubble_outline_rounded),
-                label: 'Bot',
+                label: context.s.bot,
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.bookmark_border_rounded),
-                label: 'Save',
+                label: context.s.save,
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.person_outline_rounded),
-                label: 'Profile',
+                label: context.s.profile,
               ),
             ],
           ),

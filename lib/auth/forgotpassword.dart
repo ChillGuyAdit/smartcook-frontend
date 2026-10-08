@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:smartcook/auth/mailpassoword.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/service/api_service.dart';
+import '../core/l10n/strings.dart';
 
 class forgotpassowrd extends StatefulWidget {
   const forgotpassowrd({super.key});
@@ -75,7 +76,7 @@ class _forgotpassowrdState extends State<forgotpassowrd> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message ?? 'Gagal mengirim kode')),
+        SnackBar(content: Text(res.message ?? context.s.sendCodeFailed)),
       );
       return;
     }
@@ -121,12 +122,12 @@ class _forgotpassowrdState extends State<forgotpassowrd> {
               ),
               SizedBox(height: 24),
               Text(
-                "Lupa Password?",
+                context.s.forgotPassword,
                 style: TextStyle(fontSize: 30, fontWeight: FontWeight.w600),
               ),
               SizedBox(height: 14),
               Text(
-                "Jangan khawatir! Masukkan alamat email Anda. Dan kami akan\nmemberikan instruksi untuk mengatur ulang password",
+                context.s.forgotPasswordIntro,
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12 * scale),
               ),
@@ -138,13 +139,13 @@ class _forgotpassowrdState extends State<forgotpassowrd> {
                   enabled: !_isLoading,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return "Email wajib diisi";
+                      return context.s.emailRequired;
                     }
                     if (!value.contains("@")) {
-                      return "Email harus ada simbol '@'";
+                      return context.s.emailNeedsAt;
                     }
                     if (!value.contains(".com")) {
-                      return "Email harus diakhiri dengan '.com'";
+                      return context.s.emailNeedsCom;
                     }
                     return null;
                   },

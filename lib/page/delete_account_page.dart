@@ -108,7 +108,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
       return;
     }
 
-    if (mounted) setState(() => _error = res.message ?? 'Gagal mengirim kode OTP');
+    if (mounted) setState(() => _error = res.message ?? context.s.sendOtpFailed);
   }
 
   Future<void> _confirmAndDelete() async {
@@ -135,7 +135,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
 
     if (mounted) setState(() {
       _deleting = false;
-      _error = res.message ?? 'Kode salah atau sudah kedaluwarsa';
+      _error = res.message ?? context.s.codeWrongOrExpired;
     });
   }
 
@@ -169,7 +169,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Akun dan seluruh isinya (kulkas, resep favorit, riwayat chat) akan dihapus permanen dan tidak dapat dipulihkan.',
+                    context.s.deleteAccountWarning,
                     style: TextStyle(
                       color: palette.textPrimary,
                       fontSize: 13,

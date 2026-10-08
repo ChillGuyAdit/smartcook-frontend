@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/otp_cooldown_service.dart';
+import '../core/l10n/strings.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -97,8 +98,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     setState(() => _sendingOtp = false);
     String baseMessage = res.message ??
         (res.success
-            ? 'Kode OTP telah dikirim ke email kamu.'
-            : 'Gagal mengirim OTP');
+            ? context.s.otpSentToEmail
+            : context.s.sendOtpFailed);
 
     const key = 'profile_pw';
 
@@ -108,7 +109,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       if (expiresSec is num && expiresSec > 0) {
         final minutes = (expiresSec / 60).ceil();
         baseMessage =
-            '$baseMessage Kode berlaku sekitar $minutes menit.';
+            context.s.otpValidAbout(baseMessage, minutes);
         await OtpCooldownService.setExpiry(key, expiresSec.toInt());
         if (mounted) setState(() => _expirySeconds = expiresSec.toInt());
       }
@@ -158,13 +159,13 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
     if (!res.success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message ?? 'Gagal mengganti password')),
+        SnackBar(content: Text(res.message ?? context.s.changePasswordFailed)),
       );
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Password berhasil diubah')),
+      SnackBar(content: Text(context.s.passwordChanged)),
     );
     Navigator.pop(context, true);
   }
@@ -176,7 +177,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ubah Password'),
+        title: Text(context.s.changePassword),
         backgroundColor: AppColor().utama,
       ),
       body: Padding(
@@ -185,7 +186,10 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ToggleButtons(
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: ToggleButtons(
                 isSelected: [_useOtp == false, _useOtp == true],
                 onPressed: (index) {
                   setState(() {
@@ -199,14 +203,15 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                   Padding(
                     padding: EdgeInsets.symmetric(
                         horizontal: 12 * scale, vertical: 8 * scale),
-                    child: const Text('Pakai password lama'),
+                    child: Text(context.s.useOldPassword),
                   ),
                   Padding(
                     padding: EdgeInsets.symmetric(
                         horizontal: 12 * scale, vertical: 8 * scale),
-                    child: const Text('Pakai OTP email'),
+                    child: Text(context.s.useEmailOtp),
                   ),
                 ],
+              ),
               ),
               SizedBox(height: 20 * scale),
               Form(
@@ -218,7 +223,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                         controller: _currentController,
                         obscureText: _obscureCurrent,
                         decoration: InputDecoration(
-                          labelText: 'Password lama',
+                          labelText: context.s.oldPassword,
                           suffixIcon: IconButton(
                             icon: Icon(_obscureCurrent
                                 ? Icons.visibility_off
@@ -232,7 +237,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                         ),
                         validator: (v) {
                           if (!_useOtp && (v == null || v.isEmpty)) {
-                            return 'Password lama wajib diisi';
+                            return context.s.oldPasswordRequired;
                           }
                           return null;
                         },
@@ -245,8 +250,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                             child: TextFormField(
                               controller: _otpController,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                  labelText: 'Kode OTP (4 digit)'),
+                              decoration: InputDecoration(
+                                  labelText: context.s.otpCodeField),
                               validator: (v) {
                                 if (_useOtp &&
                                     (v == null || v.trim().length != 4)) {
@@ -275,8 +280,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                                   )
                                 : Text(
                                     _otpCooldownSeconds > 0
-                                        ? 'Kirim OTP (${_otpCooldownSeconds}s)'
-                                        : 'Kirim OTP',
+                                        ? context.s.sendOtpIn(_otpCooldownSeconds)
+                                        : context.s.sendOtp,
                                   ),
                           ),
                         ],
@@ -286,7 +291,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                         Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            '⏰ OTP akan expired dalam ${OtpCooldownService.formatSeconds(_expirySeconds)}',
+                            context.s.otpExpiresInClock(OtpCooldownService.formatSeconds(_expirySeconds)),
                             style: TextStyle(
                               fontSize: 12 * scale,
                               color: Colors.grey[700],
@@ -299,7 +304,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                       controller: _newController,
                       obscureText: _obscureNew,
                       decoration: InputDecoration(
-                        labelText: 'Password baru',
+                        labelText: context.s.newPassword,
                         suffixIcon: IconButton(
                           icon: Icon(_obscureNew
                               ? Icons.visibility_off
@@ -313,7 +318,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                       ),
                       validator: (v) {
                         if (v == null || v.isEmpty) {
-                          return 'Password baru wajib diisi';
+                          return context.s.newPasswordRequired;
                         }
                         if (v.length < 6) {
                           return 'Minimal 6 karakter';
@@ -326,7 +331,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                       controller: _confirmController,
                       obscureText: _obscureConfirm,
                       decoration: InputDecoration(
-                        labelText: 'Konfirmasi password baru',
+                        labelText: context.s.confirmNewPassword,
                         suffixIcon: IconButton(
                           icon: Icon(_obscureConfirm
                               ? Icons.visibility_off
@@ -340,10 +345,10 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                       ),
                       validator: (v) {
                         if (v == null || v.isEmpty) {
-                          return 'Konfirmasi password wajib diisi';
+                          return context.s.confirmPasswordRequired;
                         }
                         if (v != _newController.text) {
-                          return 'Konfirmasi password tidak sama';
+                          return context.s.passwordsDontMatch;
                         }
                         return null;
                       },
@@ -367,7 +372,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text('Simpan Password'),
+                            : Text(context.s.savePassword),
                       ),
                     ),
                   ],

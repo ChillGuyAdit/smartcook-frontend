@@ -14,6 +14,7 @@ import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/service/token_service.dart';
 import 'reusable/net_image.dart';
+import '../core/l10n/strings.dart';
 
 class BotPage extends StatefulWidget {
   const BotPage({super.key});
@@ -258,7 +259,7 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
 
       if (response.statusCode != 200) {
         final body = await response.stream.bytesToString();
-        String errMsg = 'Gagal mengirim';
+        String errMsg = currentStrings.sendFailedShort;
         try {
           final j = jsonDecode(body) as Map?;
           if (j?['message'] != null) errMsg = j!['message'].toString();
@@ -372,7 +373,7 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
         _streamingOrTyping = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mengirim: ${e.toString()}')),
+        SnackBar(content: Text(context.s.sendFailed(e.toString()))),
       );
     }
   }
@@ -433,7 +434,7 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        subtitle: Text('$cal Kal • ${prep + cook}m'),
+        subtitle: Text(context.s.recipeMeta(cal, prep + cook)),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: id != null
             ? () {
@@ -464,7 +465,7 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
-              'SmartChef tidak tersedia saat offline.\nSilakan sambungkan internet untuk melanjutkan.',
+              context.s.chefOffline,
               textAlign: TextAlign.center,
               style: TextStyle(color: context.colors.textSecondary),
             ),
@@ -487,18 +488,18 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
                 showDialog(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('Hapus riwayat?'),
+                    title: Text(context.s.clearHistoryTitle),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Batal'),
+                        child: Text(context.s.cancel),
                       ),
                       TextButton(
                         onPressed: () {
                           Navigator.pop(ctx);
                           _clearHistory();
                         },
-                        child: const Text('Hapus'),
+                        child: Text(context.s.delete),
                       ),
                     ],
                   ),
@@ -522,7 +523,7 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
                                 color: context.colors.textDisabled),
                             const SizedBox(height: 16),
                             Text(
-                              "Tanya apa saja tentang masak",
+                              context.s.askAnythingCooking,
                               style: TextStyle(
                                   fontSize: 16,
                                   color: context.colors.textSecondary),
@@ -631,7 +632,7 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
                     child: TextField(
                       controller: _controller,
                       decoration: InputDecoration(
-                        hintText: 'Ketik pesan...',
+                        hintText: context.s.typeMessage,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none,

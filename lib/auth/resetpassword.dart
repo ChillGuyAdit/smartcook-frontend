@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smartcook/auth/animasisukses.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/service/api_service.dart';
+import '../core/l10n/strings.dart';
 
 class resetpassword extends StatefulWidget {
   final String email;
@@ -43,7 +44,7 @@ class _resetpasswordState extends State<resetpassword> {
     setState(() => _loading = false);
     if (!res.success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message ?? 'Gagal reset password')),
+        SnackBar(content: Text(res.message ?? context.s.resetPasswordFailed)),
       );
       return;
     }
@@ -81,7 +82,7 @@ class _resetpasswordState extends State<resetpassword> {
             ),
             SizedBox(height: 40),
             Text(
-              'Create new password',
+              context.s.createNewPassword,
               style: TextStyle(fontSize: 30, fontWeight: FontWeight.w600),
             ),
             SizedBox(height: 35),
@@ -105,7 +106,7 @@ class _resetpasswordState extends State<resetpassword> {
                     child: Align(
                       alignment: Alignment.topLeft,
                       child: Text(
-                        'Konfirmasi Password',
+                        context.s.confirmPassword,
                         style: TextStyle(fontSize: 15),
                       ),
                     ),
@@ -135,7 +136,7 @@ class _resetpasswordState extends State<resetpassword> {
                             ),
                           )
                         : Text(
-                      'Reset Password',
+                      context.s.resetPassword,
                       style: TextStyle(
                         color: AppColor().putih,
                         fontWeight: FontWeight.bold,
@@ -162,10 +163,10 @@ class _resetpasswordState extends State<resetpassword> {
         autovalidateMode: AutovalidateMode.onUserInteraction,
         validator: (value) {
           if (value == null || value.isEmpty) {
-            return "Password wajib isi bray";
+            return context.s.passwordRequired;
           }
           if (value.length < 6) {
-            return "Password minimal 6 karakter";
+            return context.s.passwordMin6;
           }
           return null;
         },
@@ -176,7 +177,7 @@ class _resetpasswordState extends State<resetpassword> {
             borderSide: BorderSide.none,
           ),
           fillColor: AppColor().abuabu,
-          hintText: 'Enter your password',
+          hintText: context.s.enterPassword,
           filled: true,
           prefixIcon: Icon(Icons.lock, color: AppColor().hintTextColor),
           suffixIcon: IconButton(
@@ -204,10 +205,10 @@ class _resetpasswordState extends State<resetpassword> {
         autovalidateMode: AutovalidateMode.onUserInteraction,
         validator: (value) {
           if (value == null || value.isEmpty) {
-            return "Konfirmasi password dulu bray";
+            return context.s.confirmPasswordRequired;
           }
           if (value != _passController.text) {
-            return "Password ngga sama, cek lagi bray";
+            return context.s.passwordsDontMatch;
           }
           return null;
         },
@@ -218,7 +219,7 @@ class _resetpasswordState extends State<resetpassword> {
             borderSide: BorderSide.none,
           ),
           fillColor: AppColor().abuabu,
-          hintText: 'Re-enter your password',
+          hintText: context.s.reenterPassword,
           filled: true,
           prefixIcon: Icon(Icons.lock, color: AppColor().hintTextColor),
           suffixIcon: IconButton(

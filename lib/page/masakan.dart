@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/theme/app_theme_colors.dart';
 import '../core/theme/shadows.dart';
+import '../core/l10n/strings.dart';
 
 class MasakanPage extends StatefulWidget {
   final String? recipeId;
@@ -151,7 +152,7 @@ class _MasakanPageState extends State<MasakanPage> {
       if (mounted) setState(() => _loading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(res.message ?? 'Gagal memuat resep')),
+          SnackBar(content: Text(res.message ?? context.s.loadRecipeFailed)),
         );
       }
     }
@@ -198,7 +199,7 @@ class _MasakanPageState extends State<MasakanPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text(
-                isSaved ? "Resep disimpan!" : "Resep dihapus dari simpanan")),
+                isSaved ? context.s.recipeSavedShort : context.s.recipeRemoved)),
       );
       return;
     }
@@ -240,8 +241,8 @@ class _MasakanPageState extends State<MasakanPage> {
         await _saveRecipeToLocalCacheIfNeeded();
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Perubahan favorit akan disinkron saat online'),
+        SnackBar(
+          content: Text(currentStrings.favSyncLater),
         ),
       );
       return;
@@ -257,7 +258,7 @@ class _MasakanPageState extends State<MasakanPage> {
           false,
         );
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Resep dihapus dari simpanan")),
+          SnackBar(content: Text(currentStrings.recipeRemoved)),
         );
       } else if (OfflineManager.isOffline.value) {
         // Fallback: anggap offline, simpan perubahan sebagai operasi tertunda
@@ -271,13 +272,13 @@ class _MasakanPageState extends State<MasakanPage> {
           false,
         );
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Perubahan favorit akan disinkron saat online'),
+          SnackBar(
+            content: Text(currentStrings.favSyncLater),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(res.message ?? 'Gagal menghapus')),
+          SnackBar(content: Text(res.message ?? context.s.deleteFailed)),
         );
       }
     } else {
@@ -294,7 +295,7 @@ class _MasakanPageState extends State<MasakanPage> {
         );
         await _saveRecipeToLocalCacheIfNeeded();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Resep berhasil disimpan!")),
+          SnackBar(content: Text(currentStrings.recipeSaved)),
         );
       } else if (OfflineManager.isOffline.value) {
         // Fallback: anggap offline, simpan perubahan sebagai operasi tertunda
@@ -309,13 +310,13 @@ class _MasakanPageState extends State<MasakanPage> {
         );
         await _saveRecipeToLocalCacheIfNeeded();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Perubahan favorit akan disinkron saat online'),
+          SnackBar(
+            content: Text(currentStrings.favSyncLater),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(res.message ?? 'Gagal menyimpan')),
+          SnackBar(content: Text(res.message ?? context.s.saveFailed)),
         );
       }
     }
@@ -324,7 +325,7 @@ class _MasakanPageState extends State<MasakanPage> {
   Future<void> _launchYoutube(String url) async {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      throw Exception('Could not launch $url');
+      throw Exception(currentStrings.couldNotOpen(url));
     }
   }
 
@@ -503,7 +504,7 @@ class _MasakanPageState extends State<MasakanPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Bahan yang dibutuhkan",
+                      context.s.ingredientsNeeded,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -525,7 +526,7 @@ class _MasakanPageState extends State<MasakanPage> {
                             ? [
                                 Padding(
                                   padding: const EdgeInsets.all(12),
-                                  child: Text('Tidak ada data bahan',
+                                  child: Text(context.s.noIngredientData,
                                       style: TextStyle(
                                           color:
                                               context.colors.textSecondary)),
@@ -578,9 +579,9 @@ class _MasakanPageState extends State<MasakanPage> {
                         onPressed: () async {
                           if (widget.recipeId == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
+                              SnackBar(
                                   content:
-                                      Text('Resep tidak memiliki ID valid')),
+                                      Text(context.s.recipeNoValidId)),
                             );
                             return;
                           }
@@ -596,7 +597,7 @@ class _MasakanPageState extends State<MasakanPage> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                    '$createdCount bahan ditambahkan ke kulkas'),
+                                    currentStrings.ingredientsAddedToFridge(createdCount)),
                               ),
                             );
                             await _loadRecipe();
@@ -604,15 +605,15 @@ class _MasakanPageState extends State<MasakanPage> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(res.message ??
-                                    'Gagal menambahkan bahan ke kulkas'),
+                                    currentStrings.addToFridgeFailed),
                               ),
                             );
                           }
                         },
                         icon:
                             const Icon(Icons.shopping_cart_outlined, size: 20),
-                        label: const Text(
-                          "Cari Bahan yang Kurang",
+                        label: Text(
+                          context.s.findMissingIngredients,
                           style: TextStyle(
                               fontSize: 14, fontWeight: FontWeight.bold),
                         ),
@@ -631,7 +632,7 @@ class _MasakanPageState extends State<MasakanPage> {
 
                     // Bagian Cara Membuat
                     Text(
-                      "Cara Membuat",
+                      context.s.howToMake,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -646,7 +647,7 @@ class _MasakanPageState extends State<MasakanPage> {
                           ? [
                               Padding(
                                 padding: const EdgeInsets.all(12),
-                                child: Text('Tidak ada langkah',
+                                child: Text(context.s.noSteps,
                                     style: TextStyle(
                                         color: context.colors.textSecondary)),
                               )
@@ -705,8 +706,8 @@ class _MasakanPageState extends State<MasakanPage> {
                             "https://www.youtube.com/results?search_query=resep+$_displayTitle"),
                         icon: const Icon(Icons.play_circle_fill_rounded,
                             size: 20),
-                        label: const Text(
-                          "Lihat Tutorial di YouTube",
+                        label: Text(
+                          context.s.watchTutorial,
                           style: TextStyle(
                               fontSize: 14, fontWeight: FontWeight.bold),
                         ),
@@ -729,7 +730,7 @@ class _MasakanPageState extends State<MasakanPage> {
 
                     // REKOMENDASI MAKANAN (TAMBAHAN BARU)
                     Text(
-                      "Rekomendasi Lainnya",
+                      context.s.moreRecs,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -824,11 +825,11 @@ class _MasakanPageState extends State<MasakanPage> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
-                        children: const [
+                        children: [
                           Icon(Icons.star_rounded,
                               color: Colors.white, size: 14),
                           SizedBox(width: 4),
-                          Text("Cocok Untukmu",
+                          Text(context.s.matchForYou,
                               style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 11,
@@ -852,7 +853,7 @@ class _MasakanPageState extends State<MasakanPage> {
                           color: context.colors.textPrimary)),
                   const SizedBox(height: 4),
                   Text(
-                    "Cocok Untuk Diet, Diabetes, rendah gula, tinggi serat",
+                    context.s.suitableFor,
                     style: TextStyle(
                         fontSize: 13, color: context.colors.textSecondary),
                   ),
@@ -861,11 +862,11 @@ class _MasakanPageState extends State<MasakanPage> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      _buildTag("Aman Untuk Diabetes", const Color(0xFFE8F5E9),
+                      _buildTag(context.s.safeForDiabetes, const Color(0xFFE8F5E9),
                           const Color(0xFF2E7D32)),
-                      _buildTag("Bebas Kacang", const Color(0xFFFFF3E0),
+                      _buildTag(context.s.nutFree, const Color(0xFFFFF3E0),
                           const Color(0xFFE65100)),
-                      _buildTag("Pakai Blender", const Color(0xFFE3F2FD),
+                      _buildTag(context.s.useBlender, const Color(0xFFE3F2FD),
                           const Color(0xFF1565C0)),
                     ],
                   ),
@@ -874,14 +875,14 @@ class _MasakanPageState extends State<MasakanPage> {
                     children: [
                       const Icon(Icons.local_fire_department_rounded,
                           size: 18, color: Colors.orange),
-                      Text(" 220 Kal",
+                      Text(context.s.kcalSpaced(220),
                           style: TextStyle(
                               color: context.colors.textSecondary,
                               fontWeight: FontWeight.w500)),
                       const SizedBox(width: 15),
                       const Icon(Icons.access_time_rounded,
                           size: 18, color: Colors.blueGrey),
-                      Text(" 10 menit",
+                      Text(context.s.minutesSpaced(10),
                           style: TextStyle(
                               color: context.colors.textSecondary,
                               fontWeight: FontWeight.w500)),

@@ -16,6 +16,7 @@ import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_cache_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
 import 'reusable/net_image.dart';
+import '../core/l10n/strings.dart';
 
 class homepage extends StatefulWidget {
   const homepage({super.key});
@@ -113,8 +114,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
         queryParameters: {'limit': '5'});
     final popularRes = await ApiService.get('/api/recipes/popular',
         queryParameters: {'limit': '10'});
-    final breakfastRes =
-        await ApiService.get('/api/recipes/by-meal/breakfast');
+    final breakfastRes = await ApiService.get('/api/recipes/by-meal/breakfast');
     final lunchRes = await ApiService.get('/api/recipes/by-meal/lunch');
     final dinnerRes = await ApiService.get('/api/recipes/by-meal/dinner');
 
@@ -150,16 +150,19 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
 
     // Cache jika berhasil (offline fallback)
     if (favoritesOnline.isNotEmpty) {
-      await OfflineCacheService.saveRecipeList('home_favorites_preview', favoritesOnline);
+      await OfflineCacheService.saveRecipeList(
+          'home_favorites_preview', favoritesOnline);
     }
     if (recOnline.isNotEmpty) {
-      await OfflineCacheService.saveRecipeList('home_recommendations', recOnline);
+      await OfflineCacheService.saveRecipeList(
+          'home_recommendations', recOnline);
     }
     if (popularOnline.isNotEmpty) {
       await OfflineCacheService.saveRecipeList('home_popular', popularOnline);
     }
     if (breakfastOnline.isNotEmpty) {
-      await OfflineCacheService.saveRecipeList('by_meal_breakfast', breakfastOnline);
+      await OfflineCacheService.saveRecipeList(
+          'by_meal_breakfast', breakfastOnline);
     }
     if (lunchOnline.isNotEmpty) {
       await OfflineCacheService.saveRecipeList('by_meal_lunch', lunchOnline);
@@ -188,50 +191,55 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
         ? dinnerOnline
         : await OfflineCacheService.getRecipeList('by_meal_dinner');
 
-    if (mounted) setState(() {
-      OfflineManager.setOffline(maybeOffline);
-      _favorites = favorites;
-      _fridgePreview =
-          fridgeOnline; // untuk kulkas, belum dicache (lebih dinamis)
-      _recommendations = recs;
-      _popularRecipes = popular;
-      _byMeal['breakfast'] = breakfast;
-      _byMeal['lunch'] = lunch;
-      _byMeal['dinner'] = dinner;
-      _loading = false;
-    });
+    if (mounted)
+      setState(() {
+        OfflineManager.setOffline(maybeOffline);
+        _favorites = favorites;
+        _fridgePreview =
+            fridgeOnline; // untuk kulkas, belum dicache (lebih dinamis)
+        _recommendations = recs;
+        _popularRecipes = popular;
+        _byMeal['breakfast'] = breakfast;
+        _byMeal['lunch'] = lunch;
+        _byMeal['dinner'] = dinner;
+        _loading = false;
+      });
   }
 
   List<Map<String, dynamic>> _parseRecipeList(dynamic data) {
     if (data == null) return [];
     if (data is List) {
-      return data.map((e) {
-        if (e is Map<String, dynamic>) {
-          final recipe = e['recipe'] ?? e;
-          if (recipe is Map<String, dynamic>) return recipe;
-          return <String, dynamic>{};
-        }
-        return <String, dynamic>{};
-      }).where((e) => e.isNotEmpty && e['_id'] != null).toList();
+      return data
+          .map((e) {
+            if (e is Map<String, dynamic>) {
+              final recipe = e['recipe'] ?? e;
+              if (recipe is Map<String, dynamic>) return recipe;
+              return <String, dynamic>{};
+            }
+            return <String, dynamic>{};
+          })
+          .where((e) => e.isNotEmpty && e['_id'] != null)
+          .toList();
     }
     return [];
   }
 
   List<Map<String, dynamic>> _parseFridgeList(dynamic data) {
     if (data == null) return [];
-    if (data is List) return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    if (data is List)
+      return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     return [];
   }
 
   String _buildAllergySubtitle() {
     if (_userAllergies.isEmpty) {
-      return 'Disesuaikan dengan preferensi kesehatanmu';
+      return context.s.tailoredToHealth;
     }
     if (_userAllergies.length == 1) {
-      return 'Aman untuk alergi: ${_userAllergies.first}';
+      return context.s.safeForAllergy(_userAllergies.first);
     }
     final joined = _userAllergies.join(', ');
-    return 'Aman untuk alergi: $joined';
+    return context.s.safeForAllergy(joined);
   }
 
   @override
@@ -268,7 +276,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
       case 4:
         return const ProfilePage();
       default:
-        return const Center(child: Text("Halaman tidak ditemukan"));
+        return Center(child: Text(context.s.pageNotFound));
     }
   }
 
@@ -283,36 +291,48 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const CircleAvatar(
-                      radius: 26,
-                      backgroundImage: AssetImage('image/mainLogo.jpg'),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                Expanded(
+                  child: Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 26,
+                        backgroundImage: AssetImage('image/mainLogo.jpg'),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Hallo, $_userName! ",
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    color: context.colors.textSecondary)),
-                            const Icon(Icons.auto_awesome,
-                                color: Colors.amber, size: 16),
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(context.s.greeting(_userName),
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                          fontSize: 14,
+                                          color: context.colors.textSecondary)),
+                                ),
+                                const Icon(Icons.auto_awesome,
+                                    color: Colors.amber, size: 16),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(context.s.whatToCookToday,
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: context.colors.textPrimary)),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 2),
-                        Text("Masak apa hari ini?",
-                            style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: context.colors.textPrimary)),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -328,7 +348,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
             const SizedBox(height: 30),
 
             // --- CATEGORY SECTION ---
-            Text("Kategori selera memasak",
+            Text(context.s.tasteCategories,
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -341,7 +361,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
                 scrollDirection: Axis.horizontal,
                 children: [
                   _buildCategoryCard(
-                    title: "Masakan Sehat\nRendah Kalori\nTinggi Nutrisi",
+                    title: context.s.catHealthy,
                     imagePath: 'image/broccoli.png',
                     cardWidth: cardWidth,
                     colors: [const Color(0xFF4CAF50), const Color(0xFF2E7D32)],
@@ -359,7 +379,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
                     },
                   ),
                   _buildCategoryCard(
-                    title: "Masakan Dengan\nNutrisi Seimbang",
+                    title: context.s.catBalanced,
                     imagePath: 'image/balanced_food.png',
                     cardWidth: cardWidth,
                     colors: [const Color(0xFFFFA726), const Color(0xFFEF6C00)],
@@ -377,7 +397,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
                     },
                   ),
                   _buildCategoryCard(
-                    title: "Ala-Ala\nMasakan Barat",
+                    title: context.s.catWestern,
                     imagePath: 'image/burger.png',
                     cardWidth: cardWidth,
                     colors: [const Color(0xFFEF5350), const Color(0xFFC62828)],
@@ -421,15 +441,15 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("Apa saja isi kulkas mu?",
+                        Text(context.s.fridgeQuestion,
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             )),
                         const SizedBox(height: 8),
-                        const Text(
-                          "Temukan berbagai resep makanan berdasarkan bahan yang kamu miliki",
+                        Text(
+                          context.s.findByIngredients,
                           style: TextStyle(
                               color: Colors.white70, fontSize: 13, height: 1.4),
                         ),
@@ -452,11 +472,11 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
                                 border: Border.all(color: Colors.white30)),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
-                              children: const [
+                              children: [
                                 Icon(Icons.add_circle_outline,
                                     size: 20, color: Colors.white),
                                 SizedBox(width: 8),
-                                Text("Tambahkan Bahan",
+                                Text(context.s.addIngredients,
                                     style: TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w500)),
@@ -488,16 +508,18 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              for (int i = 0; i < _fridgePreview.take(2).length; i++) ...[
+                              for (int i = 0;
+                                  i < _fridgePreview.take(2).length;
+                                  i++) ...[
                                 if (i > 0) const SizedBox(height: 4),
                                 Text(
-                                  "${i + 1}. ${_fridgePreview[i]['ingredient_name'] ?? 'Bahan'} (${_fridgePreview[i]['quantity'] ?? '-'})",
+                                  "${i + 1}. ${_fridgePreview[i]['ingredient_name'] ?? context.s.ingredientWord} (${_fridgePreview[i]['quantity'] ?? '-'})",
                                   style: const TextStyle(
                                       color: Colors.white, fontSize: 13),
                                 ),
                               ],
                               if (_fridgePreview.isEmpty)
-                                const Text("Belum ada bahan",
+                                Text(context.s.noIngredientsYet,
                                     style: TextStyle(
                                         color: Colors.white70, fontSize: 13)),
                             ],
@@ -511,8 +533,8 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
                                   builder: (context) => const KulkasPage()),
                             ).then((_) => _loadData());
                           },
-                          child: const Text(
-                            "Lihat Semua >",
+                          child: Text(
+                            context.s.seeAllArrow,
                             style: TextStyle(
                               color: Colors.greenAccent,
                               fontSize: 13,
@@ -530,7 +552,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
 
             // --- MEAL MODE SECTION (UPDATED) ---
             Center(
-                child: Text("Pilih Waktu Makan",
+                child: Text(context.s.chooseMealTime,
                     style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -539,12 +561,12 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildModeFoodItem(
-                    Icons.wb_twilight_rounded, "Breakfast", "breakfast", Colors.orange),
+                _buildModeFoodItem(Icons.wb_twilight_rounded, "Breakfast",
+                    "breakfast", Colors.orange),
                 _buildModeFoodItem(
                     Icons.wb_sunny_rounded, "Lunch", "lunch", Colors.green),
-                _buildModeFoodItem(
-                    Icons.nights_stay_rounded, "Dinner", "dinner", Colors.indigo),
+                _buildModeFoodItem(Icons.nights_stay_rounded, "Dinner",
+                    "dinner", Colors.indigo),
               ],
             ),
 
@@ -563,7 +585,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("Disimpan untukmu",
+                      Text(context.s.savedForYou,
                           style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -588,7 +610,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
                       ),
                     ).then((_) => _loadData());
                   },
-                  child: const Text("Lihat Semua",
+                  child: Text(context.s.seeAll,
                       style: TextStyle(
                           fontSize: 13,
                           color: Colors.green,
@@ -618,7 +640,8 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
                 final title = r['title']?.toString() ?? 'Resep';
                 final imageUrl = r['image_url']?.toString();
                 final cal = r['nutrition_info'] is Map
-                    ? (r['nutrition_info'] as Map)['calories']?.toString() ?? '0'
+                    ? (r['nutrition_info'] as Map)['calories']?.toString() ??
+                        '0'
                     : '0';
                 final prep = r['prep_time'] ?? 0;
                 final cook = r['cook_time'] ?? 0;
@@ -646,7 +669,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
 
             // --- POPULAR RECIPES SECTION ---
             if (_popularRecipes.isNotEmpty) ...[
-              Text("10 Resep Terpopuler",
+              Text(context.s.top10Popular,
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -658,7 +681,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
                   final hits = r['popularity_count'] ?? 0;
                   final desc = (r['description'] ?? '').toString();
                   final subtitle = hits > 0
-                      ? '${desc.isNotEmpty ? '$desc\n' : ''}Sudah dilihat $hits kali oleh pengguna.'
+                      ? '${desc.isNotEmpty ? '$desc\n' : ''}${context.s.viewedByUsers(hits)}'
                       : desc;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16),
@@ -667,11 +690,9 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
                       imageUrl: r['image_url']?.toString(),
                       subtitle: subtitle,
                       calories: r['nutrition_info'] is Map
-                          ? (r['nutrition_info'] as Map)['calories']
-                              ?.toString()
+                          ? (r['nutrition_info'] as Map)['calories']?.toString()
                           : null,
-                      time:
-                          (r['prep_time'] ?? 0) + (r['cook_time'] ?? 0),
+                      time: (r['prep_time'] ?? 0) + (r['cook_time'] ?? 0),
                       onTap: id == null
                           ? null
                           : () {
@@ -691,7 +712,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
             ],
 
             // --- RECOMMENDATION SECTION ---
-            Text("5 Rekomendasi Masakan",
+            Text(context.s.top5Recs,
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -824,7 +845,8 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
 
   // --- WIDGET BUILDERS ---
 
-  Widget _buildModeFoodItem(IconData icon, String label, String mealKey, Color iconColor) {
+  Widget _buildModeFoodItem(
+      IconData icon, String label, String mealKey, Color iconColor) {
     bool isSelected = _selectedMealTime == mealKey;
     return GestureDetector(
       onTap: () {
@@ -859,9 +881,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
               style: TextStyle(
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                   fontSize: 13,
-                  color: isSelected
-                      ? iconColor
-                      : context.colors.textPrimary)),
+                  color: isSelected ? iconColor : context.colors.textPrimary)),
         ],
       ),
     );
@@ -955,8 +975,15 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
               right: imageRight,
               bottom: imageBottom,
               child: imageUrl != null && imageUrl.isNotEmpty
-                  ? NetImage(imageUrl, width: 75, height: 75, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.restaurant, color: Colors.white54, size: 40))
-                  : Image.asset(imagePath.isNotEmpty ? imagePath : 'image/soup.png', width: 75),
+                  ? NetImage(imageUrl,
+                      width: 75,
+                      height: 75,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.restaurant,
+                          color: Colors.white54, size: 40))
+                  : Image.asset(
+                      imagePath.isNotEmpty ? imagePath : 'image/soup.png',
+                      width: 75),
             )
           ],
         ),
@@ -1019,11 +1046,11 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
-                        children: const [
+                        children: [
                           Icon(Icons.star_rounded,
                               color: Colors.white, size: 14),
                           SizedBox(width: 4),
-                          Text("Cocok Untukmu",
+                          Text(context.s.matchForYou,
                               style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 11,
@@ -1058,14 +1085,14 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
                     children: [
                       const Icon(Icons.local_fire_department_rounded,
                           size: 18, color: Colors.orange),
-                      Text(" ${calories ?? '0'} Kal",
+                      Text(context.s.kcalSpaced(calories ?? '0'),
                           style: TextStyle(
                               color: context.colors.textSecondary,
                               fontWeight: FontWeight.w500)),
                       const SizedBox(width: 15),
                       const Icon(Icons.access_time_rounded,
                           size: 18, color: Colors.blueGrey),
-                      Text(" ${time ?? 0} menit",
+                      Text(context.s.minutesSpaced(time ?? 0),
                           style: TextStyle(
                               color: context.colors.textSecondary,
                               fontWeight: FontWeight.w500)),

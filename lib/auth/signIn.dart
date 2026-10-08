@@ -193,7 +193,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
         }
       }
 
-      final msg = res.message ?? 'Login gagal';
+      final msg = res.message ?? context.s.loginFailed;
       setState(() {
         _hasError = true;
         _errorMessage = msg;
@@ -208,7 +208,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
     final user = data?['user'] as Map<String, dynamic>?;
     if (token == null || token.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Respons tidak valid')),
+        SnackBar(content: Text(context.s.invalidResponse)),
       );
       return;
     }
@@ -267,7 +267,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
                             child: Align(
                               alignment: Alignment.topLeft,
                               child: Text(
-                                'SignIn',
+                                context.s.signInLabel,
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 38 * scale,
@@ -317,7 +317,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
                                   );
                                 },
                                 child: Text(
-                                  'Lupa Password?',
+                                  context.s.forgotPassword,
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: AppColor().hintTextColor,
@@ -351,8 +351,8 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
                                   )
                                 : Text(
                                     _pwCooldownSeconds > 0
-                                        ? 'SignIn (${_pwCooldownSeconds}s)'
-                                        : 'SignIn',
+                                        ? context.s.signInIn(_pwCooldownSeconds)
+                                        : context.s.signInLabel,
                                     style: TextStyle(
                                       color: AppColor().putih,
                                       fontWeight: FontWeight.bold,
@@ -377,10 +377,11 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
           ),
           Padding(
             padding: EdgeInsets.only(bottom: screenheight * 0.04),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Text('Belum punya akun ?',
+                Text(context.s.noAccountYet,
                     style: TextStyle(fontSize: 17 * scale)),
                 SizedBox(width: 6),
                 TextButton(
@@ -400,7 +401,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
                   child: Row(
                     children: [
                       Text(
-                        'SignUp',
+                        context.s.signUpLabel,
                         style: TextStyle(
                           color: AppColor().utama,
                           fontSize: 17 * scale,
@@ -432,7 +433,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
         onFieldSubmitted: (v) =>
             FocusScope.of(context).requestFocus(_focusNode2),
         validator: (value) {
-          if (value == null || value.isEmpty) return "Wajib isi email";
+          if (value == null || value.isEmpty) return context.s.emailRequired;
           final email = value.trim();
           // Accept any real address shape. The previous check demanded the
           // literal substring "gmail", so every non-Gmail account was
@@ -442,7 +443,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
             r"(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
             r"(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$",
           ).hasMatch(email);
-          if (!ok) return "Format email tidak valid";
+          if (!ok) return context.s.emailInvalid;
           return null;
         },
         decoration: InputDecoration(
@@ -474,7 +475,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
           ),
           fillColor: Color(0xFFFFFFFF),
           prefixIcon: Icon(Icons.mail, color: AppColor().hintTextColor),
-          hintText: 'Masukkan Emailmu',
+          hintText: context.s.enterYourEmail,
           hintStyle: TextStyle(color: AppColor().hintTextColor),
         ),
       ),
@@ -491,7 +492,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
         autovalidateMode: AutovalidateMode.onUserInteraction,
         onFieldSubmitted: (v) => _submitData(),
         validator: (value) {
-          if (value == null || value.isEmpty) return "Wajib isi bray";
+          if (value == null || value.isEmpty) return context.s.fieldRequired;
           if (value.length < 6) return "Minimal 6 karakter";
           return null;
         },
@@ -531,7 +532,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
             ),
             onPressed: () => setState(() => _obscuretext = !_obscuretext),
           ),
-          hintText: 'Masukkan Password',
+          hintText: context.s.enterYourPassword,
           hintStyle: TextStyle(color: AppColor().hintTextColor),
         ),
       ),
@@ -573,9 +574,9 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
               if (userCredential == null) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                         content: Text(
-                            'Google sign-in gagal. Coba lagi.')),
+                            context.s.googleSignInFailed)),
                   );
                 }
                 return;
@@ -588,9 +589,9 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
               if (email == null || email.isEmpty || uid == null || uid.isEmpty) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                         content:
-                            Text('Google sign-in gagal. Coba lagi.')),
+                            Text(context.s.googleSignInFailed)),
                   );
                 }
                 return;
@@ -598,9 +599,9 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
               if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                         content: Text(
-                            'Tidak bisa mendapatkan token Firebase. Coba lagi.')),
+                            context.s.googleSignInIncomplete)),
                   );
                 }
                 return;
@@ -624,7 +625,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                         content: Text(
-                            res.message ?? 'Google sign-in gagal. Coba lagi.')),
+                            res.message ?? context.s.googleSignInFailed)),
                   );
                   return;
                 }
@@ -634,7 +635,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
                 final needsPassword = data?['needs_password'] == true;
                 if (token == null || token.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Respons tidak valid')),
+                    SnackBar(content: Text(context.s.invalidResponse)),
                   );
                   return;
                 }
@@ -659,7 +660,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                       content: Text(
-                          'Google sign-in gagal. Coba lagi. (${e.toString()})')),
+                          context.s.googleSignInFailedDetail(e.toString()))),
                 );
               }
             },

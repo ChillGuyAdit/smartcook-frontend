@@ -4,6 +4,7 @@ import 'package:smartcook/page/homepage.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/token_service.dart';
 import 'package:smartcook/view/onboarding/mainBoarding.dart';
+import '../core/l10n/strings.dart';
 
 class GoogleSetPasswordPage extends StatefulWidget {
   final String? email;
@@ -74,7 +75,7 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
 
     if (!res.success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message ?? 'Gagal menyimpan password')),
+        SnackBar(content: Text(res.message ?? context.s.savePasswordFailed)),
       );
       return;
     }
@@ -82,7 +83,7 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
     final data = res.data;
     if (data is! Map<String, dynamic>) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Format respons tidak valid')),
+        SnackBar(content: Text(context.s.invalidResponse)),
       );
       return;
     }
@@ -92,7 +93,7 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
 
     if (token == null || token.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Token tidak ditemukan')),
+        SnackBar(content: Text(context.s.sessionNotFound)),
       );
       return;
     }
@@ -123,7 +124,7 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Set Password'),
+        title: Text(context.s.setPassword),
         backgroundColor: AppColor().utama,
       ),
       body: Padding(
@@ -136,7 +137,7 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Buat Password Baru',
+                    context.s.createNewPasswordTitle,
                     style: TextStyle(
                       fontSize: 24 * scale,
                       fontWeight: FontWeight.bold,
@@ -145,7 +146,7 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
                   ),
                   SizedBox(height: 16 * scale),
                   Text(
-                    'Email kamu akan menggunakan email dari akun Google.',
+                    context.s.googleEmailNote,
                     style: TextStyle(
                       fontSize: 14 * scale,
                       color: AppColor().hintTextColor,
@@ -157,7 +158,7 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
                     controller: _emailController,
                     decoration: InputDecoration(
                       labelText: 'Email',
-                      hintText: _email ?? 'Memuat email...',
+                      hintText: _email ?? context.s.loadingEmail,
                       filled: true,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12 * scale),
@@ -172,7 +173,7 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Password wajib diisi';
+                        return context.s.passwordRequired;
                       }
                       if (value.length < 6) {
                         return 'Minimal 6 karakter';
@@ -180,7 +181,7 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
                       return null;
                     },
                     decoration: InputDecoration(
-                      labelText: 'Password baru',
+                      labelText: context.s.newPassword,
                       filled: true,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12 * scale),
@@ -207,15 +208,15 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Konfirmasi password wajib diisi';
+                        return context.s.confirmPasswordRequired;
                       }
                       if (value != _passwordController.text) {
-                        return 'Konfirmasi password tidak sama';
+                        return context.s.passwordsDontMatch;
                       }
                       return null;
                     },
                     decoration: InputDecoration(
-                      labelText: 'Konfirmasi password',
+                      labelText: context.s.confirmPassword,
                       filled: true,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12 * scale),
@@ -259,7 +260,7 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
                               ),
                             )
                           : Text(
-                              'Simpan Password',
+                              context.s.savePassword,
                               style: TextStyle(
                                 color: AppColor().putih,
                                 fontSize: 18 * scale,

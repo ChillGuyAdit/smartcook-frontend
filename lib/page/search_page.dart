@@ -6,6 +6,7 @@ import 'package:smartcook/service/offline_cache_service.dart';
 import '../core/theme/app_theme_colors.dart';
 import 'masakan.dart';
 import 'reusable/net_image.dart';
+import '../core/l10n/strings.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -192,7 +193,7 @@ class _SearchPageState extends State<SearchPage> {
                         child: TextField(
                           controller: _controller,
                           decoration: InputDecoration(
-                            hintText: 'Cari resep...',
+                            hintText: context.s.searchRecipes,
                             prefixIcon: const Icon(Icons.search),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -244,7 +245,7 @@ class _SearchPageState extends State<SearchPage> {
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
-                        'Mode global: menampilkan resep yang sudah ada di database dari semua user (tetap disesuaikan alergi dan preferensimu).',
+                        context.s.globalModeNote,
                         style: TextStyle(
                             fontSize: 11,
                             color: context.colors.textSecondary),
@@ -259,7 +260,7 @@ class _SearchPageState extends State<SearchPage> {
                   : _results.isEmpty && _query.isNotEmpty
                       ? Center(
                           child: Text(
-                            'Tidak ada hasil untuk "$_query"',
+                            context.s.noResultsFor(_query),
                             style: TextStyle(
                                 color: context.colors.textSecondary),
                           ),
@@ -311,7 +312,7 @@ class _SearchPageState extends State<SearchPage> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis),
                                     subtitle:
-                                        Text('$cal Kal • ${prep + cook}m'),
+                                        Text(context.s.recipeMeta(cal, prep + cook)),
                                     trailing: const Icon(
                                         Icons.arrow_forward_ios,
                                         size: 16),
@@ -342,7 +343,7 @@ class _SearchPageState extends State<SearchPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
         const SizedBox(height: 4),
-        Text('Pencarian terbaru',
+        Text(context.s.recentSearches,
             style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
@@ -358,7 +359,7 @@ class _SearchPageState extends State<SearchPage> {
                     size: 80, color: context.colors.textDisabled),
                 SizedBox(height: 16),
                 Text(
-                  "Cari resep favoritmu",
+                  context.s.searchFavorites,
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -389,7 +390,7 @@ class _SearchPageState extends State<SearchPage> {
           Padding(
             padding: const EdgeInsets.only(top: 16),
             child: Text(
-              'Menampilkan data dari cache (offline)',
+              context.s.showingCache,
               style: TextStyle(
                   color: context.colors.textDisabled, fontSize: 12),
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartcook/auth/signIn.dart';
 import 'package:smartcook/helper/color.dart';
+import '../core/l10n/strings.dart';
 
 class sukses extends StatefulWidget {
   const sukses({super.key});
@@ -26,12 +27,12 @@ class _suksesState extends State<sukses> {
           ),
           SizedBox(height: 22),
           Text(
-            'Sukses!',
+            context.s.successTitle,
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 35 * scale),
           ),
           SizedBox(height: 20 * scale),
           Text(
-            'Selamat Anda berhasil mengganti password baru Anda\nKlik lanjutkan untuk masuk',
+            context.s.passwordChangedBody,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14 * scale),
           ),
@@ -51,7 +52,7 @@ class _suksesState extends State<sukses> {
               backgroundColor: AppColor().utama,
             ),
             child: Text(
-              'Lanjutkan',
+              context.s.continueLabel,
               style: TextStyle(
                 fontSize: 27.5 * scale,
                 fontWeight: FontWeight.bold,

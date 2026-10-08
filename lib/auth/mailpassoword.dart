@@ -5,6 +5,7 @@ import 'package:smartcook/auth/resetpassword.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/otp_cooldown_service.dart';
+import '../core/l10n/strings.dart';
 
 class mailpassword extends StatefulWidget {
   final String email;
@@ -62,7 +63,7 @@ class _mailpasswordState extends State<mailpassword> {
     final otp = _otpControllers.map((c) => c.text).join();
     if (otp.length != 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Masukkan 4 digit kode OTP')),
+        SnackBar(content: Text(context.s.enterOtp4)),
       );
       return;
     }
@@ -76,7 +77,7 @@ class _mailpasswordState extends State<mailpassword> {
     setState(() => _isLoading = false);
     if (!res.success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message ?? 'Kode OTP tidak valid')),
+        SnackBar(content: Text(res.message ?? context.s.otpInvalid)),
       );
       return;
     }
@@ -115,7 +116,7 @@ class _mailpasswordState extends State<mailpassword> {
         if (mounted) setState(() => _resendCooldownSeconds = retryAfter!);
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message ?? 'Gagal mengirim ulang OTP')),
+        SnackBar(content: Text(res.message ?? currentStrings.resendOtpFailed)),
       );
       return;
     }
@@ -138,7 +139,7 @@ class _mailpasswordState extends State<mailpassword> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Kode OTP baru telah dikirim')),
+      SnackBar(content: Text(currentStrings.otpResent)),
     );
   }
 
@@ -166,13 +167,13 @@ class _mailpasswordState extends State<mailpassword> {
               ),
               SizedBox(height: 46),
               Text(
-                'Check your email',
+                context.s.checkYourEmail,
                 style: TextStyle(fontSize: 30, fontWeight: FontWeight.w600),
               ),
               SizedBox(height: 14),
               Text.rich(
                 TextSpan(
-                  text: "Kami mengirim 4 digit kode ke\n",
+                  text: context.s.weSentCodeTo,
                   style: TextStyle(fontSize: 12),
                   children: [
                     TextSpan(
@@ -193,14 +194,14 @@ class _mailpasswordState extends State<mailpassword> {
                   children: [
                     const Text('⏰ '),
                     Text(
-                      'Kode akan expired dalam ${OtpCooldownService.formatSeconds(_expirySeconds)}',
+                      context.s.otpExpiresIn(OtpCooldownService.formatSeconds(_expirySeconds)),
                       style: const TextStyle(fontSize: 12),
                     ),
                   ],
                 ),
               ] else ...[
-                const Text(
-                  'Kode OTP sudah expired. Kirim ulang OTP.',
+                Text(
+                  context.s.otpExpired,
                   style: TextStyle(fontSize: 12, color: Colors.red),
                   textAlign: TextAlign.center,
                 ),
@@ -239,7 +240,7 @@ class _mailpasswordState extends State<mailpassword> {
                         ),
                       )
                     : Text(
-                        "Verify",
+                        context.s.verify,
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -253,8 +254,8 @@ class _mailpasswordState extends State<mailpassword> {
                     _isLoading || _resendCooldownSeconds > 0 ? null : _resendOtp,
                 child: Text(
                   _resendCooldownSeconds > 0
-                      ? 'Resend OTP (${_resendCooldownSeconds}s)'
-                      : 'Resend OTP',
+                      ? context.s.resendOtpIn(_resendCooldownSeconds)
+                      : context.s.resendOtp,
                 ),
               ),
             ],

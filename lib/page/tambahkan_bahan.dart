@@ -5,6 +5,7 @@ import 'package:smartcook/service/offline_cache_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
 
 import '../core/theme/app_theme_colors.dart';
+import '../core/l10n/strings.dart';
 
 class TambahkanBahanPage extends StatefulWidget {
   const TambahkanBahanPage({super.key});
@@ -387,7 +388,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Tambahkan Bahan',
+          context.s.addIngredients,
           style: TextStyle(
             color: context.colors.textPrimary,
             fontSize: 22 * scale,
@@ -411,7 +412,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                       controller: _searchController,
                       decoration: InputDecoration(
                         hintText:
-                            'Cari atau ketik nama bahan baru (mis. \"Daun bawang\")',
+                            context.s.searchOrTypeIngredient,
                         hintStyle:
                             TextStyle(color: context.colors.textDisabled),
                         prefixIcon: Icon(Icons.search,
@@ -439,7 +440,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                     ),
                     icon: const Icon(Icons.add, size: 18, color: Colors.white),
                     label: Text(
-                      'Tambah',
+                      context.s.add,
                       style: TextStyle(
                         fontSize: 12 * scale,
                         fontWeight: FontWeight.w600,
@@ -451,7 +452,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
               ),
               SizedBox(height: 30 * scale),
               Text(
-                'Berdasarkan Kategori:',
+                context.s.byCategory,
                 style: TextStyle(
                     fontSize: 18 * scale,
                     fontWeight: FontWeight.w500,
@@ -480,7 +481,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Bahan baru: "${_searchController.text.trim()}" akan disimpan sebagai ${selectedCategory.toLowerCase()}.',
+                          context.s.newIngredientNote(_searchController.text.trim(), selectedCategory.toLowerCase()),
                           style: TextStyle(
                             fontSize: 12 * scale,
                             color: context.colors.textSecondary,
@@ -491,7 +492,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                   ),
                 ),
               Text(
-                'Daftar:',
+                context.s.listLabel,
                 style: TextStyle(
                     fontSize: 18 * scale,
                     fontWeight: FontWeight.w500,
@@ -521,7 +522,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                           ),
                         )
                       : Text(
-                          'Simpan ke Kulkas',
+                          context.s.saveToFridge,
                           style: TextStyle(
                               fontSize: 18 * scale,
                               fontWeight: FontWeight.bold,
@@ -550,13 +551,13 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
     final name = _searchController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Isi nama bahan terlebih dahulu')),
+        SnackBar(content: Text(context.s.enterIngredientFirst)),
       );
       return;
     }
     if (selectedCategory.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pilih kategori bahan terlebih dahulu')),
+        SnackBar(content: Text(context.s.pickCategoryFirst)),
       );
       return;
     }
@@ -565,7 +566,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
     final groups = bahanData[categoryKey];
     if (groups == null || groups.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kategori tidak valid')),
+        SnackBar(content: Text(context.s.invalidCategory)),
       );
       return;
     }
@@ -577,7 +578,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
     });
     if (alreadyExists) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bahan sudah ada di daftar kategori ini')),
+        SnackBar(content: Text(context.s.ingredientAlreadyListed)),
       );
       return;
     }
@@ -624,9 +625,9 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
 
     if (toSave.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
             content: Text(
-                'Tidak ada bahan yang dikirim ke kulkas. Perubahan daftar tersimpan.')),
+                context.s.nothingSentToFridge)),
       );
       Navigator.pop(context);
       return;
@@ -652,7 +653,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              '${toSave.length} bahan akan disimpan ke kulkas saat online'),
+              context.s.willSaveWhenOnline(toSave.length)),
         ),
       );
       Navigator.pop(context);
@@ -698,8 +699,8 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
           backgroundColor: Colors.red.shade700,
           content: Text(
             lastError?.isNotEmpty == true
-                ? 'Gagal menyimpan: $lastError'
-                : 'Gagal menyimpan. Pastikan sudah login.',
+                ? context.s.saveFailedWith(lastError)
+                : context.s.saveFailedLogin,
           ),
         ),
       );
@@ -708,12 +709,12 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
         !OfflineManager.isOffline.value) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$ok dari ${toSave.length} bahan berhasil disimpan.'),
+          content: Text(context.s.savedNOfM(ok, toSave.length)),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${toSave.length} bahan diproses ke kulkas')),
+        SnackBar(content: Text(context.s.processedToFridge(toSave.length))),
       );
     }
     Navigator.pop(context);
@@ -828,7 +829,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Nama', style: TextStyle(color: Colors.white70)),
+                Text(context.s.name, style: TextStyle(color: Colors.white70)),
                 Text('Total', style: TextStyle(color: Colors.white70)),
               ],
             ),
@@ -942,7 +943,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                 padding: EdgeInsets.symmetric(vertical: 12 * scale),
               ),
               child: Text(
-                'Save',
+                context.s.save,
                 style: TextStyle(
                     fontSize: 18 * scale, fontWeight: FontWeight.bold),
               ),
@@ -965,7 +966,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15)),
               title: Text(
-                'Jumlah ${item['name']}',
+                context.s.quantityOf(item['name']),
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
@@ -1010,7 +1011,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: Text(
-                    'Selesai',
+                    context.s.done,
                     style: TextStyle(color: AppColor().utama, fontSize: 16),
                   ),
                 ),

@@ -5,6 +5,7 @@ import '../core/theme/app_theme_colors.dart';
 import '../core/theme/shadows.dart';
 import 'masakan.dart';
 import 'reusable/net_image.dart';
+import '../core/l10n/strings.dart';
 
 class CategoryPage extends StatefulWidget {
   final String categoryName;
@@ -42,6 +43,21 @@ class _CategoryPageState extends State<CategoryPage> {
     if (n.contains("sehat") || n.contains("rendah kalori")) return "healthy";
     if (n.contains("nutrisi") || n.contains("seimbang")) return "balanced";
     return "";
+  }
+
+  /// Title shown to the user. `categoryName` itself stays Indonesian because
+  /// [_categoryToParam] derives the API filter from it.
+  String _displayName(BuildContext context) {
+    switch (_categoryToParam()) {
+      case 'healthy':
+        return context.s.catTitleHealthy;
+      case 'balanced':
+        return context.s.catTitleBalanced;
+      case 'western':
+        return context.s.catTitleWestern;
+      default:
+        return widget.categoryName.replaceAll("\n", " ");
+    }
   }
 
   Future<void> _loadRecipes() async {
@@ -96,7 +112,7 @@ class _CategoryPageState extends State<CategoryPage> {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
-      barrierLabel: "Filter Dismiss",
+      barrierLabel: context.s.filterDismiss,
       pageBuilder: (context, anim1, anim2) {
         return Align(
           alignment: Alignment.topRight, // Posisikan di kanan atas
@@ -120,7 +136,7 @@ class _CategoryPageState extends State<CategoryPage> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Filter Pencarian",
+                        Text(context.s.searchFilter,
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
@@ -128,7 +144,7 @@ class _CategoryPageState extends State<CategoryPage> {
                         const Divider(),
 
                         // --- FILTER KALORI ---
-                        Text("Maks. Kalori (Kal)",
+                        Text(context.s.maxCaloriesLabel,
                             style: TextStyle(
                                 fontSize: 12,
                                 color: context.colors.textSecondary)),
@@ -158,7 +174,7 @@ class _CategoryPageState extends State<CategoryPage> {
                         ),
 
                         // --- FILTER WAKTU ---
-                        Text("Maks. Waktu (Menit)",
+                        Text(context.s.maxTimeLabel,
                             style: TextStyle(
                                 fontSize: 12,
                                 color: context.colors.textSecondary)),
@@ -199,7 +215,7 @@ class _CategoryPageState extends State<CategoryPage> {
                               _applyFilters(); // Terapkan filter ke list
                               Navigator.pop(context); // Tutup popup
                             },
-                            child: const Text("Terapkan",
+                            child: Text(context.s.apply,
                                 style: TextStyle(color: Colors.white)),
                           ),
                         )
@@ -315,7 +331,7 @@ class _CategoryPageState extends State<CategoryPage> {
                             Opacity(
                               opacity: 1.0 - (0.2 * percent),
                               child: Text(
-                                "Kumpulan resep terbaik untuk kategori ${widget.categoryName.replaceAll("\n", " ").toLowerCase()}.",
+                                context.s.categoryBlurb(_displayName(context).toLowerCase()),
                                 // Berubah menjadi 1 baris (terpotong "...") saat header mengecil
                                 maxLines: percent > 0.5 ? 1 : 3,
                                 overflow: TextOverflow.ellipsis,
@@ -357,7 +373,7 @@ class _CategoryPageState extends State<CategoryPage> {
                           _applyFilters(); // Langsung filter saat ngetik
                         },
                         decoration: InputDecoration(
-                          hintText: "Cari resep...",
+                          hintText: context.s.searchRecipes,
                           hintStyle: TextStyle(
                               color: context.colors.textDisabled,
                               fontSize: 14),
@@ -413,7 +429,7 @@ class _CategoryPageState extends State<CategoryPage> {
                           child: Padding(
                             padding: const EdgeInsets.only(top: 50),
                             child: Text(
-                              "Resep tidak ditemukan 😥\nCoba ubah filter atau pencarianmu.",
+                              context.s.recipesNotFound,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                   color: context.colors.textSecondary),
@@ -508,7 +524,7 @@ class _CategoryPageState extends State<CategoryPage> {
                       const Icon(Icons.local_fire_department_rounded,
                           size: 16, color: Colors.orange),
                       const SizedBox(width: 4),
-                      Text("$cal Kal",
+                      Text(context.s.kcal(cal),
                           style: TextStyle(
                               fontSize: 13,
                               color: context.colors.textSecondary)),

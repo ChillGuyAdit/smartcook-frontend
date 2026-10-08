@@ -4,6 +4,7 @@ import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/otp_cooldown_service.dart';
 import 'package:smartcook/service/token_service.dart';
+import '../core/l10n/strings.dart';
 
 class ChangeEmailPage extends StatefulWidget {
   const ChangeEmailPage({super.key});
@@ -82,7 +83,7 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
     if (_loadingSend || _otpCooldownSeconds > 0) return;
     if (_emailController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email baru wajib diisi')),
+        SnackBar(content: Text(context.s.newEmailRequired)),
       );
       return;
     }
@@ -97,8 +98,8 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
 
     String baseMessage = res.message ??
         (res.success
-            ? 'Kode OTP telah dikirim ke email kamu.'
-            : 'Gagal mengirim OTP');
+            ? context.s.otpSentToEmail
+            : context.s.sendOtpFailed);
 
     const key = 'profile_email';
 
@@ -108,7 +109,7 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
       if (expiresSec is num && expiresSec > 0) {
         final minutes = (expiresSec / 60).ceil();
         baseMessage =
-            '$baseMessage Kode berlaku sekitar $minutes menit.';
+            context.s.otpValidAbout(baseMessage, minutes);
         await OtpCooldownService.setExpiry(key, expiresSec.toInt());
         if (mounted) setState(() => _expirySeconds = expiresSec.toInt());
       }
@@ -137,7 +138,7 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
     if (_loadingConfirm) return;
     if (_otpController.text.trim().length != 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Masukkan 4 digit OTP')),
+        SnackBar(content: Text(context.s.enterOtp4)),
       );
       return;
     }
@@ -151,7 +152,7 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
     setState(() => _loadingConfirm = false);
     if (!res.success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message ?? 'Gagal mengganti email')),
+        SnackBar(content: Text(res.message ?? context.s.changeEmailFailed)),
       );
       return;
     }
@@ -162,7 +163,7 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Email berhasil diubah')),
+      SnackBar(content: Text(currentStrings.emailChanged)),
     );
     Navigator.pop(context, true);
   }
@@ -174,7 +175,7 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ganti Email'),
+        title: Text(context.s.changeEmail),
         backgroundColor: AppColor().utama,
       ),
       body: Padding(
@@ -187,13 +188,13 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email baru'),
+                decoration: InputDecoration(labelText: context.s.newEmail),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) {
                     return 'Email baru wajib diisi';
                   }
                   if (!v.contains('@') || !v.contains('.')) {
-                    return 'Format email tidak valid';
+                    return context.s.emailInvalid;
                   }
                   return null;
                 },
@@ -205,8 +206,8 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
                     child: TextFormField(
                       controller: _otpController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                          labelText: 'Kode OTP (4 digit)'),
+                      decoration: InputDecoration(
+                          labelText: context.s.otpCodeField),
                     ),
                   ),
                   SizedBox(width: 12 * scale),
@@ -227,8 +228,8 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
                           )
                         : Text(
                             _otpCooldownSeconds > 0
-                                ? 'Kirim OTP (${_otpCooldownSeconds}s)'
-                                : 'Kirim OTP',
+                                ? context.s.sendOtpIn(_otpCooldownSeconds)
+                                : context.s.sendOtp,
                           ),
                   ),
                 ],
@@ -237,7 +238,7 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
                 SizedBox(height: 8 * scale),
                 if (_expirySeconds > 0)
                   Text(
-                    '⏰ OTP akan expired dalam ${OtpCooldownService.formatSeconds(_expirySeconds)}',
+                    context.s.otpExpiresInClock(OtpCooldownService.formatSeconds(_expirySeconds)),
                     style: TextStyle(
                       fontSize: 12 * scale,
                       color: Colors.grey[700],
@@ -262,7 +263,7 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
                             color: Colors.white,
                           ),
                         )
-                      : const Text('Konfirmasi Email'),
+                      : Text(context.s.confirmEmail),
                 ),
               ),
             ],

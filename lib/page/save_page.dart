@@ -7,6 +7,7 @@ import 'package:smartcook/page/masakan.dart';
 import '../core/theme/app_theme_colors.dart';
 import '../core/theme/shadows.dart';
 import 'reusable/net_image.dart';
+import '../core/l10n/strings.dart';
 
 class SavePage extends StatefulWidget {
   const SavePage({super.key});
@@ -65,8 +66,8 @@ class _SavePageState extends State<SavePage> {
       });
       if (OfflineManager.isOffline.value && cached.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tidak bisa mengambil favorit dari server (offline)'),
+          SnackBar(
+            content: Text(currentStrings.favoritesOffline),
           ),
         );
       }
@@ -79,7 +80,7 @@ class _SavePageState extends State<SavePage> {
       backgroundColor: context.colors.background,
       appBar: AppBar(
         title: Text(
-          "Disimpan",
+          context.s.savedTitle,
           style: TextStyle(
               color: context.colors.textPrimary,
               fontWeight: FontWeight.bold,
@@ -120,7 +121,7 @@ class _SavePageState extends State<SavePage> {
               size: 80, color: context.colors.textDisabled),
           const SizedBox(height: 16),
           Text(
-            "Belum ada resep yang disimpan",
+            context.s.noSavedRecipes,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
@@ -133,7 +134,7 @@ class _SavePageState extends State<SavePage> {
   }
 
   Widget _buildRecipeCard(Map<String, dynamic> recipe) {
-    final String title = recipe['title'] ?? 'Resep Tanpa Nama';
+    final String title = recipe['title'] ?? context.s.unnamedRecipe;
     final String imagePath = recipe['image_url'] ?? '';
     // Ambil info nutrisi
     String calories = "0 Kal";

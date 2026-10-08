@@ -6,6 +6,7 @@ import 'package:smartcook/service/offline_manager.dart';
 import '../core/theme/app_theme_colors.dart';
 import '../core/theme/shadows.dart';
 import 'tambahkan_bahan.dart';
+import '../core/l10n/strings.dart';
 
 class KulkasPage extends StatefulWidget {
   const KulkasPage({super.key});
@@ -85,12 +86,22 @@ class _KulkasPageState extends State<KulkasPage> {
     return exp.difference(today).inDays;
   }
 
+  /// Chip text for an expiry-filter option. The option string itself is the
+  /// logic key (compared in the filter), so only its label is translated.
+  String _filterLabel(String opt) => switch (opt) {
+        'Semua' => context.s.allLabel,
+        'Kadaluarsa' => context.s.expiredLabel,
+        '< 3 Hari' => context.s.lessThanDays(3),
+        '< 7 Hari' => context.s.lessThanDays(7),
+        _ => opt,
+      };
+
   // Teks Tanggal Kadaluarsa
   String _getExpiredText(int diffDays) {
-    if (diffDays < 0) return "Sudah Kadaluarsa";
-    if (diffDays == 0) return "Hari ini";
-    if (diffDays == 1) return "Besok";
-    return "$diffDays Hari lagi";
+    if (diffDays < 0) return context.s.expiredLabel;
+    if (diffDays == 0) return context.s.todayLabel;
+    if (diffDays == 1) return context.s.tomorrowLabel;
+    return context.s.daysLeft(diffDays);
   }
 
   // Warna Teks Kadaluarsa
@@ -222,7 +233,7 @@ class _KulkasPageState extends State<KulkasPage> {
                 ),
                 const SizedBox(height: 15),
                 Text(
-                  "Hapus Bahan?",
+                  context.s.deleteIngredientTitle,
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -230,7 +241,7 @@ class _KulkasPageState extends State<KulkasPage> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  "Yakin ingin menghapus '$itemName' dari kulkasmu?",
+                  context.s.deleteIngredientBody(itemName),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       color: context.colors.textSecondary, fontSize: 14),
@@ -242,7 +253,7 @@ class _KulkasPageState extends State<KulkasPage> {
                     TextButton(
                       onPressed: () => Navigator.pop(context),
                       child: Text(
-                        "Batal",
+                        context.s.cancel,
                         style: TextStyle(
                             color: context.colors.textSecondary,
                             fontWeight: FontWeight.bold),
@@ -259,8 +270,8 @@ class _KulkasPageState extends State<KulkasPage> {
                         Navigator.pop(context);
                         _deleteItem(id);
                       },
-                      child: const Text(
-                        "Ya, Hapus",
+                      child: Text(
+                        context.s.yesDelete,
                         style: TextStyle(
                             color: Colors.white, fontWeight: FontWeight.bold),
                       ),
@@ -280,7 +291,7 @@ class _KulkasPageState extends State<KulkasPage> {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
-      barrierLabel: "Filter Dismiss",
+      barrierLabel: context.s.filterDismiss,
       pageBuilder: (context, anim1, anim2) {
         return Align(
           alignment: Alignment.topRight,
@@ -302,7 +313,7 @@ class _KulkasPageState extends State<KulkasPage> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Urutkan & Filter",
+                        Text(context.s.sortAndFilter,
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
@@ -310,7 +321,7 @@ class _KulkasPageState extends State<KulkasPage> {
                         const Divider(),
 
                         // --- SORTING STOK ---
-                        Text("Urutkan Berdasarkan",
+                        Text(context.s.sortBy,
                             style: TextStyle(
                                 fontSize: 12,
                                 color: context.colors.textSecondary)),
@@ -332,7 +343,7 @@ class _KulkasPageState extends State<KulkasPage> {
                                   ),
                                   alignment: Alignment.center,
                                   child: Text(
-                                    "Terbanyak",
+                                    context.s.mostStock,
                                     style: TextStyle(
                                       color: _sortOption == "Terbanyak"
                                           ? Colors.white
@@ -360,7 +371,7 @@ class _KulkasPageState extends State<KulkasPage> {
                                   ),
                                   alignment: Alignment.center,
                                   child: Text(
-                                    "Terdikit",
+                                    context.s.leastStock,
                                     style: TextStyle(
                                       color: _sortOption == "Terdikit"
                                           ? Colors.white
@@ -377,7 +388,7 @@ class _KulkasPageState extends State<KulkasPage> {
                         const SizedBox(height: 16),
 
                         // --- FILTER KADALUARSA (BARU) ---
-                        Text("Filter Kadaluarsa",
+                        Text(context.s.expiryFilter,
                             style: TextStyle(
                                 fontSize: 12,
                                 color: context.colors.textSecondary)),
@@ -393,7 +404,7 @@ class _KulkasPageState extends State<KulkasPage> {
                           ].map((opt) {
                             final isSelected = _expiredFilterOption == opt;
                             return ChoiceChip(
-                              label: Text(opt,
+                              label: Text(_filterLabel(opt),
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: isSelected
@@ -418,7 +429,7 @@ class _KulkasPageState extends State<KulkasPage> {
                         const SizedBox(height: 16),
 
                         // --- FILTER MAKSIMAL STOK ---
-                        Text("Maksimal Stok",
+                        Text(context.s.maxStockLabel,
                             style: TextStyle(
                                 fontSize: 12,
                                 color: context.colors.textSecondary)),
@@ -459,7 +470,7 @@ class _KulkasPageState extends State<KulkasPage> {
                               _applyFilters();
                               Navigator.pop(context);
                             },
-                            child: const Text("Terapkan",
+                            child: Text(context.s.apply,
                                 style: TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold)),
@@ -504,7 +515,7 @@ class _KulkasPageState extends State<KulkasPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Edit Bahan Kulkas',
+              context.s.editFridgeIngredient,
               style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -515,7 +526,7 @@ class _KulkasPageState extends State<KulkasPage> {
               controller: _nameController,
               style: TextStyle(color: context.colors.textPrimary),
               decoration: InputDecoration(
-                labelText: 'Nama Bahan',
+                labelText: context.s.ingredientName,
                 labelStyle: TextStyle(color: context.colors.textSecondary),
                 prefixIcon:
                     const Icon(Icons.restaurant_menu, color: Color(0xFF4CAF50)),
@@ -534,7 +545,7 @@ class _KulkasPageState extends State<KulkasPage> {
               keyboardType: TextInputType.number,
               style: TextStyle(color: context.colors.textPrimary),
               decoration: InputDecoration(
-                labelText: 'Jumlah',
+                labelText: context.s.quantity,
                 labelStyle: TextStyle(color: context.colors.textSecondary),
                 prefixIcon: const Icon(Icons.format_list_numbered,
                     color: Color(0xFF4CAF50)),
@@ -568,10 +579,10 @@ class _KulkasPageState extends State<KulkasPage> {
                 Navigator.of(context).pop();
                 if (res.success) {
                   await _loadFridge();
-                  _showSuccessPopup('Bahan berhasil diperbarui!');
+                  _showSuccessPopup(currentStrings.ingredientUpdated);
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(res.message ?? 'Gagal memperbarui')),
+                    SnackBar(content: Text(res.message ?? context.s.updateFailed)),
                   );
                 }
               },
@@ -581,8 +592,8 @@ class _KulkasPageState extends State<KulkasPage> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text(
-                'Simpan Perubahan',
+              child: Text(
+                context.s.saveChanges,
                 style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -606,14 +617,14 @@ class _KulkasPageState extends State<KulkasPage> {
         method: 'DELETE',
         path: '/api/fridge/$id',
       );
-      _showSuccessPopup('Bahan dihapus (akan disinkron saat online)');
+      _showSuccessPopup(currentStrings.ingredientDeletedSync);
       return;
     }
     final res = await ApiService.delete('/api/fridge/$id');
     if (!mounted) return;
     if (res.success) {
       await _loadFridge();
-      _showSuccessPopup('Bahan berhasil dihapus!');
+      _showSuccessPopup(currentStrings.ingredientDeleted);
     } else if (OfflineManager.isOffline.value) {
       // Fallback: anggap offline, hapus lokal & antrikan operasi
       if (mounted) setState(() {
@@ -624,10 +635,10 @@ class _KulkasPageState extends State<KulkasPage> {
         method: 'DELETE',
         path: '/api/fridge/$id',
       );
-      _showSuccessPopup('Bahan dihapus (akan disinkron saat online)');
+      _showSuccessPopup(currentStrings.ingredientDeletedSync);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message ?? 'Gagal menghapus')),
+        SnackBar(content: Text(res.message ?? context.s.deleteFailed)),
       );
     }
   }
@@ -682,7 +693,7 @@ class _KulkasPageState extends State<KulkasPage> {
                         },
                         style: TextStyle(color: context.colors.textPrimary),
                         decoration: InputDecoration(
-                          hintText: "Cari bahan di kulkas...",
+                          hintText: context.s.searchFridge,
                           hintStyle: TextStyle(
                               color: context.colors.textDisabled,
                               fontSize: 14),
@@ -735,7 +746,7 @@ class _KulkasPageState extends State<KulkasPage> {
                           child: Padding(
                             padding: const EdgeInsets.only(top: 50),
                             child: Text(
-                              "Bahan tidak ditemukan 😥\nCoba ubah filter atau tambahkan bahan.",
+                              context.s.ingredientsNotFound,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                   color: context.colors.textSecondary,
@@ -819,7 +830,7 @@ class _KulkasPageState extends State<KulkasPage> {
                         size: 14, color: Colors.blueGrey),
                     const SizedBox(width: 4),
                     Text(
-                      "Stok: ${item['qty']}",
+                      context.s.stockLabel(item['qty']),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -975,7 +986,7 @@ class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
               children: [
                 // Judul
                 Text(
-                  "Isi Kulkasmu",
+                  context.s.yourFridge,
                   style: TextStyle(
                     // Ukuran mengecil perlahan
                     fontSize: Tween<double>(begin: 24.0, end: 18.0)
@@ -989,7 +1000,7 @@ class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
                         Tween<double>(begin: 6.0, end: 2.0).transform(percent)),
                 // Deskripsi (Mengecil tapi TIDAK hilang / opacity tetap)
                 Text(
-                  "Cek dan kelola persediaan bahan masakan yang ada di dalam kulkasmu dengan mudah.",
+                  context.s.fridgeIntro,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

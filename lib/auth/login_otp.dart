@@ -7,6 +7,7 @@ import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/otp_cooldown_service.dart';
 import 'package:smartcook/service/token_service.dart';
 import 'package:smartcook/view/onboarding/mainBoarding.dart';
+import '../core/l10n/strings.dart';
 
 class LoginOtpPage extends StatefulWidget {
   final String email;
@@ -101,7 +102,7 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
     final otp = _otpControllers.map((c) => c.text).join();
     if (otp.length != 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Masukkan 4 digit kode OTP')),
+        SnackBar(content: Text(context.s.enterOtp4)),
       );
       return;
     }
@@ -129,7 +130,7 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
 
     if (!res.success) {
       setState(() {
-        _errorMessage = res.message ?? 'Verifikasi OTP gagal';
+        _errorMessage = res.message ?? context.s.otpVerifyFailed;
       });
       return;
     }
@@ -149,7 +150,7 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
     if (mustChangePassword && !_showNewPassword) {
       if (mounted) setState(() {
         _showNewPassword = true;
-        _errorMessage = 'OTP terverifikasi. Silakan buat password baru.';
+        _errorMessage = context.s.otpVerifiedNewPassword;
       });
       return;
     }
@@ -188,7 +189,7 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
         if (mounted) setState(() => _resendCooldownSeconds = retryAfter!);
       }
       if (mounted) setState(() {
-        _errorMessage = res.message ?? 'Gagal mengirim ulang OTP';
+        _errorMessage = res.message ?? context.s.resendOtpFailed;
       });
       return;
     }
@@ -209,7 +210,7 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
     if (mounted) setState(() {
       _resendCooldownSeconds = 60;
       _expirySeconds = expirySec;
-      _errorMessage = 'Kode OTP baru telah dikirim.';
+      _errorMessage = context.s.otpResent;
     });
   }
 
@@ -240,14 +241,14 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
                 child: Image.asset('image/mail.png'),
               ),
               const SizedBox(height: 46),
-              const Text(
-                'Check your email',
+              Text(
+                context.s.checkYourEmail,
                 style: TextStyle(fontSize: 30, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 14),
               Text.rich(
                 TextSpan(
-                  text: "Kami mengirim 4 digit kode ke\n",
+                  text: context.s.weSentCodeTo,
                   style: const TextStyle(fontSize: 12),
                   children: [
                     TextSpan(
@@ -268,14 +269,14 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
                   children: [
                     const Text('⏰ '),
                     Text(
-                      'Kode akan expired dalam ${OtpCooldownService.formatSeconds(_expirySeconds)}',
+                      context.s.otpExpiresIn(OtpCooldownService.formatSeconds(_expirySeconds)),
                       style: TextStyle(fontSize: 12 * scale),
                     ),
                   ],
                 ),
               ] else ...[
-                const Text(
-                  'Kode OTP sudah expired. Kirim ulang OTP.',
+                Text(
+                  context.s.otpExpired,
                   style: TextStyle(fontSize: 12, color: Colors.red),
                   textAlign: TextAlign.center,
                 ),
@@ -316,7 +317,7 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
                     controller: _passwordController,
                     obscureText: _obscureNewPassword,
                     decoration: InputDecoration(
-                      labelText: 'Password baru',
+                      labelText: context.s.newPassword,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -336,10 +337,10 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
                     validator: (value) {
                       if (!_showNewPassword) return null;
                       if (value == null || value.isEmpty) {
-                        return 'Password baru wajib diisi';
+                        return context.s.newPasswordRequired;
                       }
                       if (value.length < 6) {
-                        return 'Password minimal 6 karakter';
+                        return context.s.passwordMin6;
                       }
                       return null;
                     },
@@ -366,8 +367,8 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
                           strokeWidth: 3,
                         ),
                       )
-                    : const Text(
-                        "Verify",
+                    : Text(
+                        context.s.verify,
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -381,8 +382,8 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
                     _loading || _resendCooldownSeconds > 0 ? null : _resendOtp,
                 child: Text(
                   _resendCooldownSeconds > 0
-                      ? 'Resend OTP (${_resendCooldownSeconds}s)'
-                      : 'Resend OTP',
+                      ? context.s.resendOtpIn(_resendCooldownSeconds)
+                      : context.s.resendOtp,
                 ),
               ),
               const SizedBox(height: 18),

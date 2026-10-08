@@ -7,6 +7,7 @@ import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/auth_service.dart';
 import 'package:smartcook/service/token_service.dart';
 import 'package:smartcook/view/onboarding/mainBoarding.dart';
+import '../core/l10n/strings.dart';
 
 class signup extends StatefulWidget {
   const signup({super.key});
@@ -50,7 +51,7 @@ class _signupState extends State<signup> {
       debugPrint('Error navigating: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal navigasi: ${e.toString()}')),
+        SnackBar(content: Text(context.s.navigateFailed(e.toString()))),
       );
     }
   }
@@ -89,7 +90,7 @@ class _signupState extends State<signup> {
       if (!res.success) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(res.message ?? 'Registrasi gagal')),
+            SnackBar(content: Text(res.message ?? context.s.registerFailed)),
           );
         }
         return;
@@ -104,7 +105,7 @@ class _signupState extends State<signup> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content: Text(
-                    'Format respons tidak valid. Tipe: ${data.runtimeType}, Data: ${data?.toString() ?? 'null'}')),
+                    context.s.invalidResponse)),
           );
         }
         return;
@@ -113,7 +114,7 @@ class _signupState extends State<signup> {
       final user = data['user'] as Map<String, dynamic>?;
       if (token == null || token.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Token tidak ditemukan')),
+          SnackBar(content: Text(context.s.sessionNotFound)),
         );
         return;
       }
@@ -124,7 +125,7 @@ class _signupState extends State<signup> {
         debugPrint('Error saving token: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal menyimpan token: ${e.toString()}')),
+            SnackBar(content: Text(context.s.saveSessionFailed(e.toString()))),
           );
         }
         return;
@@ -137,7 +138,7 @@ class _signupState extends State<signup> {
       if (!mounted) return;
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Terjadi kesalahan: ${e.toString()}')),
+        SnackBar(content: Text(context.s.somethingWrong(e.toString()))),
       );
     }
   }
@@ -180,7 +181,7 @@ class _signupState extends State<signup> {
                         child: Align(
                           alignment: Alignment.topLeft,
                           child: Text(
-                            "Sign Up",
+                            context.s.signUpLabel,
                             style: TextStyle(
                               color: AppColor().hintTextColor,
                               fontSize: 38 * scale,
@@ -199,15 +200,15 @@ class _signupState extends State<signup> {
                                 _focusNode1,
                                 _focusNode2,
                                 Icons.person,
-                                'Masukkan Namamu',
+                                context.s.enterYourName,
                                 scale,
                                 false),
                             SizedBox(height: 15 * scale),
                             inputField(_kontrolEmail, _focusNode2, _focusNode3,
-                                Icons.mail, 'Masukkan Emailmu', scale, false),
+                                Icons.mail, context.s.enterYourEmail, scale, false),
                             SizedBox(height: 15 * scale),
                             inputField(_kontrolPassword, _focusNode3, null,
-                                Icons.lock, 'Masukkan Password', scale, true),
+                                Icons.lock, context.s.enterYourPassword, scale, true),
                           ],
                         ),
                       ),
@@ -234,7 +235,7 @@ class _signupState extends State<signup> {
                                 ),
                               )
                             : Text(
-                                'Sign Up',
+                                context.s.signUpLabel,
                                 style: TextStyle(
                                   color: AppColor().putih,
                                   fontSize: 22 * scale,
@@ -290,9 +291,9 @@ class _signupState extends State<signup> {
                           if (userCredential == null) {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                SnackBar(
                                     content: Text(
-                                        'Google sign-in gagal. Coba lagi.')),
+                                        currentStrings.googleSignInFailed)),
                               );
                             }
                             return;
@@ -308,9 +309,9 @@ class _signupState extends State<signup> {
                               uid.isEmpty) {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                SnackBar(
                                     content: Text(
-                                        'Google sign-in gagal. Coba lagi.')),
+                                        currentStrings.googleSignInFailed)),
                               );
                             }
                             return;
@@ -319,9 +320,9 @@ class _signupState extends State<signup> {
                               firebaseIdToken.isEmpty) {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                SnackBar(
                                     content: Text(
-                                        'Tidak bisa mendapatkan token Firebase. Coba lagi.')),
+                                        currentStrings.googleSignInIncomplete)),
                               );
                             }
                             return;
@@ -344,15 +345,15 @@ class _signupState extends State<signup> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                   content: Text(res.message ??
-                                      'Google sign-in gagal. Coba lagi.')),
+                                      currentStrings.googleSignInFailed)),
                             );
                             return;
                           }
                           final data = res.data;
                           if (data == null || data is! Map<String, dynamic>) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Format respons tidak valid')),
+                              SnackBar(
+                                  content: Text(currentStrings.invalidResponse)),
                             );
                             return;
                           }
@@ -363,8 +364,8 @@ class _signupState extends State<signup> {
                               data['needs_password'] == true;
                           if (token == null || token.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Token tidak ditemukan')),
+                              SnackBar(
+                                  content: Text(currentStrings.sessionNotFound)),
                             );
                             return;
                           }
@@ -390,7 +391,7 @@ class _signupState extends State<signup> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                                 content: Text(
-                                    'Google sign-in gagal. Coba lagi. (${e.toString()})')),
+                                    currentStrings.googleSignInFailedDetail(e.toString()))),
                           );
                         }
                       },
@@ -409,10 +410,11 @@ class _signupState extends State<signup> {
                   ],
                 ),
                 SizedBox(height: 40 * scale),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text('Sudah punya akun ?',
+                    Text(context.s.haveAccount,
                         style: TextStyle(fontSize: 17 * scale)),
                     SizedBox(width: 8 * scale),
                     TextButton(
@@ -434,7 +436,7 @@ class _signupState extends State<signup> {
                       child: Row(
                         children: [
                           Text(
-                            'Signin',
+                            context.s.signInLabel,
                             style: TextStyle(
                               color: AppColor().utama,
                               fontSize: 17 * scale,
@@ -485,7 +487,7 @@ class _signupState extends State<signup> {
           }
         },
         validator: (value) {
-          if (value == null || value.isEmpty) return "Wajib diisi";
+          if (value == null || value.isEmpty) return context.s.fieldRequired;
           if (isPassword) {
             if (value.length < 6) return "Minimal 6 karakter";
             return null;
@@ -499,7 +501,7 @@ class _signupState extends State<signup> {
             r"(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
             r"(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$",
           ).hasMatch(email);
-          if (!ok) return "Format email tidak valid";
+          if (!ok) return context.s.emailInvalid;
           return null;
         },
         decoration: InputDecoration(
