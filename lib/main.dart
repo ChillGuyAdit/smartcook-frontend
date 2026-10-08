@@ -1,3 +1,4 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -270,6 +271,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           themeMode: ThemeProvider.instance.mode,
           locale: LanguageController.instance.locale,
           supportedLocales: LanguageController.supportedLocales,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
           initialRoute: '/',
           routes: {
             '/': (context) => const splashscreen(),

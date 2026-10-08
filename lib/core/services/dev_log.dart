@@ -138,6 +138,10 @@ class DevLog {
   /// Records an event. `action` is the thing being attempted, e.g.
   /// `load_profile` or `switch_locale`. Call freely - it never throws, never
   /// awaits, and never blocks the UI.
+  /// Tests set this so no flush timer outlives the test.
+  @visibleForTesting
+  static bool disabled = false;
+
   static void log(
     String event, {
     String? action,
@@ -147,6 +151,7 @@ class DevLog {
     int? statusCode,
     Map<String, dynamic>? meta,
   }) {
+    if (disabled) return;
     _guard('log', () {
       final event2 = {
         _kEvent: event,
