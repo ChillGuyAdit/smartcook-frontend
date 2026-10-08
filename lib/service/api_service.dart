@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:smartcook/config/api_config.dart';
 import 'package:smartcook/core/services/app_session.dart';
 import 'package:smartcook/core/services/dev_log.dart';
+import 'package:smartcook/core/services/secure_channel.dart';
 import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/service/token_service.dart';
 
@@ -22,6 +23,9 @@ const Set<String> kAppTokenCodes = {
 };
 
 class ApiService {
+  /// Every request goes through the sealed channel (see SecureChannel).
+  static final http.Client _http = SecureHttpClient.shared;
+
   static String get _baseUrl => ApiConfig.baseUrl;
 
   static void Function()? onUnauthorized;
@@ -250,7 +254,7 @@ class ApiService {
           if (queryParameters != null && queryParameters.isNotEmpty) {
             uri = uri.replace(queryParameters: queryParameters);
           }
-          return http
+          return _http
               .get(uri, headers: headers)
               .timeout(const Duration(seconds: 30));
         },
@@ -297,7 +301,7 @@ class ApiService {
             debugPrint('Headers: $headers');
             debugPrint('Body: $bodyStr');
           }
-          final res = await http
+          final res = await _http
               .post(uri, headers: headers, body: bodyStr)
               .timeout(const Duration(seconds: 30));
           if (kDebugMode) {
@@ -324,7 +328,7 @@ class ApiService {
         path,
         (headers) async {
           final uri = Uri.parse('$_baseUrl$path');
-          return http
+          return _http
               .put(
                 uri,
                 headers: headers,
@@ -350,7 +354,7 @@ class ApiService {
         path,
         (headers) async {
           final uri = Uri.parse('$_baseUrl$path');
-          return http
+          return _http
               .delete(
                 uri,
                 headers: headers,

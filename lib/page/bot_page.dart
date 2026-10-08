@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:http/http.dart' as http;
+import '../core/services/secure_channel.dart';
 import 'package:smartcook/config/api_config.dart';
 import 'package:smartcook/core/services/app_session.dart';
 import 'package:smartcook/core/theme/app_theme_colors.dart';
@@ -248,7 +249,7 @@ class _BotPageState extends State<BotPage> with WidgetsBindingObserver {
       ..body = jsonEncode({'message': text});
 
     try {
-      final client = http.Client();
+      final client = SecureHttpClient.shared;
       final response = await client.send(request).timeout(
             const Duration(seconds: 120),
             onTimeout: () => throw Exception('Timeout'),

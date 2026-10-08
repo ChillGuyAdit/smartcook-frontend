@@ -1,3 +1,4 @@
+import 'secure_channel.dart';
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -57,7 +58,7 @@ class AppSession {
       // silently retried forever, showing nothing to the user.
       validateStatus: (status) => status != null && status < 500,
     ),
-  );
+  )..interceptors.add(SecureDioInterceptor());
 
   /// Serialises concurrent callers so a burst of requests at boot produces
   /// one handshake, not ten.
