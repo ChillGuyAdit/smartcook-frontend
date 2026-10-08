@@ -81,7 +81,31 @@ class ApiService {
   /// Runs [call], and if the server rejects the app session, renews it once
   /// and retries. A user-JWT rejection is *not* retried here: that means the
   /// account genuinely needs to sign in again.
+  /// Every request passes through here, so this is the one place to record
+  /// "which endpoint, how long, what status" for the developer log. Only the
+  /// route and timing are recorded - never headers, bodies or tokens.
   static Future<ApiResponse> _withSessionRetry(
+    String path,
+    Future<http.Response> Function(Map<String, String> headers) call, {
+    required bool requireAppSession,
+  }) async {
+    final sw = Stopwatch()..start();
+    final result = await _withSessionRetryInner(
+      path,
+      call,
+      requireAppSession: requireAppSession,
+    );
+    DevLog.log(
+      'api_call',
+      action: 'api:$path',
+      statusCode: result.statusCode,
+      durationMs: sw.elapsedMilliseconds,
+      level: result.success ? 'info' : 'warn',
+    );
+    return result;
+  }
+
+  static Future<ApiResponse> _withSessionRetryInner(
     String path,
     Future<http.Response> Function(Map<String, String> headers) call, {
     required bool requireAppSession,

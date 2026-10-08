@@ -1,3 +1,4 @@
+import 'package:smartcook/core/services/dev_log.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -36,7 +37,10 @@ class CustomBottomNavBar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
           child: BottomNavigationBar(
             currentIndex: currentIndex,
-            onTap: onTap,
+            onTap: (i) {
+              DevLog.log('screen_view', action: 'tab:$i');
+              onTap(i);
+            },
             type: BottomNavigationBarType.fixed,
             // Transparent so the container colour shows through.
             backgroundColor: Colors.transparent,

@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/api_config.dart';
 import '../../service/token_service.dart';
 import 'app_update_fetcher.dart';
+import 'dev_log_crypto.dart';
 
 /// Developer debug log.
 ///
@@ -313,9 +314,20 @@ class DevLog {
       } catch (_) {}
       // Accept 4xx: a rejected batch must not retry forever, because the batch
       // is a diagnostic, not something the user is waiting on.
+      // Sealed so that only the server can read it (see DevLogCrypto). If
+      // sealing itself fails the batch is dropped rather than sent in clear:
+      // this is a diagnostic, and plaintext would defeat the point.
+      final Map<String, dynamic> payload;
+      try {
+        payload = await DevLogCrypto.seal(enriched);
+      } catch (e) {
+        debugPrint('[devlog] could not seal batch, dropped: $e');
+        await _persist(_queue);
+        return;
+      }
       await dio.post<Map<String, dynamic>>(
         '/api/devlog/ingest',
-        data: {'events': enriched},
+        data: payload,
         options: Options(
           validateStatus: (s) => s != null && s < 500,
           headers: {

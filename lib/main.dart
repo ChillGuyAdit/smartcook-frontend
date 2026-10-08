@@ -11,6 +11,7 @@ import 'package:smartcook/view/splashscreen.dart';
 import 'package:smartcook/core/services/app_session.dart';
 import 'package:smartcook/core/services/app_update_checker.dart';
 import 'package:smartcook/core/services/dev_log.dart';
+import 'package:smartcook/core/services/screen_observer.dart';
 import 'package:smartcook/core/theme/app_colors.dart';
 import 'package:smartcook/core/theme/app_theme.dart';
 import 'package:smartcook/core/theme/language_controller.dart';
@@ -18,6 +19,10 @@ import 'package:smartcook/core/theme/shadows.dart';
 import 'package:smartcook/core/theme/theme_provider.dart';
 
 import 'firebase_options.dart';
+
+// One observer for the whole app: MaterialApp rebuilds on theme/language
+// changes and the observer keeps the last screen it saw.
+final ScreenObserver _screenObserver = ScreenObserver();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -258,6 +263,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       builder: (context, _) {
         return MaterialApp(
           navigatorKey: navigatorKey,
+          navigatorObservers: [_screenObserver],
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,

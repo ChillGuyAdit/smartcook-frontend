@@ -148,7 +148,7 @@ New-Item -ItemType Directory -Force $stage | Out-Null
 foreach ($abi in 'arm64', 'arm32') {
     $src = Join-Path $buildRoot "build\releases\smartcook-$fullName-$abi.apk"
     if (-not (Test-Path $src)) { Fail "APK tidak ditemukan: $src" }
-    $cert = & $apksigner verify --print-certs $src 2>&1 | Select-String 'SHA-256'
+    $cert = & $apksigner verify --print-certs $src | Select-String 'SHA-256'
     if ("$cert" -notmatch $ReleaseCert) { Fail "APK $abi TIDAK ditandatangani kunci rilis. Periksa android/key.properties." }
     Copy-Item $src (Join-Path $stage "smartcook-$newName-$abi.apk")
 }
@@ -183,4 +183,21 @@ git add -f "releases/smartcook-$fullName-arm64.apk" "releases/smartcook-$fullNam
 git commit -q -m "[chore] release $fullName"
 git tag -f "app-v$fullName"
 if (-not $NoPush) { git push -q origin main; git push -q -f origin "app-v$fullName" }
+# ---------------------------------------------------------------- GitHub Release
+# The APKs must also be downloadable from GitHub (AGENTS.md > Verifying a release).
+if (-not $NoPush -and (Get-Command gh -ErrorAction SilentlyContinue)) {
+    $m = Get-Content (Join-Path $stage 'latest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $md = @($m.headlineId, '')
+    foreach ($sec in $m.sections) {
+        $md += ('### ' + $(if ($sec.kind -eq 'new') { 'Yang baru' } else { 'Perbaikan' }))
+        foreach ($item in $sec.items) { $md += "- $item" }
+        $md += ''
+    }
+    $notesPath = Join-Path $stage 'github-release.md'
+    [IO.File]::WriteAllText($notesPath, ($md -join "`n"), [Text.UTF8Encoding]::new($false))
+    gh release create "v$newName" --title "SmartCook Android $newName" --notes-file $notesPath `
+        "releases/smartcook-$fullName-arm64.apk" "releases/smartcook-$fullName-arm32.apk"
+    if ($LASTEXITCODE -ne 0) { Write-Host 'PERINGATAN: GitHub Release gagal dibuat; buat manual dengan gh release create.' -ForegroundColor Yellow }
+}
+
 Write-Host "==> Selesai: $fullName (tag app-v$fullName). Verifikasi sesuai AGENTS.md > Verifying a release."
