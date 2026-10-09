@@ -5,6 +5,7 @@ import 'package:smartcook/service/offline_manager.dart';
 
 import '../core/theme/app_theme_colors.dart';
 import '../core/theme/shadows.dart';
+import 'reusable/fridge_details_fields.dart';
 import 'tambahkan_bahan.dart';
 import '../core/l10n/strings.dart';
 
@@ -522,6 +523,10 @@ class _KulkasPageState extends State<KulkasPage> {
     final existingItem = found.first;
     _nameController.text = existingItem['name'].toString();
     _qtyController.text = _qtyText(existingItem['qty']);
+    String unit = (existingItem['unit'] ?? 'pcs').toString();
+    DateTime? expiry = existingItem['expiredDate'] is DateTime
+        ? existingItem['expiredDate'] as DateTime
+        : null;
 
     showModalBottomSheet(
       context: context,
@@ -531,119 +536,129 @@ class _KulkasPageState extends State<KulkasPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          top: 25,
-          left: 20,
-          right: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 25,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.s.editFridgeIngredient,
-              style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: context.colors.textPrimary),
+      builder: (_) => StatefulBuilder(builder: (sheetContext, setSheet) {
+        return SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.only(
+              top: 25,
+              left: 20,
+              right: 20,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 25,
             ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _nameController,
-              // The name is the identity of the item (the server cannot rename
-              // it), so it is shown but not editable.
-              enabled: false,
-              style: TextStyle(color: context.colors.textPrimary),
-              decoration: InputDecoration(
-                labelText: context.s.ingredientName,
-                labelStyle: TextStyle(color: context.colors.textSecondary),
-                prefixIcon:
-                    const Icon(Icons.restaurant_menu, color: Color(0xFF4CAF50)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: Color(0xFF4CAF50), width: 2),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.s.editFridgeIngredient,
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: context.colors.textPrimary),
                 ),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 15),
-            TextField(
-              controller: _qtyController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              style: TextStyle(color: context.colors.textPrimary),
-              decoration: InputDecoration(
-                labelText: context.s.quantity,
-                labelStyle: TextStyle(color: context.colors.textSecondary),
-                prefixIcon: const Icon(Icons.format_list_numbered,
-                    color: Color(0xFF4CAF50)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: Color(0xFF4CAF50), width: 2),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _nameController,
+                  // The name is the identity of the item (the server cannot rename
+                  // it), so it is shown but not editable.
+                  enabled: false,
+                  style: TextStyle(color: context.colors.textPrimary),
+                  decoration: InputDecoration(
+                    labelText: context.s.ingredientName,
+                    labelStyle: TextStyle(color: context.colors.textSecondary),
+                    prefixIcon: const Icon(Icons.restaurant_menu,
+                        color: Color(0xFF4CAF50)),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          const BorderSide(color: Color(0xFF4CAF50), width: 2),
+                    ),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 25),
-            ElevatedButton(
-              onPressed: () async {
-                final typed = num.tryParse(
-                    _qtyController.text.trim().replaceAll(',', '.'));
-                if (typed == null || typed < 0 || typed > 1000000) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(context.s.invalidQuantity)),
-                  );
-                  return;
-                }
-                final qty = typed;
-                final exp = existingItem['expiredDate'];
-                final res = await ApiService.put(
-                  '/api/fridge/$id',
-                  body: {
-                    'quantity': qty,
-                    'unit': existingItem['unit'] ?? 'pcs',
-                    // Only a date the user/server really has: never invent one.
-                    if (exp is DateTime)
-                      'expired_date': exp.toUtc().toIso8601String(),
+                const SizedBox(height: 15),
+                TextField(
+                  controller: _qtyController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  style: TextStyle(color: context.colors.textPrimary),
+                  decoration: InputDecoration(
+                    labelText: context.s.quantity,
+                    labelStyle: TextStyle(color: context.colors.textSecondary),
+                    prefixIcon: const Icon(Icons.format_list_numbered,
+                        color: Color(0xFF4CAF50)),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          const BorderSide(color: Color(0xFF4CAF50), width: 2),
+                    ),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                FridgeDetailsFields(
+                  unit: unit,
+                  expiry: expiry,
+                  onUnit: (u) => setSheet(() => unit = u),
+                  onExpiry: (d) => setSheet(() => expiry = d),
+                ),
+                const SizedBox(height: 25),
+                ElevatedButton(
+                  onPressed: () async {
+                    final typed = num.tryParse(
+                        _qtyController.text.trim().replaceAll(',', '.'));
+                    if (typed == null || typed < 0 || typed > 1000000) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(context.s.invalidQuantity)),
+                      );
+                      return;
+                    }
+                    final qty = typed;
+                    final res = await ApiService.put(
+                      '/api/fridge/$id',
+                      body: {
+                        'quantity': qty,
+                        'unit': unit,
+                        // null clears the date; a date is never invented.
+                        'expired_date': expiry?.toUtc().toIso8601String(),
+                      },
+                    );
+                    _nameController.clear();
+                    _qtyController.clear();
+                    if (!mounted) return;
+                    Navigator.of(context).pop();
+                    if (res.success) {
+                      await _loadFridge();
+                      _showSuccessPopup(currentStrings.ingredientUpdated);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content:
+                                Text(res.message ?? context.s.updateFailed)),
+                      );
+                    }
                   },
-                );
-                _nameController.clear();
-                _qtyController.clear();
-                if (!mounted) return;
-                Navigator.of(context).pop();
-                if (res.success) {
-                  await _loadFridge();
-                  _showSuccessPopup(currentStrings.ingredientUpdated);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(res.message ?? context.s.updateFailed)),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E1E1E),
-                minimumSize: const Size.fromHeight(55),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text(
-                context.s.saveChanges,
-                style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
-              ),
-            )
-          ],
-        ),
-      ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E1E1E),
+                    minimumSize: const Size.fromHeight(55),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text(
+                    context.s.saveChanges,
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      }),
     );
   }
 

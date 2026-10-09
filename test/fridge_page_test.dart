@@ -9,6 +9,8 @@ import 'package:smartcook/core/services/dev_log.dart';
 import 'package:smartcook/core/theme/app_theme.dart';
 import 'package:smartcook/core/theme/language_controller.dart';
 import 'package:smartcook/page/kulkas.dart';
+import 'package:smartcook/page/reusable/fridge_details_fields.dart';
+import 'package:smartcook/page/tambahkan_bahan.dart';
 import 'package:smartcook/service/api_service.dart';
 
 /// The fridge page with real-looking data: what is shown, what is hidden and
@@ -126,5 +128,97 @@ void main() {
     await _settle(tester);
     expect(calls, greaterThanOrEqualTo(2), reason: 'coming back must reload');
     expect(find.text('Beras'), findsOneWidget, reason: 'a failed refresh must not wipe the list');
+  });
+
+  fridgeDetailsTests();
+  addPageTests();
+}
+
+void fridgeDetailsTests() {
+  testWidgets('unit and expiry fields: choose a unit, pick a date, clear it', (tester) async {
+    await LanguageController.instance.set(const Locale('en'));
+    String unit = 'pcs';
+    DateTime? expiry;
+    await tester.pumpWidget(_app(Scaffold(
+      body: StatefulBuilder(
+        builder: (context, setState) => Padding(
+          padding: const EdgeInsets.all(16),
+          child: FridgeDetailsFields(
+            unit: unit,
+            expiry: expiry,
+            onUnit: (u) => setState(() => unit = u),
+            onExpiry: (d) => setState(() => expiry = d),
+          ),
+        ),
+      ),
+    )));
+    await tester.pump();
+    expect(find.text('Unit'), findsOneWidget);
+    expect(find.text('Pick a date'), findsOneWidget);
+
+    await tester.tap(find.text('kg'));
+    await tester.pump();
+    expect(unit, 'kg');
+
+    await tester.tap(find.text('Pick a date'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(expiry, isNotNull);
+    expect(find.text('Pick a date'), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.pump();
+    expect(expiry, isNull, reason: 'a cleared date must be reported as null so the server clears it');
+    expect(find.text('Pick a date'), findsOneWidget);
+  });
+
+  for (final lang in ['id', 'en']) {
+    testWidgets('fridge edit sheet ($lang): unit chips and date button fit and show the item values', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.75;
+      addTearDown(tester.view.reset);
+      await LanguageController.instance.set(Locale(lang));
+      await tester.pumpWidget(_app(KulkasPage(loader: () async => _ok([
+            {'_id': 'a', 'ingredient_name': 'Gula', 'quantity': 0.5, 'unit': 'kg', 'expired_date': _in(5)},
+          ]))));
+      await _settle(tester);
+      await tester.tap(find.byIcon(Icons.edit_note_rounded));
+      await tester.pumpAndSettle();
+      final s = stringsFor(Locale(lang));
+      expect(find.text(s.unitLabel), findsOneWidget);
+      expect(find.text(s.expiryDateLabel), findsOneWidget);
+      expect(find.text('kg'), findsOneWidget);
+      expect(find.text(s.pickDate), findsNothing, reason: 'the item already has a date');
+      expect(find.text('0.5'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+}
+
+void addPageTests() {
+  testWidgets('add ingredient dialog: unit and expiry can be set next to the quantity', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    await LanguageController.instance.set(const Locale('en'));
+    await tester.pumpWidget(_app(const TambahkanBahanPage()));
+    await _settle(tester);
+    await tester.tap(find.text('Protein'));
+    await tester.pumpAndSettle();
+    // every row shows "<count> <unit>"; the default unit is pcs
+    final pill = find.text('0 pcs').first;
+    await tester.tap(pill);
+    await tester.pumpAndSettle();
+    expect(find.text('Unit'), findsOneWidget);
+    expect(find.text('Expiry date'), findsOneWidget);
+    await tester.tap(find.text('gram'));
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.add_circle));
+    await tester.pump();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 gram'), findsOneWidget, reason: 'the row shows the chosen unit');
+    expect(tester.takeException(), isNull);
   });
 }

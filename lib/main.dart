@@ -45,7 +45,7 @@ void main() async {
 
   // Developer debug log. Init early so a crash during boot still produces a
 // record, and any events queued by a previous run are flushed.
-await DevLog.init();
+  await DevLog.init();
   DevLog.log('app_launch', action: 'cold_start', level: 'info');
   // Anything that escapes a zone handler is the most valuable signal we get.
   FlutterError.onError = (details) {
@@ -54,7 +54,10 @@ await DevLog.init();
       details.exception,
       stack: details.stack,
       action: 'flutter_error',
-      meta: {'library': details.library ?? 'flutter', 'context': details.context?.toString()},
+      meta: {
+        'library': details.library ?? 'flutter',
+        'context': details.context?.toString()
+      },
     );
     FlutterError.presentError(details);
   };
@@ -130,7 +133,8 @@ class _RenderErrorScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline, color: Color(0xFF4CAF50), size: 46),
+                const Icon(Icons.error_outline,
+                    color: Color(0xFF4CAF50), size: 46),
                 const SizedBox(height: 14),
                 const Text(
                   'SmartCook',
@@ -184,6 +188,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       Future<void>.delayed(const Duration(seconds: 4), _checkForUpdate);
     });
   }
+
+  /// The update pop-up lives above all routes, so the system back key is
+  /// offered to it first: closes an optional update, is swallowed for a
+  /// mandatory one. This observer is registered before the app's navigator,
+  /// so it is asked first.
+  @override
+  Future<bool> didPopRoute() async => UpdateOverlay.handleBack();
 
   @override
   void dispose() {
@@ -284,6 +295,20 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           },
           // Wrapper global untuk menampilkan banner offline di seluruh aplikasi.
           builder: (context, child) {
+            // While the update pop-up is open the back key belongs to it, even
+            // when a route change reports that there is nothing to pop.
+            final host = context;
+            child = NotificationListener<NavigationNotification>(
+              onNotification: (n) {
+                if (UpdateOverlay.isOpen && !n.canHandlePop) {
+                  const NavigationNotification(canHandlePop: true)
+                      .dispatch(host);
+                  return true;
+                }
+                return false;
+              },
+              child: child ?? const SizedBox.shrink(),
+            );
             return ValueListenableBuilder<bool>(
               valueListenable: OfflineManager.isOffline,
               builder: (context, isOffline, _) {

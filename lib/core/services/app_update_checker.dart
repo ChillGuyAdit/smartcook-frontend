@@ -133,7 +133,7 @@ class AppUpdateChecker {
       if (context != null && context.mounted) break;
       await Future<void>.delayed(const Duration(seconds: 1));
     }
-if (context == null || !context.mounted) {
+    if (context == null || !context.mounted) {
       // Do not stay silent: this used to be the failure mode where the app
       // stayed on an old build and nothing said why.
       debugPrint(
@@ -143,19 +143,146 @@ if (context == null || !context.mounted) {
       _optionalShown = false;
       return;
     }
-  _dialogOpen = true;
+    _dialogOpen = true;
 
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => _UpdateDialog(
+    // Not showDialog(): a dialog is a route, and the splash / sign-in / home
+    // loading code replaces or clears routes (`pushReplacement`,
+    // `pushNamedAndRemoveUntil`). Whatever was on top of the stack - the
+    // dialog - went with it, so right after login the pop-up appeared and
+    // vanished again. An overlay entry sits above every route and is only
+    // removed by the user (Later / back) - never for a mandatory update.
+    await UpdateOverlay.show(
+      Navigator.of(context, rootNavigator: true),
+      forced: forced,
+      builder: (close) => _UpdateDialog(
         info: info,
         installedVersion: installedVersion,
         installedBuild: installedBuild,
         forced: forced,
+        onClose: close,
       ),
     );
     _dialogOpen = false;
+  }
+}
+
+/// Tells the framework that something on screen wants the back key.
+///
+/// Android only forwards the back key to Flutter while the framework says it
+/// can handle it, and with a single route on the stack (splash, sign-in) it
+/// says it cannot: the app was simply closed. Used by the overlay below and by
+/// the listener in `main.dart` that re-asserts it when a route change reports
+/// "nothing to pop" while the pop-up is open.
+class _BackAnnouncer extends StatefulWidget {
+  const _BackAnnouncer({required this.child});
+  final Widget child;
+
+  @override
+  State<_BackAnnouncer> createState() => _BackAnnouncerState();
+}
+
+class _BackAnnouncerState extends State<_BackAnnouncer> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted)
+        const NavigationNotification(canHandlePop: true).dispatch(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+/// Hosts the update pop-up above all routes (see [AppUpdateChecker.check]).
+///
+/// Back button: `_MyAppState` is registered as a binding observer before the
+/// app's own navigator, so [handleBack] sees the key first. A mandatory update
+/// swallows it; an optional one closes the pop-up (like "Later").
+class UpdateOverlay {
+  UpdateOverlay._();
+
+  static OverlayEntry? _entry;
+  static VoidCallback? _close;
+  static Completer<void>? _done;
+
+  /// Set by the dialog while it is on screen: closing is allowed (optional
+  /// update, not in the middle of a download).
+  static bool canDismiss = false;
+
+  /// The dialog can claim the back key first (e.g. to leave the full notes).
+  static bool Function()? backHandler;
+
+  static bool get isOpen => _entry != null;
+
+  /// Test seam: forget a pop-up whose widget tree no longer exists.
+  @visibleForTesting
+  static void reset() {
+    _entry = null;
+    _close = null;
+    backHandler = null;
+    canDismiss = false;
+    if (_done != null && !_done!.isCompleted) _done!.complete();
+    _done = null;
+  }
+
+  static Future<void> show(
+    NavigatorState nav, {
+    required bool forced,
+    required Widget Function(VoidCallback close) builder,
+  }) {
+    final overlay = nav.overlay;
+    if (overlay == null) return Future<void>.value();
+    if (_entry != null) return _done!.future;
+    final done = Completer<void>();
+    _done = done;
+    canDismiss = !forced;
+
+    late final OverlayEntry entry;
+    void close() {
+      if (_entry != entry) return;
+      _entry = null;
+      _close = null;
+      backHandler = null;
+      canDismiss = false;
+      entry.remove();
+      entry.dispose();
+      if (!done.isCompleted) done.complete();
+    }
+
+    entry = OverlayEntry(
+      builder: (ctx) => _BackAnnouncer(
+        child: Stack(
+          children: [
+            const ModalBarrier(dismissible: false, color: Color(0x99000000)),
+            Padding(
+              padding: MediaQuery.of(ctx).viewInsets,
+              child: SafeArea(
+                child: Center(
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: builder(close),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    _entry = entry;
+    _close = close;
+    overlay.insert(entry);
+    return done.future;
+  }
+
+  /// True when the key was consumed by the pop-up.
+  static bool handleBack() {
+    if (_entry == null) return false;
+    if (backHandler?.call() == true) return true;
+    if (canDismiss) _close?.call();
+    return true;
   }
 }
 
@@ -210,12 +337,14 @@ class _UpdateDialog extends StatefulWidget {
     required this.installedVersion,
     required this.installedBuild,
     required this.forced,
+    required this.onClose,
   });
 
   final Map<String, dynamic> info;
   final String installedVersion;
   final int installedBuild;
   final bool forced;
+  final VoidCallback onClose;
 
   @override
   State<_UpdateDialog> createState() => _UpdateDialogState();
@@ -315,26 +444,27 @@ class _UpdateDialogState extends State<_UpdateDialog> {
     return newer > 0 ? newer : 1;
   }
 
-  void _showAllNotes() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        maxChildSize: 0.95,
-        builder: (ctx, scroll) => _ReleaseNotesList(
-          controller: scroll,
-          releases: _releases,
-          installedBuild: widget.installedBuild,
-        ),
-      ),
-    );
+  // The full notes open inside the pop-up itself: a bottom sheet is a route and
+  // would be drawn underneath the overlay that hosts this dialog.
+  bool _notesOpen = false;
+  final ScrollController _notesScroll = ScrollController();
+
+  void _showAllNotes() => setState(() => _notesOpen = true);
+
+  bool _handleBack() {
+    if (_notesOpen) {
+      setState(() => _notesOpen = false);
+      return true;
+    }
+    return false;
   }
 
   @override
   void dispose() {
     _cancel?.cancel();
+    _notesScroll.dispose();
+    if (UpdateOverlay.backHandler == _handleBack)
+      UpdateOverlay.backHandler = null;
     super.dispose();
   }
 
@@ -397,7 +527,8 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         'build': build,
       });
       if (result.type != ResultType.done) {
-        debugPrint('[update] installer result: ${result.type} ${result.message}');
+        debugPrint(
+            '[update] installer result: ${result.type} ${result.message}');
       }
     } on ApkDownloadException catch (e) {
       DevLog.log('update_result', action: 'download', level: 'warn', meta: {
@@ -439,6 +570,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
   @override
   void initState() {
     super.initState();
+    UpdateOverlay.backHandler = _handleBack;
     // Deliberately no download here. The dialog opens at the `ready` stage so
     // the user reads the notes and presses the button. Starting the transfer
     // automatically would spend mobile data without asking.
@@ -462,118 +594,151 @@ class _UpdateDialogState extends State<_UpdateDialog> {
   Widget build(BuildContext context) {
     final percent =
         _progress == null ? null : (_progress! * 100).clamp(0, 100).round();
-    return PopScope(
-      canPop: !widget.forced && _stage != _DialogStage.downloading,
-      child: AlertDialog(
-        title: Text(_stage == _DialogStage.installing
-            ? _s.updateInstalling
-            : widget.forced
-                ? _s.updateMandatoryTitle
-                : _s.updateOptionalTitle),
-        // Scrollable so the progress bar and buttons stay reachable when the
-        // release notes are long on a small screen.
-        content: SingleChildScrollView(
+    // Closing is only allowed for an optional update that is not downloading.
+    UpdateOverlay.canDismiss =
+        !widget.forced && _stage != _DialogStage.downloading;
+    if (_notesOpen) {
+      return ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 560,
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+        ),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          clipBehavior: Clip.antiAlias,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _versionLine(),
-                style: const TextStyle(fontWeight: FontWeight.w600),
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => setState(() => _notesOpen = false),
+                ),
               ),
-              if (_versionsBehind > 1) ...[
-                const SizedBox(height: 4),
-                Text(
-                  _s.updateVersionsBehind.replaceFirst(
-                    '{count}',
-                    '$_versionsBehind',
-                  ),
-                  style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              Expanded(
+                child: _ReleaseNotesList(
+                  controller: _notesScroll,
+                  releases: _releases,
+                  installedBuild: widget.installedBuild,
                 ),
-              ],
-              if (_notes != null && _notes!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(_notes!),
-              ],
-              if (_releases.isNotEmpty)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                    onPressed: _showAllNotes,
-                    child: Text(_releases.length > 1
-                        ? _s.updateShowAllNotes
-                        : _s.updateShowFullNotes),
-                  ),
-                ),
-              if (widget.forced) ...[
-                const SizedBox(height: 8),
-                Text(_s.updateForcedNotice),
-              ],
-              if (_stage == _DialogStage.downloading) ...[
-                const SizedBox(height: 16),
-                LinearProgressIndicator(value: _progress),
-                const SizedBox(height: 6),
-                Text(_waitingForNetwork
-                    ? _s.updateWaitingForNetwork
-                    : percent == null
-                        ? _s.updatePreparing
-                        : _s.updatePercentDone.replaceFirst(
-                            '{percent}',
-                            '$percent',
-                          )),
-              ],
-              if (_stage == _DialogStage.installing) ...[
-                const SizedBox(height: 16),
-                Text(_s.updateConfirmInAndroid),
-                const SizedBox(height: 8),
-                Text(
-                  _s.updateUnknownSourceNotice,
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ],
-              if (_error != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  _error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ],
+              ),
             ],
           ),
         ),
-        actions: [
-          // "Nanti" only on optional updates: a mandatory one cannot be
-          // dismissed, so offering a way out would be a lie.
-          if (!widget.forced && _stage != _DialogStage.downloading)
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(_s.updateLater),
+      );
+    }
+    return AlertDialog(
+      title: Text(_stage == _DialogStage.installing
+          ? _s.updateInstalling
+          : widget.forced
+              ? _s.updateMandatoryTitle
+              : _s.updateOptionalTitle),
+      // Scrollable so the progress bar and buttons stay reachable when the
+      // release notes are long on a small screen.
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _versionLine(),
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-          if (_stage == _DialogStage.downloading)
-            TextButton(
-              onPressed: () {
-                _cancel?.cancel();
-                setState(() => _stage = _DialogStage.ready);
-              },
-              child: Text(_s.updateCancelDownload),
-            ),
-          if (_stage != _DialogStage.downloading)
-            FilledButton(
-              onPressed: _download,
-              child: Text(switch (_stage) {
-                // After a network drop the partial file is intact, so the
-                // button offers to continue rather than to start over.
-                _DialogStage.failed =>
-                  (_error ?? '').contains(_s.updateResumeCta)
-                      ? _s.updateResumeCta
-                      : _s.updateRetry,
-                _DialogStage.installing => _s.updateInstallAgain,
-                _ => _s.updateNow,
-              }),
-            ),
-        ],
+            if (_versionsBehind > 1) ...[
+              const SizedBox(height: 4),
+              Text(
+                _s.updateVersionsBehind.replaceFirst(
+                  '{count}',
+                  '$_versionsBehind',
+                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              ),
+            ],
+            if (_notes != null && _notes!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(_notes!),
+            ],
+            if (_releases.isNotEmpty)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                  onPressed: _showAllNotes,
+                  child: Text(_releases.length > 1
+                      ? _s.updateShowAllNotes
+                      : _s.updateShowFullNotes),
+                ),
+              ),
+            if (widget.forced) ...[
+              const SizedBox(height: 8),
+              Text(_s.updateForcedNotice),
+            ],
+            if (_stage == _DialogStage.downloading) ...[
+              const SizedBox(height: 16),
+              LinearProgressIndicator(value: _progress),
+              const SizedBox(height: 6),
+              Text(_waitingForNetwork
+                  ? _s.updateWaitingForNetwork
+                  : percent == null
+                      ? _s.updatePreparing
+                      : _s.updatePercentDone.replaceFirst(
+                          '{percent}',
+                          '$percent',
+                        )),
+            ],
+            if (_stage == _DialogStage.installing) ...[
+              const SizedBox(height: 16),
+              Text(_s.updateConfirmInAndroid),
+              const SizedBox(height: 8),
+              Text(
+                _s.updateUnknownSourceNotice,
+                style: const TextStyle(fontSize: 13),
+              ),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+          ],
+        ),
       ),
+      actions: [
+        // "Nanti" only on optional updates: a mandatory one cannot be
+        // dismissed, so offering a way out would be a lie.
+        if (!widget.forced && _stage != _DialogStage.downloading)
+          TextButton(
+            onPressed: widget.onClose,
+            child: Text(_s.updateLater),
+          ),
+        if (_stage == _DialogStage.downloading)
+          TextButton(
+            onPressed: () {
+              _cancel?.cancel();
+              setState(() => _stage = _DialogStage.ready);
+            },
+            child: Text(_s.updateCancelDownload),
+          ),
+        if (_stage != _DialogStage.downloading)
+          FilledButton(
+            onPressed: _download,
+            child: Text(switch (_stage) {
+              // After a network drop the partial file is intact, so the
+              // button offers to continue rather than to start over.
+              _DialogStage.failed => (_error ?? '').contains(_s.updateResumeCta)
+                  ? _s.updateResumeCta
+                  : _s.updateRetry,
+              _DialogStage.installing => _s.updateInstallAgain,
+              _ => _s.updateNow,
+            }),
+          ),
+      ],
     );
   }
 }

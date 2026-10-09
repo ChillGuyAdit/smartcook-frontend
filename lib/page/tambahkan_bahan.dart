@@ -6,6 +6,7 @@ import 'package:smartcook/service/offline_manager.dart';
 
 import '../core/theme/app_theme_colors.dart';
 import '../core/l10n/strings.dart';
+import 'reusable/fridge_details_fields.dart';
 
 class TambahkanBahanPage extends StatefulWidget {
   const TambahkanBahanPage({super.key});
@@ -383,8 +384,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
       backgroundColor: context.colors.background,
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios,
-              color: context.colors.textPrimary),
+          icon: Icon(Icons.arrow_back_ios, color: context.colors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -411,8 +411,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                     child: TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
-                        hintText:
-                            context.s.searchOrTypeIngredient,
+                        hintText: context.s.searchOrTypeIngredient,
                         hintStyle:
                             TextStyle(color: context.colors.textDisabled),
                         prefixIcon: Icon(Icons.search,
@@ -481,7 +480,9 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                     children: [
                       Expanded(
                         child: Text(
-                          context.s.newIngredientNote(_searchController.text.trim(), selectedCategory.toLowerCase()),
+                          context.s.newIngredientNote(
+                              _searchController.text.trim(),
+                              selectedCategory.toLowerCase()),
                           style: TextStyle(
                             fontSize: 12 * scale,
                             color: context.colors.textSecondary,
@@ -615,7 +616,10 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                 'name': item['name'],
                 'category': _mapCategoryToBackend(category),
                 'quantity': count,
-                'unit': 'pcs',
+                'unit': (item['unit'] ?? 'pcs').toString(),
+                if (item['expiry'] is DateTime)
+                  'expired_date':
+                      (item['expiry'] as DateTime).toUtc().toIso8601String(),
               });
             }
           }
@@ -625,9 +629,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
 
     if (toSave.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(
-                context.s.nothingSentToFridge)),
+        SnackBar(content: Text(context.s.nothingSentToFridge)),
       );
       Navigator.pop(context);
       return;
@@ -645,6 +647,8 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
             'category': item['category'],
             'quantity': item['quantity'],
             'unit': item['unit'],
+            if (item['expired_date'] != null)
+              'expired_date': item['expired_date'],
           },
         );
       }
@@ -652,8 +656,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-              context.s.willSaveWhenOnline(toSave.length)),
+          content: Text(context.s.willSaveWhenOnline(toSave.length)),
         ),
       );
       Navigator.pop(context);
@@ -670,6 +673,8 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
           'category': item['category'],
           'quantity': item['quantity'],
           'unit': item['unit'],
+          if (item['expired_date'] != null)
+            'expired_date': item['expired_date'],
         },
         useAuth: true,
       );
@@ -685,6 +690,8 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
             'category': item['category'],
             'quantity': item['quantity'],
             'unit': item['unit'],
+            if (item['expired_date'] != null)
+              'expired_date': item['expired_date'],
           },
         );
       } else if (lastError == null && res.message != null) {
@@ -753,7 +760,8 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                     decoration: BoxDecoration(
                       color: AppColor().utama,
                       shape: BoxShape.circle,
-                      border: Border.all(color: context.colors.surface, width: 2),
+                      border:
+                          Border.all(color: context.colors.surface, width: 2),
                     ),
                     child: Icon(Icons.check,
                         size: 10 * scale, color: Colors.white),
@@ -766,9 +774,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
             label,
             style: TextStyle(
               fontSize: 14 * scale,
-              color: isSelected
-                  ? activeColor
-                  : context.colors.textSecondary,
+              color: isSelected ? activeColor : context.colors.textSecondary,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -894,7 +900,8 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                               border: Border.all(color: Colors.white70),
                             ),
                             child: Text(
-                              '${items[index]['count']} item',
+                              '${items[index]['count']} ${items[index]['unit'] ?? 'pcs'}'
+                              '${items[index]['expiry'] is DateTime ? ' · ${MaterialLocalizations.of(context).formatShortDate(items[index]['expiry'] as DateTime)}' : ''}',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 14 * scale,
@@ -916,10 +923,11 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                             final key = _buildHiddenKey(name, backendCategory);
                             await OfflineCacheService.addHiddenIngredientKey(
                                 key);
-                            if (mounted) setState(() {
-                              _hiddenIngredientKeys.add(key);
-                              items.removeAt(index);
-                            });
+                            if (mounted)
+                              setState(() {
+                                _hiddenIngredientKeys.add(key);
+                                items.removeAt(index);
+                              });
                           },
                         ),
                       ],
@@ -970,43 +978,65 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              content: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              content: SingleChildScrollView(
+                  child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    onPressed: () {
-                      if (item['count'] > 0) {
-                        setStateDialog(() {
-                          item['count']--;
-                        });
-                        // Update state parent page juga
-                        this.setState(() {});
-                      }
-                    },
-                    icon:
-                        Icon(Icons.remove_circle, color: Colors.red, size: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          if (item['count'] > 0) {
+                            setStateDialog(() {
+                              item['count']--;
+                            });
+                            // Update state parent page juga
+                            this.setState(() {});
+                          }
+                        },
+                        icon: Icon(Icons.remove_circle,
+                            color: Colors.red, size: 32),
+                      ),
+                      SizedBox(width: 20),
+                      Text(
+                        '${item['count']}',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: context.colors.textPrimary,
+                        ),
+                      ),
+                      SizedBox(width: 20),
+                      IconButton(
+                        onPressed: () {
+                          setStateDialog(() {
+                            item['count']++;
+                          });
+                          this.setState(() {});
+                        },
+                        icon: Icon(Icons.add_circle,
+                            color: Colors.green, size: 32),
+                      ),
+                    ],
                   ),
-                  SizedBox(width: 20),
-                  Text(
-                    '${item['count']}',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: context.colors.textPrimary,
-                    ),
-                  ),
-                  SizedBox(width: 20),
-                  IconButton(
-                    onPressed: () {
-                      setStateDialog(() {
-                        item['count']++;
-                      });
+                  const SizedBox(height: 18),
+                  FridgeDetailsFields(
+                    unit: (item['unit'] ?? 'pcs').toString(),
+                    expiry: item['expiry'] is DateTime
+                        ? item['expiry'] as DateTime
+                        : null,
+                    onUnit: (u) {
+                      setStateDialog(() => item['unit'] = u);
                       this.setState(() {});
                     },
-                    icon: Icon(Icons.add_circle, color: Colors.green, size: 32),
+                    onExpiry: (d) {
+                      setStateDialog(() => item['expiry'] = d);
+                      this.setState(() {});
+                    },
                   ),
                 ],
-              ),
+              )),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),

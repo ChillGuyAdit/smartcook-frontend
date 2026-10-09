@@ -275,6 +275,10 @@ abstract class Str {
   String get tomorrowLabel;
   String get ingredientUpdated;
   String get updateFailed;
+  String get unitLabel;
+  String get expiryDateLabel;
+  String get pickDate;
+  String get clearDate;
   String get backOnline;
   String get offlineBanner;
   String get noExpiryDate;
@@ -814,6 +818,14 @@ class StrId implements Str {
   String get ingredientUpdated => 'Bahan berhasil diperbarui!';
   @override
   String get updateFailed => 'Gagal memperbarui';
+  @override
+  String get unitLabel => 'Satuan';
+  @override
+  String get expiryDateLabel => 'Tanggal kadaluarsa';
+  @override
+  String get pickDate => 'Pilih tanggal';
+  @override
+  String get clearDate => 'Hapus tanggal';
   @override
   String get backOnline => 'Koneksi kembali online';
   @override
@@ -1404,6 +1416,14 @@ class StrEn implements Str {
   String get ingredientUpdated => 'Ingredient updated!';
   @override
   String get updateFailed => 'Couldn\'t update';
+  @override
+  String get unitLabel => 'Unit';
+  @override
+  String get expiryDateLabel => 'Expiry date';
+  @override
+  String get pickDate => 'Pick a date';
+  @override
+  String get clearDate => 'Clear date';
   @override
   String get backOnline => 'Back online';
   @override
