@@ -31,40 +31,76 @@ Widget _app(Widget home) => AnimatedBuilder(
       ),
     );
 
-String _in(int days) => DateTime.now().add(Duration(days: days)).toUtc().toIso8601String();
+String _in(int days) =>
+    DateTime.now().add(Duration(days: days)).toUtc().toIso8601String();
 
-ApiResponse _ok(List<Map<String, dynamic>> items) => ApiResponse(success: true, data: items);
+ApiResponse _ok(List<Map<String, dynamic>> items) =>
+    ApiResponse(success: true, data: items);
 
 Future<void> _settle(WidgetTester tester) async {
   for (var i = 0; i < 6; i++) {
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
     await tester.pump(const Duration(milliseconds: 300));
   }
 }
 
+final _sampleItems = [
+  {
+    '_id': 'a',
+    'ingredient_name': 'Beras',
+    'quantity': 1000,
+    'unit': 'gram',
+    'expired_date': _in(30)
+  },
+  {
+    '_id': 'b',
+    'ingredient_name': 'Tepung terigu protein tinggi untuk roti dan kue basah',
+    'quantity': 2500,
+    'unit': 'gram',
+    'expired_date': null
+  },
+  {
+    '_id': 'c',
+    'ingredient_name': 'Gula',
+    'quantity': 0.5,
+    'unit': 'kg',
+    'expired_date': _in(2)
+  },
+  {
+    '_id': 'd',
+    'ingredient_name': 'Susu',
+    'quantity': 1.0,
+    'unit': 'liter',
+    'expired_date': _in(-3)
+  },
+];
+
 void main() {
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
       const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
       (call) async => null,
     );
     PackageInfo.setMockInitialValues(
-        appName: 'SmartCook', packageName: 'com.example.smartcook', version: '1.1.4', buildNumber: '20', buildSignature: '');
+        appName: 'SmartCook',
+        packageName: 'com.example.smartcook',
+        version: '1.1.4',
+        buildNumber: '20',
+        buildSignature: '');
     DevLog.disabled = true;
     SharedPreferences.setMockInitialValues({});
     await LanguageController.instance.set(const Locale('id'));
   });
 
-  final items = [
-    {'_id': 'a', 'ingredient_name': 'Beras', 'quantity': 1000, 'unit': 'gram', 'expired_date': _in(30)},
-    {'_id': 'b', 'ingredient_name': 'Tepung terigu protein tinggi untuk roti dan kue basah', 'quantity': 2500, 'unit': 'gram', 'expired_date': null},
-    {'_id': 'c', 'ingredient_name': 'Gula', 'quantity': 0.5, 'unit': 'kg', 'expired_date': _in(2)},
-    {'_id': 'd', 'ingredient_name': 'Susu', 'quantity': 1.0, 'unit': 'liter', 'expired_date': _in(-3)},
-  ];
+  final items = _sampleItems;
 
   for (final lang in ['id', 'en']) {
-    testWidgets('fridge ($lang): every item is listed, nothing hidden by a default stock limit, no overflow', (tester) async {
+    testWidgets(
+        'fridge ($lang): every item is listed, nothing hidden by a default stock limit, no overflow',
+        (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 2.75;
       addTearDown(tester.view.reset);
@@ -76,7 +112,8 @@ void main() {
       await _settle(tester);
 
       expect(find.text('Beras'), findsOneWidget);
-      expect(find.textContaining('Tepung terigu'), findsOneWidget, reason: '2500 g must not be hidden by a default limit');
+      expect(find.textContaining('Tepung terigu'), findsOneWidget,
+          reason: '2500 g must not be hidden by a default limit');
       expect(find.text('Gula'), findsOneWidget);
       expect(find.text('Susu'), findsOneWidget);
       // decimals and units are shown as they are, "1.0" becomes "1"
@@ -84,23 +121,26 @@ void main() {
       expect(find.textContaining('1 liter'), findsOneWidget);
       expect(find.textContaining('1.0 liter'), findsNothing);
       // no invented expiry: the item without a date says so
-      expect(find.text(lang == 'id' ? 'Tanpa tanggal kadaluarsa' : 'No expiry date'), findsOneWidget);
-      // The two-line intro must stay well inside the 170dp green header (it used to spill
-      // onto the page below in Indonesian).
-      final intro = tester.getRect(find.text(stringsFor(Locale(lang)).fridgeIntro));
-      expect(intro.bottom, lessThanOrEqualTo(150.0), reason: 'intro leaves the header: $intro');
+      expect(
+          find.text(
+              lang == 'id' ? 'Tanpa tanggal kadaluarsa' : 'No expiry date'),
+          findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
 
-  testWidgets('fridge: a failed load says so and offers a retry instead of showing an empty fridge', (tester) async {
+  testWidgets(
+      'fridge: a failed load says so and offers a retry instead of showing an empty fridge',
+      (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.75;
     addTearDown(tester.view.reset);
     var calls = 0;
     await tester.pumpWidget(_app(KulkasPage(loader: () async {
       calls++;
-      return calls == 1 ? ApiResponse(success: false, message: 'x') : _ok(items);
+      return calls == 1
+          ? ApiResponse(success: false, message: 'x')
+          : _ok(items);
     })));
     await _settle(tester);
     expect(find.textContaining('Kulkas belum bisa dimuat'), findsOneWidget);
@@ -110,14 +150,17 @@ void main() {
     expect(find.text('Beras'), findsOneWidget);
   });
 
-  testWidgets('fridge: items stay on screen when a refresh fails', (tester) async {
+  testWidgets('fridge: items stay on screen when a refresh fails',
+      (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.75;
     addTearDown(tester.view.reset);
     var calls = 0;
     await tester.pumpWidget(_app(KulkasPage(loader: () async {
       calls++;
-      return calls == 1 ? _ok(items) : ApiResponse(success: false, message: 'x');
+      return calls == 1
+          ? _ok(items)
+          : ApiResponse(success: false, message: 'x');
     })));
     await _settle(tester);
     expect(find.text('Beras'), findsOneWidget);
@@ -127,15 +170,19 @@ void main() {
     tester.state<NavigatorState>(find.byType(Navigator).first).pop();
     await _settle(tester);
     expect(calls, greaterThanOrEqualTo(2), reason: 'coming back must reload');
-    expect(find.text('Beras'), findsOneWidget, reason: 'a failed refresh must not wipe the list');
+    expect(find.text('Beras'), findsOneWidget,
+        reason: 'a failed refresh must not wipe the list');
   });
 
   fridgeDetailsTests();
   addPageTests();
+  headerLayoutTests();
+  flowTests();
 }
 
 void fridgeDetailsTests() {
-  testWidgets('unit and expiry fields: choose a unit, pick a date, clear it', (tester) async {
+  testWidgets('unit and expiry fields: choose a unit, pick a date, clear it',
+      (tester) async {
     await LanguageController.instance.set(const Locale('en'));
     String unit = 'pcs';
     DateTime? expiry;
@@ -169,19 +216,30 @@ void fridgeDetailsTests() {
 
     await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pump();
-    expect(expiry, isNull, reason: 'a cleared date must be reported as null so the server clears it');
+    expect(expiry, isNull,
+        reason:
+            'a cleared date must be reported as null so the server clears it');
     expect(find.text('Pick a date'), findsOneWidget);
   });
 
   for (final lang in ['id', 'en']) {
-    testWidgets('fridge edit sheet ($lang): unit chips and date button fit and show the item values', (tester) async {
+    testWidgets(
+        'fridge edit sheet ($lang): unit chips and date button fit and show the item values',
+        (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 2.75;
       addTearDown(tester.view.reset);
       await LanguageController.instance.set(Locale(lang));
-      await tester.pumpWidget(_app(KulkasPage(loader: () async => _ok([
-            {'_id': 'a', 'ingredient_name': 'Gula', 'quantity': 0.5, 'unit': 'kg', 'expired_date': _in(5)},
-          ]))));
+      await tester.pumpWidget(_app(KulkasPage(
+          loader: () async => _ok([
+                {
+                  '_id': 'a',
+                  'ingredient_name': 'Gula',
+                  'quantity': 0.5,
+                  'unit': 'kg',
+                  'expired_date': _in(5)
+                },
+              ]))));
       await _settle(tester);
       await tester.tap(find.byIcon(Icons.edit_note_rounded));
       await tester.pumpAndSettle();
@@ -189,7 +247,8 @@ void fridgeDetailsTests() {
       expect(find.text(s.unitLabel), findsOneWidget);
       expect(find.text(s.expiryDateLabel), findsOneWidget);
       expect(find.text('kg'), findsOneWidget);
-      expect(find.text(s.pickDate), findsNothing, reason: 'the item already has a date');
+      expect(find.text(s.pickDate), findsNothing,
+          reason: 'the item already has a date');
       expect(find.text('0.5'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -197,7 +256,9 @@ void fridgeDetailsTests() {
 }
 
 void addPageTests() {
-  testWidgets('add ingredient dialog: unit and expiry can be set next to the quantity', (tester) async {
+  testWidgets(
+      'add ingredient dialog: unit and expiry can be set next to the quantity',
+      (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.75;
     addTearDown(tester.view.reset);
@@ -218,7 +279,88 @@ void addPageTests() {
     await tester.pump();
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
-    expect(find.text('1 gram'), findsOneWidget, reason: 'the row shows the chosen unit');
+    expect(find.text('1 gram'), findsOneWidget,
+        reason: 'the row shows the chosen unit');
     expect(tester.takeException(), isNull);
+  });
+}
+
+void headerLayoutTests() {
+  for (final lang in ['id', 'en']) {
+    for (final top in [0.0, 24.0, 48.0]) {
+      for (final scale in [1.0, 1.3, 1.6]) {
+        testWidgets(
+            'fridge header ($lang, status bar ${top.toInt()}dp, font x$scale): nothing overlaps before scrolling',
+            (tester) async {
+          tester.view.physicalSize = const Size(1080, 2400);
+          tester.view.devicePixelRatio = 2.75;
+          tester.view.padding = FakeViewPadding(top: top * 2.75);
+          tester.view.viewPadding = FakeViewPadding(top: top * 2.75);
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          addTearDown(() {
+            tester.view.reset();
+            tester.platformDispatcher.clearTextScaleFactorTestValue();
+          });
+          await LanguageController.instance.set(Locale(lang));
+          await tester.pumpWidget(
+              _app(KulkasPage(loader: () async => _ok(_sampleItems))));
+          await _settle(tester);
+
+          final s = stringsFor(Locale(lang));
+          final back =
+              tester.getRect(find.byIcon(Icons.arrow_back_ios_new_rounded));
+          final title = tester.getRect(find.text(s.yourFridge));
+          final intro = tester.getRect(find.text(s.fridgeIntro));
+          final search = tester.getRect(find.byType(TextField).first);
+
+          expect(title.top, greaterThanOrEqualTo(back.bottom),
+              reason: 'title sits on the back button: $title vs $back');
+          expect(intro.top, greaterThanOrEqualTo(title.bottom - 1),
+              reason: 'intro overlaps the title');
+          expect(intro.bottom, lessThanOrEqualTo(search.top),
+              reason: 'intro runs into the search bar: $intro vs $search');
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+  }
+}
+
+void flowTests() {
+  testWidgets('pull to refresh reloads the list without a spinner wiping it', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    await LanguageController.instance.set(const Locale('en'));
+    var calls = 0;
+    await tester.pumpWidget(_app(KulkasPage(loader: () async {
+      calls++;
+      return _ok(_sampleItems);
+    })));
+    await _settle(tester);
+    expect(calls, 1);
+    await tester.fling(find.byType(CustomScrollView), const Offset(0, 500), 1000);
+    await _settle(tester);
+    expect(calls, 2, reason: 'a pull must reload');
+    expect(find.text('Beras'), findsOneWidget);
+  });
+
+  testWidgets('sort by "Expiring soon": earliest date first, items without a date last', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    await LanguageController.instance.set(const Locale('en'));
+    await tester.pumpWidget(_app(KulkasPage(loader: () async => _ok(_sampleItems))));
+    await _settle(tester);
+    await tester.tap(find.byIcon(Icons.tune_rounded));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Expiring soon'));
+    await tester.pump();
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+    double y(String t) => tester.getTopLeft(find.textContaining(t).first).dy;
+    expect(y('Susu'), lessThan(y('Gula')), reason: 'expired first');
+    expect(y('Gula'), lessThan(y('Beras')));
+    expect(y('Beras'), lessThan(y('Tepung')), reason: 'no date goes last');
   });
 }

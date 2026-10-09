@@ -275,6 +275,8 @@ abstract class Str {
   String get tomorrowLabel;
   String get ingredientUpdated;
   String get updateFailed;
+  String get soonestExpiry;
+  String mergedIntoExisting(int n);
   String get unitLabel;
   String get expiryDateLabel;
   String get pickDate;
@@ -818,6 +820,10 @@ class StrId implements Str {
   String get ingredientUpdated => 'Bahan berhasil diperbarui!';
   @override
   String get updateFailed => 'Gagal memperbarui';
+  @override
+  String get soonestExpiry => 'Segera kadaluarsa';
+  @override
+  String mergedIntoExisting(int n) => '$n bahan digabung ke stok yang sudah ada.';
   @override
   String get unitLabel => 'Satuan';
   @override
@@ -1416,6 +1422,10 @@ class StrEn implements Str {
   String get ingredientUpdated => 'Ingredient updated!';
   @override
   String get updateFailed => 'Couldn\'t update';
+  @override
+  String get soonestExpiry => 'Expiring soon';
+  @override
+  String mergedIntoExisting(int n) => n == 1 ? '1 item added to existing stock.' : '$n items added to existing stock.';
   @override
   String get unitLabel => 'Unit';
   @override

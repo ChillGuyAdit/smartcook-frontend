@@ -53,8 +53,8 @@ class _KulkasPageState extends State<KulkasPage> {
     _loadFridge();
   }
 
-  Future<void> _loadFridge() async {
-    setState(() => _loading = true);
+  Future<void> _loadFridge({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
     final res = await (widget.loader ?? () => ApiService.get('/api/fridge'))();
     if (!mounted) return;
 
@@ -176,6 +176,14 @@ class _KulkasPageState extends State<KulkasPage> {
       }).toList();
 
       _filteredItems.sort((a, b) {
+        if (_sortOption == "Kadaluarsa") {
+          final da = a['expiredDate'];
+          final db = b['expiredDate'];
+          if (da is DateTime && db is DateTime) return da.compareTo(db);
+          if (da is DateTime) return -1; // dated items first
+          if (db is DateTime) return 1;
+          return 0;
+        }
         final c = _qtyOf(a['qty']).compareTo(_qtyOf(b['qty']));
         return _sortOption == "Terbanyak" ? -c : c;
       });
@@ -402,6 +410,35 @@ class _KulkasPageState extends State<KulkasPage> {
                                           : context.colors.textSecondary,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setPopupState(
+                                    () => _sortOption = "Kadaluarsa"),
+                                child: Container(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: _sortOption == "Kadaluarsa"
+                                        ? _themeColors[0]
+                                        : context.colors.surfaceVariant,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    context.s.soonestExpiry,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: _sortOption == "Kadaluarsa"
+                                          ? Colors.white
+                                          : context.colors.textSecondary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
                                     ),
                                   ),
                                 ),
@@ -717,138 +754,146 @@ class _KulkasPageState extends State<KulkasPage> {
         backgroundColor: _themeColors[0],
         child: const Icon(Icons.add),
       ),
-      body: CustomScrollView(
-        slivers: [
-          // --- CUSTOM HEADER ANIMATION (DIUBAH DARI SLIVERAPPBAR) ---
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _KulkasHeaderDelegate(
-              safeArea: safeAreaTop,
-              themeColors: _themeColors,
-            ),
-          ),
-
-          // --- SEARCH & FILTER BAR ---
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: context.colors.surface,
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: context.softShadow,
-                        border: Border.all(color: context.colors.border),
-                      ),
-                      child: TextField(
-                        onChanged: (value) {
-                          _searchQuery = value;
-                          _applyFilters();
-                        },
-                        style: TextStyle(color: context.colors.textPrimary),
-                        decoration: InputDecoration(
-                          hintText: context.s.searchFridge,
-                          hintStyle: TextStyle(
-                              color: context.colors.textDisabled, fontSize: 14),
-                          filled: false,
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          icon: Icon(Icons.search, color: _themeColors[0]),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: () => _showFilterMenu(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: _themeColors[1],
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _themeColors[1].withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          )
-                        ],
-                      ),
-                      child:
-                          const Icon(Icons.tune_rounded, color: Colors.white),
-                    ),
-                  ),
-                ],
+      body: RefreshIndicator(
+        onRefresh: () => _loadFridge(silent: true),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // --- CUSTOM HEADER ANIMATION (DIUBAH DARI SLIVERAPPBAR) ---
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _KulkasHeaderDelegate.measured(
+                context: context,
+                safeArea: safeAreaTop,
+                themeColors: _themeColors,
+                title: context.s.yourFridge,
+                intro: context.s.fridgeIntro,
               ),
             ),
-          ),
 
-          // --- LIST BAHAN KULKAS ---
-          SliverPadding(
-            padding: const EdgeInsets.all(20),
-            sliver: _loading
-                ? const SliverToBoxAdapter(
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.only(top: 50),
-                        child: CircularProgressIndicator(),
-                      ),
-                    ),
-                  )
-                : _loadFailed && _fridgeItems.isEmpty
-                    ? SliverToBoxAdapter(
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 50),
-                            child: Column(
-                              children: [
-                                Text(
-                                  context.s.fridgeLoadFailed,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      color: context.colors.textSecondary,
-                                      fontSize: 16),
-                                ),
-                                const SizedBox(height: 12),
-                                TextButton(
-                                  onPressed: _loadFridge,
-                                  child: Text(context.s.updateRetry),
-                                ),
-                              ],
-                            ),
+            // --- SEARCH & FILTER BAR ---
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: context.colors.surface,
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: context.softShadow,
+                          border: Border.all(color: context.colors.border),
+                        ),
+                        child: TextField(
+                          onChanged: (value) {
+                            _searchQuery = value;
+                            _applyFilters();
+                          },
+                          style: TextStyle(color: context.colors.textPrimary),
+                          decoration: InputDecoration(
+                            hintText: context.s.searchFridge,
+                            hintStyle: TextStyle(
+                                color: context.colors.textDisabled,
+                                fontSize: 14),
+                            filled: false,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            icon: Icon(Icons.search, color: _themeColors[0]),
                           ),
                         ),
-                      )
-                    : _filteredItems.isEmpty
-                        ? SliverToBoxAdapter(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(top: 50),
-                                child: Text(
-                                  context.s.ingredientsNotFound,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      color: context.colors.textSecondary,
-                                      fontSize: 16),
-                                ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: () => _showFilterMenu(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: _themeColors[1],
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _themeColors[1].withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            )
+                          ],
+                        ),
+                        child:
+                            const Icon(Icons.tune_rounded, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // --- LIST BAHAN KULKAS ---
+            SliverPadding(
+              padding: const EdgeInsets.all(20),
+              sliver: _loading
+                  ? const SliverToBoxAdapter(
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.only(top: 50),
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                    )
+                  : _loadFailed && _fridgeItems.isEmpty
+                      ? SliverToBoxAdapter(
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 50),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    context.s.fridgeLoadFailed,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: context.colors.textSecondary,
+                                        fontSize: 16),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  TextButton(
+                                    onPressed: _loadFridge,
+                                    child: Text(context.s.updateRetry),
+                                  ),
+                                ],
                               ),
                             ),
-                          )
-                        : SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final item = _filteredItems[index];
-                                return _buildFridgeListItem(item);
-                              },
-                              childCount: _filteredItems.length,
-                            ),
                           ),
-          ),
-        ],
+                        )
+                      : _filteredItems.isEmpty
+                          ? SliverToBoxAdapter(
+                              child: Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 50),
+                                  child: Text(
+                                    context.s.ingredientsNotFound,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: context.colors.textSecondary,
+                                        fontSize: 16),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final item = _filteredItems[index];
+                                  return _buildFridgeListItem(item);
+                                },
+                                childCount: _filteredItems.length,
+                              ),
+                            ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1005,22 +1050,99 @@ class _KulkasPageState extends State<KulkasPage> {
 class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double safeArea;
   final List<Color> themeColors;
+  final String title;
+  final String intro;
+  final double _min;
+  final double _max;
+  // Height of the title + intro block in the expanded state.
+  final double _blockHeight;
 
-  _KulkasHeaderDelegate({required this.safeArea, required this.themeColors});
+  static const double _backTop = 12; // gap above the back button
+  static const double _backSize = 36; // 8 padding + 20 icon + 8 padding
+  static const double _gap = 10; // back button -> title
+  static const double _bottom = 16; // under the intro
+
+  _KulkasHeaderDelegate._({
+    required this.safeArea,
+    required this.themeColors,
+    required this.title,
+    required this.intro,
+    required double min,
+    required double max,
+    required double blockHeight,
+  })  : _min = min,
+        _max = max,
+        _blockHeight = blockHeight;
+
+  /// Sizes the header from its text. Fixed numbers (170dp, "title at +46")
+  /// broke on phones with a tall status bar, a bigger system font or a longer
+  /// translation: the title sat on the back button and the intro ran into the
+  /// search bar.
+  factory _KulkasHeaderDelegate.measured({
+    required BuildContext context,
+    required double safeArea,
+    required List<Color> themeColors,
+    required String title,
+    required String intro,
+  }) {
+    final media = MediaQuery.of(context);
+    // Measure with the same inherited style the Text widgets will use,
+    // otherwise a theme font/height makes the real text taller than measured.
+    final base = DefaultTextStyle.of(context).style;
+    final width = (media.size.width - 32).clamp(80.0, 4000.0);
+    double height(String text, TextStyle style, int lines, double w) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: base.merge(style)),
+        maxLines: lines,
+        textDirection: TextDirection.ltr,
+        textScaler: media.textScaler,
+      )..layout(maxWidth: w);
+      return painter.height;
+    }
+
+    const titleStyle = TextStyle(fontSize: 24, fontWeight: FontWeight.bold);
+    const introStyle = TextStyle(fontSize: 12, height: 1.2);
+    final titleH = height(title, titleStyle, 2, width);
+    final introH = height(intro, introStyle, 2, width);
+    final block = titleH + 6 + introH;
+    final expanded = safeArea + _backTop + _backSize + _gap + block + _bottom;
+
+    // Collapsed: the block sits to the right of the back button.
+    final colW = (media.size.width - 60 - 16).clamp(80.0, 4000.0);
+    final colBlock = height(
+            title,
+            const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            2,
+            colW) +
+        2 +
+        height(intro, const TextStyle(fontSize: 10, height: 1.2), 2, colW);
+    final collapsed = safeArea + 10 + colBlock + 10;
+
+    final min = collapsed < safeArea + 70 ? safeArea + 70 : collapsed;
+    final max = expanded < 170 ? 170.0 : expanded;
+    return _KulkasHeaderDelegate._(
+      safeArea: safeArea,
+      themeColors: themeColors,
+      title: title,
+      intro: intro,
+      min: min,
+      max: max < min ? min : max,
+      blockHeight: block,
+    );
+  }
 
   @override
-  // Memberikan space yang cukup untuk tombol back, judul, & deskripsi di mode collapsed
-  double get minExtent => safeArea + 70.0;
+  double get minExtent => _min;
 
   @override
-  // DIUBAH: Height awal dikurangi agar header tidak terlalu memakan tempat (sebelumnya 220.0)
-  double get maxExtent => 170.0;
+  double get maxExtent => _max;
 
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
     // Persentase scroll (0.0 = full expand bawah, 1.0 = full collapsed atas)
-    double percent = (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
+    final range = maxExtent - minExtent;
+    double percent = range <= 0 ? 0.0 : (shrinkOffset / range).clamp(0.0, 1.0);
 
     return Container(
       decoration: BoxDecoration(
@@ -1076,7 +1198,11 @@ class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
 
             // DIUBAH: Nilai "begin" dikurangi agar judul naik lebih dekat ke tombol Back
             // Sebelumnya (maxExtent - 85.0), sekarang diset fix safeArea + 65.0
-            top: Tween<double>(begin: safeArea + 46.0, end: safeArea + 10.0)
+            // Expanded: anchored to the bottom of the header, so it is always
+            // below the back button whatever the text height is.
+            top: Tween<double>(
+                    begin: maxExtent - _bottom - _blockHeight,
+                    end: safeArea + 10.0)
                 .transform(percent),
 
             right: 16, // Membatasi lebar agar text tidak tembus layar kanan
@@ -1086,7 +1212,9 @@ class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
               children: [
                 // Judul
                 Text(
-                  context.s.yourFridge,
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     // Ukuran mengecil perlahan
                     fontSize: Tween<double>(begin: 24.0, end: 18.0)
@@ -1100,7 +1228,7 @@ class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
                         Tween<double>(begin: 6.0, end: 2.0).transform(percent)),
                 // Deskripsi (Mengecil tapi TIDAK hilang / opacity tetap)
                 Text(
-                  context.s.fridgeIntro,
+                  intro,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1124,6 +1252,9 @@ class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _KulkasHeaderDelegate oldDelegate) {
     return maxExtent != oldDelegate.maxExtent ||
         minExtent != oldDelegate.minExtent ||
-        safeArea != oldDelegate.safeArea;
+        safeArea != oldDelegate.safeArea ||
+        title != oldDelegate.title ||
+        intro != oldDelegate.intro ||
+        themeColors != oldDelegate.themeColors;
   }
 }

@@ -664,6 +664,7 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
     }
 
     int ok = 0;
+    int merged = 0;
     String? lastError;
     for (final item in toSave) {
       final res = await ApiService.post(
@@ -680,6 +681,9 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
       );
       if (res.success) {
         ok++;
+        // The server answers 200 when the amount was added to an existing
+        // item and 201 when a new item was created.
+        if (res.statusCode == 200) merged++;
       } else if (OfflineManager.isOffline.value) {
         // Fallback: anggap offline, antrikan operasi dan lanjut
         await OfflineCacheService.addPendingOperation(
@@ -721,7 +725,10 @@ class _TambahkanBahanPageState extends State<TambahkanBahanPage> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.s.processedToFridge(toSave.length))),
+        SnackBar(
+            content: Text(merged > 0
+                ? '${context.s.processedToFridge(toSave.length)} ${context.s.mergedIntoExisting(merged)}'
+                : context.s.processedToFridge(toSave.length))),
       );
     }
     Navigator.pop(context);
