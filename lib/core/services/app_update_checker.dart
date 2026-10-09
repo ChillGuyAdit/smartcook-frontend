@@ -296,7 +296,7 @@ class UpdateOverlay {
 enum _DialogStage { ready, downloading, installing, failed }
 
 /// One entry from the server's `history`, shown in the full release notes.
-class _ReleaseNote {
+class ReleaseNote {
   final String version;
   final int build;
 
@@ -312,7 +312,7 @@ class _ReleaseNote {
   final String? date;
   final String notes;
 
-  const _ReleaseNote({
+  const ReleaseNote({
     required this.version,
     required this.build,
     required this.androidVersionCode,
@@ -320,7 +320,7 @@ class _ReleaseNote {
     required this.notes,
   });
 
-  factory _ReleaseNote.fromJson(Map<String, dynamic> j) {
+  factory ReleaseNote.fromJson(Map<String, dynamic> j) {
     final build = (j['build'] as num?)?.toInt() ?? 0;
     // `androidVersionCode` is the field the client actually compares against;
     // `build` is the manifest's monotonic counter. Fall back to `build` for
@@ -328,7 +328,7 @@ class _ReleaseNote {
     // whether or not the field is present.
     final androidVersionCode =
         (j['androidVersionCode'] as num?)?.toInt() ?? build;
-    return _ReleaseNote(
+    return ReleaseNote(
       version: j['version'] as String? ?? '',
       build: build,
       androidVersionCode: androidVersionCode,
@@ -401,9 +401,9 @@ class _UpdateDialogState extends State<_UpdateDialog> {
   String? get _notes => _info['notes'] as String?;
   int get _latestBuild => (_info['latestBuild'] as num?)?.toInt() ?? 0;
 
-  List<_ReleaseNote> get _releases => [
+  List<ReleaseNote> get _releases => [
         for (final r in (_info['history'] as List? ?? const []))
-          if (r is Map) _ReleaseNote.fromJson(Map<String, dynamic>.from(r)),
+          if (r is Map) ReleaseNote.fromJson(Map<String, dynamic>.from(r)),
       ];
 
   /// Dialog strings follow the app language, like every other screen.
@@ -627,7 +627,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                 ),
               ),
               Expanded(
-                child: _ReleaseNotesList(
+                child: ReleaseNotesList(
                   controller: _notesScroll,
                   releases: _releases,
                   installedBuild: widget.installedBuild,
@@ -753,12 +753,12 @@ class _UpdateDialogState extends State<_UpdateDialog> {
 /// Scrollable history of every release. The installed version is labelled
 /// "Versi kamu", versions the update brings are labelled "Baru". Notes only -
 /// an older APK can never be downloaded from here.
-class _ReleaseNotesList extends StatelessWidget {
+class ReleaseNotesList extends StatelessWidget {
   final ScrollController controller;
-  final List<_ReleaseNote> releases;
+  final List<ReleaseNote> releases;
   final int installedBuild;
 
-  const _ReleaseNotesList({
+  const ReleaseNotesList({
     required this.controller,
     required this.releases,
     required this.installedBuild,
@@ -794,17 +794,20 @@ class _ReleaseNotesList extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              // A Wrap, not a Row: on a narrow screen or with large text the
+              // chip and the date used to run off the right edge.
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
                     '${s.version} ${r.version}',
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  const SizedBox(width: 8),
                   if (isNew) _Chip(label: s.newBadge, color: scheme.primary),
                   if (isCurrent)
                     _Chip(label: s.youAreHere, color: scheme.outline),
-                  const Spacer(),
                   if (r.date != null)
                     Text(r.date!, style: Theme.of(context).textTheme.bodySmall),
                 ],
