@@ -9,7 +9,10 @@ import 'tambahkan_bahan.dart';
 import '../core/l10n/strings.dart';
 
 class KulkasPage extends StatefulWidget {
-  const KulkasPage({super.key});
+  const KulkasPage({super.key, this.loader});
+
+  /// Test seam: where the fridge list comes from. Defaults to the API.
+  final Future<ApiResponse> Function()? loader;
 
   @override
   State<KulkasPage> createState() => _KulkasPageState();
@@ -21,7 +24,12 @@ class _KulkasPageState extends State<KulkasPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _qtyController = TextEditingController();
   String _searchQuery = "";
-  int _maxStock = 500;
+  // Upper bound of the "maximum stock" filter. Starts at "no limit": a fixed
+  // default (it used to be 500) silently hid every item with more in stock,
+  // e.g. 1000 g of rice.
+  static const int _noLimit = 1 << 30;
+  int _maxStock = _noLimit;
+  bool _loadFailed = false;
   String _sortOption = "Terbanyak";
   String _expiredFilterOption = "Semua";
   bool _loading = true;
@@ -46,36 +54,62 @@ class _KulkasPageState extends State<KulkasPage> {
 
   Future<void> _loadFridge() async {
     setState(() => _loading = true);
-    final res = await ApiService.get('/api/fridge');
+    final res = await (widget.loader ?? () => ApiService.get('/api/fridge'))();
     if (!mounted) return;
 
+    // A failed request must not look like an empty fridge: keep what was on
+    // screen and say that loading failed.
+    if (!res.success) {
+      setState(() {
+        _loadFailed = true;
+        _loading = false;
+      });
+      _applyFilters();
+      return;
+    }
+
     List<Map<String, dynamic>> list = [];
-    if (res.success && res.data != null) {
-      final data = res.data;
-      if (data is List) {
-        for (final e in data) {
-          final item = Map<String, dynamic>.from(e as Map);
-          DateTime exp = DateTime.now().add(const Duration(days: 7));
-          try {
-            final ed = item['expired_date']?.toString();
-            if (ed != null && ed.isNotEmpty) exp = DateTime.parse(ed);
-          } catch (_) {}
-          list.add({
-            'id': item['_id']?.toString(),
-            'name': item['ingredient_name'] ?? item['name'] ?? 'Bahan',
-            'qty': item['quantity'] ?? item['qty'] ?? 0,
-            'expiredDate': exp,
-            'unit': item['unit'],
-          });
-        }
+    final data = res.data;
+    if (data is List) {
+      for (final e in data) {
+        if (e is! Map) continue;
+        final item = Map<String, dynamic>.from(e);
+        // No expiry date means "not set", not "a week from now".
+        DateTime? exp;
+        try {
+          final ed = item['expired_date']?.toString();
+          if (ed != null && ed.isNotEmpty) exp = DateTime.parse(ed).toLocal();
+        } catch (_) {}
+        list.add({
+          'id': item['_id']?.toString(),
+          'name': item['ingredient_name'] ??
+              item['name'] ??
+              currentStrings.ingredientWord,
+          'qty': item['quantity'] ?? item['qty'] ?? 0,
+          'expiredDate': exp,
+          'unit': item['unit'],
+        });
       }
     }
 
     setState(() {
       _fridgeItems = list;
+      _loadFailed = false;
       _loading = false;
     });
     _applyFilters();
+  }
+
+  /// Quantity as a number; the server may send an int, a double or a string.
+  static num _qtyOf(Object? v) {
+    if (v is num) return v;
+    return num.tryParse(v.toString().replaceAll(',', '.')) ?? 0;
+  }
+
+  /// "2" instead of "2.0"; "0.5" stays "0.5".
+  static String _qtyText(Object? v) {
+    final n = _qtyOf(v);
+    return n == n.roundToDouble() ? n.round().toString() : n.toString();
   }
 
   // Menghitung sisa hari
@@ -97,7 +131,8 @@ class _KulkasPageState extends State<KulkasPage> {
       };
 
   // Teks Tanggal Kadaluarsa
-  String _getExpiredText(int diffDays) {
+  String _getExpiredText(int? diffDays) {
+    if (diffDays == null) return context.s.noExpiryDate;
     if (diffDays < 0) return context.s.expiredLabel;
     if (diffDays == 0) return context.s.todayLabel;
     if (diffDays == 1) return context.s.tomorrowLabel;
@@ -105,7 +140,8 @@ class _KulkasPageState extends State<KulkasPage> {
   }
 
   // Warna Teks Kadaluarsa
-  Color _getExpiredColor(int diffDays) {
+  Color _getExpiredColor(int? diffDays) {
+    if (diffDays == null) return context.colors.textSecondary;
     if (diffDays < 0) return Colors.red;
     if (diffDays <= 3)
       return Colors.orange.shade800; // Peringatan jika < 3 hari
@@ -119,44 +155,29 @@ class _KulkasPageState extends State<KulkasPage> {
             .toString()
             .toLowerCase()
             .contains(_searchQuery.toLowerCase());
-        final q = item['qty'] is int
-            ? item['qty'] as int
-            : int.tryParse(item['qty'].toString()) ?? 0;
-        final matchStock = q <= _maxStock;
+        final matchStock = _qtyOf(item['qty']) <= _maxStock;
         final exp = item['expiredDate'];
-        final diffDays = exp is DateTime ? _getDaysDiff(exp) : 0;
+        final int? diffDays = exp is DateTime ? _getDaysDiff(exp) : null;
         bool matchExpired = true;
-        if (_expiredFilterOption == "Kadaluarsa") {
-          matchExpired = diffDays < 0;
-        } else if (_expiredFilterOption == "< 3 Hari") {
-          matchExpired = diffDays >= 0 && diffDays <= 3;
-        } else if (_expiredFilterOption == "< 7 Hari") {
-          matchExpired = diffDays >= 0 && diffDays <= 7;
+        if (_expiredFilterOption != "Semua") {
+          // Items without an expiry date can never match an expiry filter.
+          if (diffDays == null) {
+            matchExpired = false;
+          } else if (_expiredFilterOption == "Kadaluarsa") {
+            matchExpired = diffDays < 0;
+          } else if (_expiredFilterOption == "< 3 Hari") {
+            matchExpired = diffDays >= 0 && diffDays <= 3;
+          } else if (_expiredFilterOption == "< 7 Hari") {
+            matchExpired = diffDays >= 0 && diffDays <= 7;
+          }
         }
         return matchSearch && matchStock && matchExpired;
       }).toList();
 
-      if (_sortOption == "Terbanyak") {
-        _filteredItems.sort((a, b) {
-          final qa = a['qty'] is int
-              ? a['qty'] as int
-              : int.tryParse(a['qty'].toString()) ?? 0;
-          final qb = b['qty'] is int
-              ? b['qty'] as int
-              : int.tryParse(b['qty'].toString()) ?? 0;
-          return qb.compareTo(qa);
-        });
-      } else {
-        _filteredItems.sort((a, b) {
-          final qa = a['qty'] is int
-              ? a['qty'] as int
-              : int.tryParse(a['qty'].toString()) ?? 0;
-          final qb = b['qty'] is int
-              ? b['qty'] as int
-              : int.tryParse(b['qty'].toString()) ?? 0;
-          return qa.compareTo(qb);
-        });
-      }
+      _filteredItems.sort((a, b) {
+        final c = _qtyOf(a['qty']).compareTo(_qtyOf(b['qty']));
+        return _sortOption == "Terbanyak" ? -c : c;
+      });
     });
   }
 
@@ -439,10 +460,12 @@ class _KulkasPageState extends State<KulkasPage> {
                             IconButton(
                               icon: const Icon(Icons.remove_circle_outline,
                                   color: Colors.redAccent),
-                              onPressed: () => setPopupState(() =>
-                                  _maxStock = (_maxStock - 10).clamp(5, 1000)),
+                              onPressed: () => setPopupState(() => _maxStock =
+                                  _maxStock >= _noLimit
+                                      ? 1000
+                                      : (_maxStock - 10).clamp(5, 1000)),
                             ),
-                            Text("$_maxStock",
+                            Text(_maxStock >= _noLimit ? "∞" : "$_maxStock",
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 18,
@@ -450,8 +473,10 @@ class _KulkasPageState extends State<KulkasPage> {
                             IconButton(
                               icon: const Icon(Icons.add_circle_outline,
                                   color: Colors.green),
-                              onPressed: () => setPopupState(() =>
-                                  _maxStock = (_maxStock + 10).clamp(5, 1000)),
+                              onPressed: () => setPopupState(() => _maxStock =
+                                  _maxStock >= _noLimit || _maxStock + 10 > 1000
+                                      ? _noLimit
+                                      : _maxStock + 10),
                             ),
                           ],
                         ),
@@ -490,10 +515,11 @@ class _KulkasPageState extends State<KulkasPage> {
 
   // Bottom Modal Sheet HANYA untuk Edit
   void _showEditForm(dynamic id) {
-    final existingItem =
-        _fridgeItems.firstWhere((element) => element['id'] == id);
+    final found = _fridgeItems.where((element) => element['id'] == id);
+    if (found.isEmpty) return;
+    final existingItem = found.first;
     _nameController.text = existingItem['name'].toString();
-    _qtyController.text = existingItem['qty'].toString();
+    _qtyController.text = _qtyText(existingItem['qty']);
 
     showModalBottomSheet(
       context: context,
@@ -524,6 +550,9 @@ class _KulkasPageState extends State<KulkasPage> {
             const SizedBox(height: 20),
             TextField(
               controller: _nameController,
+              // The name is the identity of the item (the server cannot rename
+              // it), so it is shown but not editable.
+              enabled: false,
               style: TextStyle(color: context.colors.textPrimary),
               decoration: InputDecoration(
                 labelText: context.s.ingredientName,
@@ -542,7 +571,8 @@ class _KulkasPageState extends State<KulkasPage> {
             const SizedBox(height: 15),
             TextField(
               controller: _qtyController,
-              keyboardType: TextInputType.number,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               style: TextStyle(color: context.colors.textPrimary),
               decoration: InputDecoration(
                 labelText: context.s.quantity,
@@ -561,16 +591,24 @@ class _KulkasPageState extends State<KulkasPage> {
             const SizedBox(height: 25),
             ElevatedButton(
               onPressed: () async {
-                if (_nameController.text.isEmpty || _qtyController.text.isEmpty)
+                final typed = num.tryParse(
+                    _qtyController.text.trim().replaceAll(',', '.'));
+                if (typed == null || typed < 0 || typed > 1000000) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(context.s.invalidQuantity)),
+                  );
                   return;
-                final qty = int.tryParse(_qtyController.text) ?? 1;
+                }
+                final qty = typed;
                 final exp = existingItem['expiredDate'];
                 final res = await ApiService.put(
                   '/api/fridge/$id',
                   body: {
                     'quantity': qty,
                     'unit': existingItem['unit'] ?? 'pcs',
-                    if (exp is DateTime) 'expired_date': exp.toIso8601String(),
+                    // Only a date the user/server really has: never invent one.
+                    if (exp is DateTime)
+                      'expired_date': exp.toUtc().toIso8601String(),
                   },
                 );
                 _nameController.clear();
@@ -582,7 +620,8 @@ class _KulkasPageState extends State<KulkasPage> {
                   _showSuccessPopup(currentStrings.ingredientUpdated);
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(res.message ?? context.s.updateFailed)),
+                    SnackBar(
+                        content: Text(res.message ?? context.s.updateFailed)),
                   );
                 }
               },
@@ -627,10 +666,11 @@ class _KulkasPageState extends State<KulkasPage> {
       _showSuccessPopup(currentStrings.ingredientDeleted);
     } else if (OfflineManager.isOffline.value) {
       // Fallback: anggap offline, hapus lokal & antrikan operasi
-      if (mounted) setState(() {
-        _fridgeItems.removeWhere((e) => e['id'] == id);
-        _applyFilters();
-      });
+      if (mounted)
+        setState(() {
+          _fridgeItems.removeWhere((e) => e['id'] == id);
+          _applyFilters();
+        });
       await OfflineCacheService.addPendingOperation(
         method: 'DELETE',
         path: '/api/fridge/$id',
@@ -695,8 +735,7 @@ class _KulkasPageState extends State<KulkasPage> {
                         decoration: InputDecoration(
                           hintText: context.s.searchFridge,
                           hintStyle: TextStyle(
-                              color: context.colors.textDisabled,
-                              fontSize: 14),
+                              color: context.colors.textDisabled, fontSize: 14),
                           border: InputBorder.none,
                           icon: Icon(Icons.search, color: _themeColors[0]),
                         ),
@@ -740,30 +779,54 @@ class _KulkasPageState extends State<KulkasPage> {
                       ),
                     ),
                   )
-                : _filteredItems.isEmpty
+                : _loadFailed && _fridgeItems.isEmpty
                     ? SliverToBoxAdapter(
                         child: Center(
                           child: Padding(
                             padding: const EdgeInsets.only(top: 50),
-                            child: Text(
-                              context.s.ingredientsNotFound,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                  color: context.colors.textSecondary,
-                                  fontSize: 16),
+                            child: Column(
+                              children: [
+                                Text(
+                                  context.s.fridgeLoadFailed,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      color: context.colors.textSecondary,
+                                      fontSize: 16),
+                                ),
+                                const SizedBox(height: 12),
+                                TextButton(
+                                  onPressed: _loadFridge,
+                                  child: Text(context.s.updateRetry),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       )
-                    : SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final item = _filteredItems[index];
-                            return _buildFridgeListItem(item);
-                          },
-                          childCount: _filteredItems.length,
-                        ),
-                      ),
+                    : _filteredItems.isEmpty
+                        ? SliverToBoxAdapter(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 50),
+                                child: Text(
+                                  context.s.ingredientsNotFound,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      color: context.colors.textSecondary,
+                                      fontSize: 16),
+                                ),
+                              ),
+                            ),
+                          )
+                        : SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final item = _filteredItems[index];
+                                return _buildFridgeListItem(item);
+                              },
+                              childCount: _filteredItems.length,
+                            ),
+                          ),
           ),
         ],
       ),
@@ -773,8 +836,9 @@ class _KulkasPageState extends State<KulkasPage> {
   // Desain Card List
   Widget _buildFridgeListItem(Map<String, dynamic> item) {
     // Hitung status kadaluarsa
-    final diffDays = _getDaysDiff(item['expiredDate']);
-    final isExpired = diffDays < 0;
+    final exp = item['expiredDate'];
+    final int? diffDays = exp is DateTime ? _getDaysDiff(exp) : null;
+    final isExpired = diffDays != null && diffDays < 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -785,9 +849,7 @@ class _KulkasPageState extends State<KulkasPage> {
             : context.colors.surface, // Berubah merah jika expired
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-            color: isExpired
-                ? Colors.red.shade100
-                : context.colors.border),
+            color: isExpired ? Colors.red.shade100 : context.colors.border),
         boxShadow: context.softShadow,
       ),
       child: Row(
@@ -814,7 +876,9 @@ class _KulkasPageState extends State<KulkasPage> {
               children: [
                 // Nama Bahan
                 Text(
-                  item['name'],
+                  item['name'].toString(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -829,14 +893,17 @@ class _KulkasPageState extends State<KulkasPage> {
                     const Icon(Icons.inventory_2_outlined,
                         size: 14, color: Colors.blueGrey),
                     const SizedBox(width: 4),
-                    Text(
-                      context.s.stockLabel(item['qty']),
+                    Flexible(
+                        child: Text(
+                      context.s.stockLabel(
+                          '${_qtyText(item['qty'])}${(item['unit'] ?? '').toString().isEmpty ? '' : ' ${item['unit']}'}'),
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: context.colors.textSecondary,
                       ),
-                    ),
+                    )),
                   ],
                 ),
 
@@ -849,14 +916,16 @@ class _KulkasPageState extends State<KulkasPage> {
                     Icon(Icons.event_busy_rounded,
                         size: 14, color: _getExpiredColor(diffDays)),
                     const SizedBox(width: 4),
-                    Text(
+                    Flexible(
+                        child: Text(
                       _getExpiredText(diffDays),
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: _getExpiredColor(diffDays),
                       ),
-                    ),
+                    )),
                   ],
                 ),
               ],

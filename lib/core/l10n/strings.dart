@@ -275,6 +275,9 @@ abstract class Str {
   String get tomorrowLabel;
   String get ingredientUpdated;
   String get updateFailed;
+  String get noExpiryDate;
+  String get invalidQuantity;
+  String get fridgeLoadFailed;
   String get ingredientDeletedSync;
   String get ingredientDeleted;
   String get deleteFailed;
@@ -809,6 +812,12 @@ class StrId implements Str {
   String get ingredientUpdated => 'Bahan berhasil diperbarui!';
   @override
   String get updateFailed => 'Gagal memperbarui';
+  @override
+  String get noExpiryDate => 'Tanpa tanggal kadaluarsa';
+  @override
+  String get invalidQuantity => 'Isi jumlah dengan angka, misalnya 2 atau 0,5.';
+  @override
+  String get fridgeLoadFailed => 'Kulkas belum bisa dimuat.\nPeriksa koneksi lalu coba lagi.';
   @override
   String get ingredientDeletedSync => 'Bahan dihapus (akan disinkron saat online)';
   @override
@@ -1389,6 +1398,12 @@ class StrEn implements Str {
   String get ingredientUpdated => 'Ingredient updated!';
   @override
   String get updateFailed => 'Couldn\'t update';
+  @override
+  String get noExpiryDate => 'No expiry date';
+  @override
+  String get invalidQuantity => 'Enter the quantity as a number, for example 2 or 0.5.';
+  @override
+  String get fridgeLoadFailed => 'Couldn\'t load your fridge.\nCheck your connection and try again.';
   @override
   String get ingredientDeletedSync => 'Ingredient deleted (will sync when you\'re online)';
   @override
