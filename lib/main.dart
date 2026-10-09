@@ -32,14 +32,16 @@ final ScreenObserver _screenObserver = ScreenObserver();
 
 /// Shows the blocked / suspended notice. Very early in start-up the navigator
 /// may not exist yet, so it tries again for a few seconds.
-void _showRestricted(String code, String message, String reason,
+void _showRestricted(
+    String code, String message, String reason, int? remainingSeconds,
     [int attempt = 0]) {
   final nav = navigatorKey.currentState;
   if (nav == null) {
     if (attempt < 20) {
       Future<void>.delayed(
         const Duration(milliseconds: 500),
-        () => _showRestricted(code, message, reason, attempt + 1),
+        () => _showRestricted(
+            code, message, reason, remainingSeconds, attempt + 1),
       );
     } else {
       Restriction.clear();
@@ -49,7 +51,11 @@ void _showRestricted(String code, String message, String reason,
   nav.pushAndRemoveUntil(
     MaterialPageRoute<void>(
       builder: (_) =>
-          RestrictedPage(code: code, message: message, reason: reason),
+          RestrictedPage(
+              code: code,
+              message: message,
+              reason: reason,
+              remainingSeconds: remainingSeconds),
     ),
     (route) => false,
   );

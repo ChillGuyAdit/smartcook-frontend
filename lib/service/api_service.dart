@@ -174,6 +174,7 @@ class ApiService {
         body['code'].toString(),
         body['message']?.toString() ?? '',
         body['reason']?.toString() ?? '',
+        (body['remainingSeconds'] as num?)?.toInt(),
       );
       return ApiResponse(
         success: false,

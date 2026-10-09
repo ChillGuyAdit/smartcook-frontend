@@ -29,28 +29,36 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('the pop-up stays when the route under it is replaced (the login bug)', (tester) async {
+  testWidgets(
+      'the pop-up stays when the route under it is replaced (the login bug)',
+      (tester) async {
     await pumpApp(tester);
     await open(tester, forced: false);
     expect(find.text('Update available'), findsOneWidget);
 
     // what login / splash do: replace the top route, then clear the stack
-    key.currentState!.pushReplacement(MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('home'))));
+    key.currentState!.pushReplacement(MaterialPageRoute<void>(
+        builder: (_) => const Scaffold(body: Text('home'))));
     await tester.pumpAndSettle();
     expect(find.text('home'), findsOneWidget);
-    expect(find.text('Update available'), findsOneWidget, reason: 'replaced by the new route');
+    expect(find.text('Update available'), findsOneWidget,
+        reason: 'replaced by the new route');
 
     key.currentState!.pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('signin'))), (r) => false);
+        MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('signin'))),
+        (r) => false);
     await tester.pumpAndSettle();
     expect(find.text('signin'), findsOneWidget);
-    expect(find.text('Update available'), findsOneWidget, reason: 'removed with the stack');
+    expect(find.text('Update available'), findsOneWidget,
+        reason: 'removed with the stack');
 
     UpdateOverlay.handleBack();
     await tester.pump();
   });
 
-  testWidgets('optional update: "Later" and the back key close it', (tester) async {
+  testWidgets('optional update: "Later" and the back key close it',
+      (tester) async {
     await pumpApp(tester);
     await open(tester, forced: false);
     await tester.tap(find.text('Later'));
@@ -59,7 +67,8 @@ void main() {
     expect(UpdateOverlay.isOpen, isFalse);
 
     await open(tester, forced: false);
-    expect(UpdateOverlay.handleBack(), isTrue, reason: 'back is consumed by the pop-up');
+    expect(UpdateOverlay.handleBack(), isTrue,
+        reason: 'back is consumed by the pop-up');
     await tester.pump();
     expect(find.text('Update available'), findsNothing);
     expect(UpdateOverlay.isOpen, isFalse);
@@ -67,7 +76,8 @@ void main() {
     expect(UpdateOverlay.handleBack(), isFalse);
   });
 
-  testWidgets('mandatory update: back is swallowed and the pop-up stays', (tester) async {
+  testWidgets('mandatory update: back is swallowed and the pop-up stays',
+      (tester) async {
     await pumpApp(tester);
     await open(tester, forced: true);
     expect(UpdateOverlay.handleBack(), isTrue);
@@ -81,7 +91,9 @@ void main() {
     expect(find.text('Update available'), findsOneWidget);
   });
 
-  testWidgets('a second request while one is open does not stack another pop-up', (tester) async {
+  testWidgets(
+      'a second request while one is open does not stack another pop-up',
+      (tester) async {
     await pumpApp(tester);
     await open(tester, forced: false);
     await open(tester, forced: false);

@@ -14,10 +14,14 @@ void main() {
     }
   });
 
-  test('sign-out empties the queue so it cannot run on the next account', () async {
-    await OfflineCacheService.addPendingOperation(method: 'DELETE', path: '/api/fridge/abc');
+  test('sign-out empties the queue so it cannot run on the next account',
+      () async {
     await OfflineCacheService.addPendingOperation(
-        method: 'POST', path: '/api/fridge', body: {'ingredient_name': 'Ayam', 'category': 'protein'});
+        method: 'DELETE', path: '/api/fridge/abc');
+    await OfflineCacheService.addPendingOperation(
+        method: 'POST',
+        path: '/api/fridge',
+        body: {'ingredient_name': 'Ayam', 'category': 'protein'});
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getStringList('pending_operations_v1'), hasLength(2));
 

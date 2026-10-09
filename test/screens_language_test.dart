@@ -65,22 +65,49 @@ List<String> visibleCopy(WidgetTester tester) {
       if (t != null && t.trim().isNotEmpty) out.add(t.trim());
     }
   }
-  for (final e in tester.widgetList<TextFormField>(find.byType(TextFormField))) {
+  for (final e
+      in tester.widgetList<TextFormField>(find.byType(TextFormField))) {
     // hint of the inner TextField is already covered above
-    if (e.initialValue != null && e.initialValue!.isNotEmpty) out.add(e.initialValue!);
+    if (e.initialValue != null && e.initialValue!.isNotEmpty)
+      out.add(e.initialValue!);
   }
   return out;
 }
 
 // Words that only belong to one language. Brand and loan words are left out.
 const indonesianOnly = [
-  'Masukkan', 'Lupa ', 'Belum punya', 'Sudah punya', 'Kode ', 'Gagal', 'Ubah ',
-  'Ganti ', 'Simpan', 'wajib', 'Konfirmasi', 'Selamat', 'Lanjutkan', 'Kirim ',
-  'Berhasil', 'Pakai ', 'Daftar', 'Cek email',
+  'Masukkan',
+  'Lupa ',
+  'Belum punya',
+  'Sudah punya',
+  'Kode ',
+  'Gagal',
+  'Ubah ',
+  'Ganti ',
+  'Simpan',
+  'wajib',
+  'Konfirmasi',
+  'Selamat',
+  'Lanjutkan',
+  'Kirim ',
+  'Berhasil',
+  'Pakai ',
+  'Daftar',
+  'Cek email',
 ];
 const englishOnly = [
-  'Sign Up', 'Signin', 'SignIn', 'Check your email', 'Verify', 'Create new',
-  'Enter your', 'Re-enter', 'Success!', 'Forgot password', 'Sign in', 'Sign up',
+  'Sign Up',
+  'Signin',
+  'SignIn',
+  'Check your email',
+  'Verify',
+  'Create new',
+  'Enter your',
+  'Re-enter',
+  'Success!',
+  'Forgot password',
+  'Sign in',
+  'Sign up',
 ];
 
 void main() {
@@ -88,7 +115,8 @@ void main() {
     // Plugins that only exist on a device: answer them so screens that read the
     // app version or the secure store finish loading like they do on a phone.
     TestWidgetsFlutterBinding.ensureInitialized();
-    final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(
       const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
       (call) async => null,
@@ -130,7 +158,8 @@ void main() {
   };
 
   for (final entry in screens.entries) {
-    testWidgets('${entry.key}: copy follows the language, no blank screen', (tester) async {
+    testWidgets('${entry.key}: copy follows the language, no blank screen',
+        (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 2.75;
       addTearDown(tester.view.reset);
@@ -139,10 +168,12 @@ void main() {
       // Let the first (offline, failing) data load finish, retries included.
       for (var i = 0; i < 70; i++) {
         // Real time for the (blocked, instantly failing) network calls...
-        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 60)));
+        await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 60)));
         // ...fake time for retry back-offs and animations.
         await tester.pump(const Duration(milliseconds: 500));
-        final loading = find.byType(CircularProgressIndicator).evaluate().isNotEmpty;
+        final loading =
+            find.byType(CircularProgressIndicator).evaluate().isNotEmpty;
         if (i >= 5 && !loading && visibleCopy(tester).isNotEmpty) break;
       }
       expect(tester.takeException(), isNull, reason: '${entry.key} in id');
@@ -156,20 +187,26 @@ void main() {
       expect(en, isNotEmpty, reason: '${entry.key} rendered nothing in en');
 
       // The copy must actually change...
-      expect(en.join('|'), isNot(id.join('|')), reason: '${entry.key}: language switch changed nothing');
+      expect(en.join('|'), isNot(id.join('|')),
+          reason: '${entry.key}: language switch changed nothing');
       // ...and leave nothing of the other language behind.
       for (final w in indonesianOnly) {
-        expect(en.where((t) => t.contains(w)), isEmpty, reason: '${entry.key} (en) still says "$w": ${en.where((t) => t.contains(w))}');
+        expect(en.where((t) => t.contains(w)), isEmpty,
+            reason:
+                '${entry.key} (en) still says "$w": ${en.where((t) => t.contains(w))}');
       }
       for (final w in englishOnly) {
-        expect(id.where((t) => t.contains(w)), isEmpty, reason: '${entry.key} (id) still says "$w": ${id.where((t) => t.contains(w))}');
+        expect(id.where((t) => t.contains(w)), isEmpty,
+            reason:
+                '${entry.key} (id) still says "$w": ${id.where((t) => t.contains(w))}');
       }
 
       // And back again.
       await LanguageController.instance.set(const Locale('id'));
       await tester.pump(const Duration(milliseconds: 400));
       expect(tester.takeException(), isNull, reason: '${entry.key} back to id');
-      expect(visibleCopy(tester).join('|'), id.join('|'), reason: '${entry.key}: round trip differs');
+      expect(visibleCopy(tester).join('|'), id.join('|'),
+          reason: '${entry.key}: round trip differs');
     });
   }
 
@@ -177,10 +214,22 @@ void main() {
   // push "Sign in" to the far left edge of the next line.
   for (final lang in ['id', 'en']) {
     for (final c in [
-      ('sign up', () => const signup(), (Str s) => s.haveAccount, (Str s) => s.signInLabel),
-      ('sign in', () => const signin(), (Str s) => s.noAccountYet, (Str s) => s.signUpLabel),
+      (
+        'sign up',
+        () => const signup(),
+        (Str s) => s.haveAccount,
+        (Str s) => s.signInLabel
+      ),
+      (
+        'sign in',
+        () => const signin(),
+        (Str s) => s.noAccountYet,
+        (Str s) => s.signUpLabel
+      ),
     ]) {
-      testWidgets('${c.$1} ($lang): the switch-screen link sits on the same line, centred', (tester) async {
+      testWidgets(
+          '${c.$1} ($lang): the switch-screen link sits on the same line, centred',
+          (tester) async {
         tester.view.physicalSize = const Size(1080, 2400);
         tester.view.devicePixelRatio = 2.75;
         addTearDown(tester.view.reset);
@@ -190,10 +239,13 @@ void main() {
         final s = stringsFor(Locale(lang));
         final question = tester.getRect(find.text(c.$3(s)).last);
         final link = tester.getRect(find.text(c.$4(s)).last);
-        expect((question.center.dy - link.center.dy).abs(), lessThan(10), reason: 'link wrapped to its own line');
-        final width = tester.view.physicalSize.width / tester.view.devicePixelRatio;
+        expect((question.center.dy - link.center.dy).abs(), lessThan(10),
+            reason: 'link wrapped to its own line');
+        final width =
+            tester.view.physicalSize.width / tester.view.devicePixelRatio;
         final group = question.expandToInclude(link);
-        expect((group.center.dx - width / 2).abs(), lessThan(width * 0.12), reason: 'not centred: $group');
+        expect((group.center.dx - width / 2).abs(), lessThan(width * 0.12),
+            reason: 'not centred: $group');
       });
     }
   }

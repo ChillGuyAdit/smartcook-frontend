@@ -327,7 +327,8 @@ void headerLayoutTests() {
 }
 
 void flowTests() {
-  testWidgets('pull to refresh reloads the list without a spinner wiping it', (tester) async {
+  testWidgets('pull to refresh reloads the list without a spinner wiping it',
+      (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.75;
     addTearDown(tester.view.reset);
@@ -339,18 +340,22 @@ void flowTests() {
     })));
     await _settle(tester);
     expect(calls, 1);
-    await tester.fling(find.byType(CustomScrollView), const Offset(0, 500), 1000);
+    await tester.fling(
+        find.byType(CustomScrollView), const Offset(0, 500), 1000);
     await _settle(tester);
     expect(calls, 2, reason: 'a pull must reload');
     expect(find.text('Beras'), findsOneWidget);
   });
 
-  testWidgets('sort by "Expiring soon": earliest date first, items without a date last', (tester) async {
+  testWidgets(
+      'sort by "Expiring soon": earliest date first, items without a date last',
+      (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.75;
     addTearDown(tester.view.reset);
     await LanguageController.instance.set(const Locale('en'));
-    await tester.pumpWidget(_app(KulkasPage(loader: () async => _ok(_sampleItems))));
+    await tester
+        .pumpWidget(_app(KulkasPage(loader: () async => _ok(_sampleItems))));
     await _settle(tester);
     await tester.tap(find.byIcon(Icons.tune_rounded));
     await tester.pumpAndSettle();

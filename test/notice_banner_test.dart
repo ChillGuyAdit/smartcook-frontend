@@ -15,8 +15,11 @@ ApiResponse _ok(dynamic data) => ApiResponse(success: true, data: data);
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('shows the announcement and remembers it was closed; a new one shows again', (tester) async {
-    await tester.pumpWidget(_host(() async => _ok({'id': '1', 'text': 'Perawatan malam ini'})));
+  testWidgets(
+      'shows the announcement and remembers it was closed; a new one shows again',
+      (tester) async {
+    await tester.pumpWidget(
+        _host(() async => _ok({'id': '1', 'text': 'Perawatan malam ini'})));
     await tester.pumpAndSettle();
     expect(find.text('Perawatan malam ini'), findsOneWidget);
 
@@ -26,18 +29,21 @@ void main() {
 
     // same announcement on the next visit: stays closed
     await tester.pumpWidget(const SizedBox());
-    await tester.pumpWidget(_host(() async => _ok({'id': '1', 'text': 'Perawatan malam ini'})));
+    await tester.pumpWidget(
+        _host(() async => _ok({'id': '1', 'text': 'Perawatan malam ini'})));
     await tester.pumpAndSettle();
     expect(find.text('Perawatan malam ini'), findsNothing);
 
     // a different announcement: shown
     await tester.pumpWidget(const SizedBox());
-    await tester.pumpWidget(_host(() async => _ok({'id': '2', 'text': 'Fitur baru'})));
+    await tester
+        .pumpWidget(_host(() async => _ok({'id': '2', 'text': 'Fitur baru'})));
     await tester.pumpAndSettle();
     expect(find.text('Fitur baru'), findsOneWidget);
   });
 
-  testWidgets('nothing to show or any failure leaves no trace on the page', (tester) async {
+  testWidgets('nothing to show or any failure leaves no trace on the page',
+      (tester) async {
     for (final f in <Future<ApiResponse> Function()>[
       () async => _ok(null),
       () async => _ok({'id': '9', 'text': '   '}),

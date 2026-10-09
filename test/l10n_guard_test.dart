@@ -38,7 +38,8 @@ void main() {
           final visible = text
               .replaceAll(RegExp(r'\$\{[^}]*\}?'), '')
               .replaceAll(RegExp(r'\$\w+'), '');
-          if (!RegExp(r'[A-Za-z]{3}').hasMatch(visible)) continue; // numbers, symbols
+          if (!RegExp(r'[A-Za-z]{3}').hasMatch(visible))
+            continue; // numbers, symbols
           if (allowed.any((a) => text == a || text.startsWith(a))) continue;
           final line = src.substring(0, m.start).split('\n').length;
           offenders.add('${f.path}:$line  "$text"');
@@ -46,10 +47,13 @@ void main() {
       }
     }
     expect(offenders, isEmpty,
-        reason: 'Move these into lib/core/l10n/strings.dart (StrId + StrEn):\n${offenders.join('\n')}');
+        reason:
+            'Move these into lib/core/l10n/strings.dart (StrId + StrEn):\n${offenders.join('\n')}');
   });
 
-  test('every translated string differs between Indonesian and English where it should', () {
+  test(
+      'every translated string differs between Indonesian and English where it should',
+      () {
     // Sanity on a sample: the two tables are not accidentally identical.
     const id = StrId();
     const en = StrEn();
@@ -71,7 +75,8 @@ void main() {
       expect(s.otpExpiresIn('04:59'), contains('04:59'));
       expect(s.deleteIngredientBody('Ayam'), contains('Ayam'));
       expect(s.noResultsFor('nasi'), contains('nasi'));
-      expect(s.newIngredientNote('Bawang', 'sayur'), allOf(contains('Bawang'), contains('sayur')));
+      expect(s.newIngredientNote('Bawang', 'sayur'),
+          allOf(contains('Bawang'), contains('sayur')));
       expect(s.ingredientsAddedToFridge(3), contains('3'));
       expect(s.couldNotOpen('https://x.y'), contains('https://x.y'));
       expect(s.lessThanDays(3), contains('3'));

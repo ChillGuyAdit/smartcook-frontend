@@ -20,7 +20,8 @@ Future<Map<String, dynamic>> _open(
   final x = X25519();
   final shared = await x.sharedSecretKey(
     keyPair: serverKey,
-    remotePublicKey: SimplePublicKey(_un(env['k'] as String), type: KeyPairType.x25519),
+    remotePublicKey:
+        SimplePublicKey(_un(env['k'] as String), type: KeyPairType.x25519),
   );
   final key = await Hkdf(hmac: Hmac.sha256(), outputLength: 32).deriveKey(
     secretKey: shared,
@@ -36,7 +37,8 @@ Future<Map<String, dynamic>> _open(
   final plain = await AesGcm.with256bits().decrypt(
     box,
     secretKey: key,
-    aad: utf8.encode(aadOverride ?? 'smartcook-devlog-v1|${env['kid']}|${env['k']}'),
+    aad: utf8
+        .encode(aadOverride ?? 'smartcook-devlog-v1|${env['kid']}|${env['k']}'),
   );
   return jsonDecode(utf8.decode(plain)) as Map<String, dynamic>;
 }
@@ -55,14 +57,17 @@ void main() {
   });
 
   test('round trip with the server private key', () async {
-    final env = await DevLogCrypto.seal(events, serverKey: pub, kid: 'abcd1234');
+    final env =
+        await DevLogCrypto.seal(events, serverKey: pub, kid: 'abcd1234');
     final body = await _open(env, server);
     expect(body['events'], events);
     expect((body['t'] as int) > 0, isTrue);
   });
 
-  test('envelope has the agreed shape, unpadded base64url, 32B key, 12B nonce', () async {
-    final env = await DevLogCrypto.seal(events, serverKey: pub, kid: 'abcd1234');
+  test('envelope has the agreed shape, unpadded base64url, 32B key, 12B nonce',
+      () async {
+    final env =
+        await DevLogCrypto.seal(events, serverKey: pub, kid: 'abcd1234');
     expect(env.keys.toSet(), {'v', 'kid', 'k', 'n', 'c'});
     expect(env['v'], 1);
     for (final f in ['k', 'n', 'c']) {
@@ -74,7 +79,8 @@ void main() {
   });
 
   test('nothing readable on the wire', () async {
-    final wire = jsonEncode(await DevLogCrypto.seal(events, serverKey: pub, kid: 'abcd1234'));
+    final wire = jsonEncode(
+        await DevLogCrypto.seal(events, serverKey: pub, kid: 'abcd1234'));
     for (final needle in ['rahasia', 'gmail', 'app_launch', 'api_call']) {
       expect(wire.contains(needle), isFalse);
     }
@@ -89,13 +95,15 @@ void main() {
   });
 
   test('a different server key cannot open it', () async {
-    final env = await DevLogCrypto.seal(events, serverKey: pub, kid: 'abcd1234');
+    final env =
+        await DevLogCrypto.seal(events, serverKey: pub, kid: 'abcd1234');
     final stranger = await X25519().newKeyPair();
     expect(_open(env, stranger), throwsA(anything));
   });
 
   test('tampering is detected: ciphertext bit flip and AAD mismatch', () async {
-    final env = await DevLogCrypto.seal(events, serverKey: pub, kid: 'abcd1234');
+    final env =
+        await DevLogCrypto.seal(events, serverKey: pub, kid: 'abcd1234');
     final raw = _un(env['c'] as String);
     raw[3] ^= 1;
     expect(_open({...env, 'c': _b64u(raw)}, server), throwsA(anything));
@@ -117,7 +125,11 @@ void main() {
     }
     final env = await DevLogCrypto.seal(
       [
-        {'e': 'app_launch', 'a': 'from_dart', 'q': {'ünï': 'çödé ✓'}},
+        {
+          'e': 'app_launch',
+          'a': 'from_dart',
+          'q': {'ünï': 'çödé ✓'}
+        },
       ],
       serverKey: pubKey,
       kid: kid,

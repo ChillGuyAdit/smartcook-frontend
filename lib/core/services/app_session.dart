@@ -185,7 +185,8 @@ class AppSession {
       final code = raw?['code']?.toString();
       if (Restriction.isRestriction(code)) {
         Restriction.report(code!, raw?['message']?.toString() ?? '',
-            raw?['reason']?.toString() ?? '');
+            raw?['reason']?.toString() ?? '',
+            (raw?['remainingSeconds'] as num?)?.toInt());
         _lastFailure = SessionFailure.network;
         throw const SessionException(SessionFailure.network);
       }

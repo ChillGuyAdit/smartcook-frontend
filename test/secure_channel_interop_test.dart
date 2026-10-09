@@ -64,19 +64,32 @@ void main() {
     expect(j['build'], '15');
   }, skip: skip);
 
-  test('POST JSON body and a non-200 success status come back correctly', () async {
+  test('POST JSON body and a non-200 success status come back correctly',
+      () async {
     final r = await client.post(
       base.replace(path: '/api/echo'),
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer t'},
-      body: jsonEncode({'email': 'a@b.co', 'n': [1, 2], 'teks': 'çödé ✓'}),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer t'
+      },
+      body: jsonEncode({
+        'email': 'a@b.co',
+        'n': [1, 2],
+        'teks': 'çödé ✓'
+      }),
     );
     expect(r.statusCode, 201);
     final j = jsonDecode(r.body) as Map<String, dynamic>;
-    expect(j['body'], {'email': 'a@b.co', 'n': [1, 2], 'teks': 'çödé ✓'});
+    expect(j['body'], {
+      'email': 'a@b.co',
+      'n': [1, 2],
+      'teks': 'çödé ✓'
+    });
     expect(j['auth'], 'Bearer t');
   }, skip: skip);
 
-  test('DELETE with a body, 403, 429 + Retry-After and 500 keep their status', () async {
+  test('DELETE with a body, 403, 429 + Retry-After and 500 keep their status',
+      () async {
     final del = http.Request('DELETE', base.replace(path: '/api/echo'))
       ..headers['Content-Type'] = 'application/json'
       ..body = jsonEncode({'reason': 'x'});
@@ -95,7 +108,8 @@ void main() {
     expect(boom.statusCode, 500);
   }, skip: skip);
 
-  test('empty bodies, unicode and large compressed responses survive', () async {
+  test('empty bodies, unicode and large compressed responses survive',
+      () async {
     final empty = await client.get(base.replace(path: '/api/empty'));
     expect(empty.statusCode, 204);
     expect(empty.body, '');
@@ -107,12 +121,14 @@ void main() {
     expect((jsonDecode(big.body)['rows'] as List).length, 5000);
   }, skip: skip);
 
-  test('chat streaming: sealed frames are decrypted back into the original SSE', () async {
-    final req = http.Request('POST', base.replace(path: '/api/chat/message-stream'))
-      ..headers['Content-Type'] = 'application/json'
-      ..headers['Authorization'] = 'Bearer s'
-      ..headers['Accept'] = 'text/event-stream'
-      ..body = jsonEncode({'message': 'resep apa?'});
+  test('chat streaming: sealed frames are decrypted back into the original SSE',
+      () async {
+    final req =
+        http.Request('POST', base.replace(path: '/api/chat/message-stream'))
+          ..headers['Content-Type'] = 'application/json'
+          ..headers['Authorization'] = 'Bearer s'
+          ..headers['Accept'] = 'text/event-stream'
+          ..body = jsonEncode({'message': 'resep apa?'});
     final resp = await client.send(req);
     expect(resp.statusCode, 200);
 
@@ -132,13 +148,16 @@ void main() {
       }
     }
     expect(events.first['status'], 'connected');
-    expect(events.where((e) => e['text'] != null).map((e) => e['text']).join(), 'Halo dunia!');
+    expect(events.where((e) => e['text'] != null).map((e) => e['text']).join(),
+        'Halo dunia!');
     expect(events.last['done'], true);
     expect(events.last['fullReply'], 'Halo dunia! resep apa?');
   }, skip: skip);
 
-  test('a phone clock 15 minutes wrong is corrected and the request retried', () async {
-    SecureChannel.noteServerTime(DateTime.now().millisecondsSinceEpoch - 15 * 60 * 1000);
+  test('a phone clock 15 minutes wrong is corrected and the request retried',
+      () async {
+    SecureChannel.noteServerTime(
+        DateTime.now().millisecondsSinceEpoch - 15 * 60 * 1000);
     expect(SecureChannel.skewMs.abs() > 10 * 60 * 1000, isTrue);
 
     final r = await client.get(
@@ -147,17 +166,20 @@ void main() {
     );
     expect(r.statusCode, 200);
     expect(jsonDecode(r.body)['auth'], 'Bearer clock');
-    expect(SecureChannel.skewMs.abs() < 60 * 1000, isTrue, reason: 'offset learned from the server');
+    expect(SecureChannel.skewMs.abs() < 60 * 1000, isTrue,
+        reason: 'offset learned from the server');
   }, skip: skip);
 
   test('exempt paths (update check, health) still work in the clear', () async {
     final v = await client.get(base.replace(path: '/api/app/version'));
     expect(v.statusCode, 200);
     expect(jsonDecode(v.body)['data']['latestBuild'], 99);
-    expect((await client.get(base.replace(path: '/api/health'))).statusCode, 200);
+    expect(
+        (await client.get(base.replace(path: '/api/health'))).statusCode, 200);
   }, skip: skip);
 
-  test('Dio interceptor: handshake-style POST, 403 does not throw, 500 does', () async {
+  test('Dio interceptor: handshake-style POST, 403 does not throw, 500 does',
+      () async {
     final dio = Dio(BaseOptions(
       baseUrl: base.toString(),
       validateStatus: (s) => s != null && s < 500,
@@ -186,11 +208,13 @@ void main() {
 
     await expectLater(
       dio.get<Map<String, dynamic>>('/api/boom'),
-      throwsA(isA<DioException>().having((e) => e.response?.statusCode, 'status', 500)),
+      throwsA(isA<DioException>()
+          .having((e) => e.response?.statusCode, 'status', 500)),
     );
   }, skip: skip);
 
-  test('strict server: a plain request is refused with UPDATE_REQUIRED, sealed still works',
+  test(
+      'strict server: a plain request is refused with UPDATE_REQUIRED, sealed still works',
       () async {
     final strict = Uri.parse(strictUrl ?? 'http://127.0.0.1:1');
     SecureChannel.originOverride = strict;
@@ -201,7 +225,9 @@ void main() {
     expect(jsonDecode(plain.body)['code'], 'UPDATE_REQUIRED');
 
     // An old app can still see the update dialog.
-    expect((await http.get(strict.replace(path: '/api/app/version'))).statusCode, 200);
+    expect(
+        (await http.get(strict.replace(path: '/api/app/version'))).statusCode,
+        200);
 
     final sealed = await client.get(strict.replace(path: '/api/echo'),
         headers: {'Authorization': 'Bearer new-app'});
@@ -209,7 +235,9 @@ void main() {
     expect(jsonDecode(sealed.body)['auth'], 'Bearer new-app');
   }, skip: skip);
 
-  test('strict server + Dio: the interceptor really seals (a plain Dio is refused)', () async {
+  test(
+      'strict server + Dio: the interceptor really seals (a plain Dio is refused)',
+      () async {
     final strict = Uri.parse(strictUrl ?? 'http://127.0.0.1:1');
     SecureChannel.originOverride = strict;
 
@@ -217,7 +245,8 @@ void main() {
       baseUrl: strict.toString(),
       validateStatus: (s) => s != null && s < 500,
     ));
-    final refused = await plainDio.post<Map<String, dynamic>>('/api/echo', data: {'build': 15});
+    final refused = await plainDio
+        .post<Map<String, dynamic>>('/api/echo', data: {'build': 15});
     expect(refused.statusCode, 426);
 
     final sealedDio = Dio(BaseOptions(
@@ -236,6 +265,9 @@ void main() {
 
   test('unrelated hosts are never sealed', () {
     SecureChannel.originOverride = null;
-    expect(SecureChannel.shouldSeal('GET', Uri.parse('https://example.org/api/echo')), isFalse);
+    expect(
+        SecureChannel.shouldSeal(
+            'GET', Uri.parse('https://example.org/api/echo')),
+        isFalse);
   });
 }

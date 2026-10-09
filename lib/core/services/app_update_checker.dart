@@ -54,6 +54,13 @@ class AppUpdateChecker {
   static bool _dialogOpen = false;
   static int _networkRetries = 0;
 
+  /// Asks again right now, even if the optional pop-up was already shown this
+  /// run (used by the blocked screen, where updating must stay possible).
+  static Future<void> recheck(BuildContext? Function() contextOf) {
+    _optionalShown = false;
+    return check(contextOf);
+  }
+
   /// Entry point called from `main.dart` after the first frame.
   static Future<void> check(BuildContext? Function() contextOf) async {
     if (kIsWeb || !Platform.isAndroid || _dialogOpen) return;

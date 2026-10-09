@@ -762,6 +762,59 @@ void main() {
     expect(api.calls.any((c) => c.endsWith(':once:true')), isTrue,
         reason: api.calls.toString());
   });
+
+  group('restrictions list', () {
+    testWidgets('shows time left, filters, pages by 10 and lifts',
+        (tester) async {
+      await _phone(tester);
+      final api = FakeOpsApi();
+      api.rules = [
+        for (var i = 0; i < 13; i++)
+          {
+            'id': 'r$i',
+            'kind': i % 2 == 0 ? 'ip' : 'email',
+            'value': i % 2 == 0 ? '203.0.113.$i' : 'u$i@example.com',
+            'reason': 'abuse',
+            'by': 'boss@example.com',
+            'createdAt': DateTime.now().toIso8601String(),
+            'until': i == 0
+                ? DateTime.now()
+                    .add(const Duration(hours: 2, minutes: 5))
+                    .toIso8601String()
+                : null,
+          }
+      ];
+      await tester
+          .pumpWidget(_app(Scaffold(body: SecurityPage(api: api, me: _owner))));
+      await _settle(tester);
+      expect(find.textContaining('Sisa 2 jam'), findsOneWidget);
+      expect(find.text('Permanen (sampai dicabut)'), findsWidgets);
+      await tester.scrollUntilVisible(
+          find.textContaining('Halaman 1 dari 2'), 300,
+          scrollable: find.byType(Scrollable).first);
+      await tester.ensureVisible(find.byIcon(Icons.chevron_right));
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.chevron_right));
+      await _settle(tester);
+      expect(api.calls, contains('restrictionsPage:all:2'));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 31));
+    });
+
+    testWidgets('filtering by IP asks the server for IP rules only',
+        (tester) async {
+      await _phone(tester);
+      final api = FakeOpsApi();
+      await tester
+          .pumpWidget(_app(Scaffold(body: SecurityPage(api: api, me: _owner))));
+      await _settle(tester);
+      await tester.tap(find.text('IP'));
+      await _settle(tester);
+      expect(api.calls, contains('restrictionsPage:ip:1'));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 31));
+    });
+  });
 }
 
 class _ThrowingApi extends FakeOpsApi {

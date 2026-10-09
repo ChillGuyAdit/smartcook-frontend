@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme_colors.dart';
@@ -17,6 +19,12 @@ class SecurityPage extends StatefulWidget {
 
 class _SecurityPageState extends State<SecurityPage> {
   List<Json> _rules = const [];
+  String? _kind; // null = all, 'ip', 'email'
+  int _page = 1;
+  int _pages = 1;
+  int _total = 0;
+  DateTime _fetchedAt = DateTime.now();
+  Timer? _tick;
   List<Json> _trail = const [];
   bool _loading = true;
 
@@ -24,14 +32,34 @@ class _SecurityPageState extends State<SecurityPage> {
   void initState() {
     super.initState();
     _load();
+    // Re-read every 30 s so time left stays right and finished ones drop off.
+    _tick = Timer.periodic(const Duration(seconds: 30), (_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
-    final rules =
-        widget.me.can('restrict') ? await widget.api.restrictions() : <Json>[];
+    final res = widget.me.can('restrict')
+        ? await widget.api.restrictionsPage(kind: _kind, page: _page)
+        : null;
+    final rows = res?['items'];
+    final rules = rows is List
+        ? [
+            for (final e in rows)
+              if (e is Map) Json.from(e)
+          ]
+        : <Json>[];
     final trail = widget.me.can('trail') ? await widget.api.trail() : <Json>[];
     if (!mounted) return;
     setState(() {
+      _fetchedAt = DateTime.now();
+      _page = (numOf(res?['page']) ?? 1).toInt();
+      _pages = (numOf(res?['pages']) ?? 1).toInt();
+      _total = (numOf(res?['total']) ?? 0).toInt();
       _rules = rules;
       _trail = trail;
       _loading = false;
@@ -81,6 +109,25 @@ class _SecurityPageState extends State<SecurityPage> {
           children: [
             if (widget.me.can('restrict')) ...[
               Section(t('PEMBATASAN AKTIF', 'ACTIVE RESTRICTIONS')),
+              Wrap(spacing: 8, children: [
+                for (final (k, label) in <(String?, String)>[
+                  (null, t('Semua', 'All')),
+                  ('ip', 'IP'),
+                  ('email', t('Akun / email', 'Account / e-mail')),
+                ])
+                  ChoiceChip(
+                    label: Text(label),
+                    selected: _kind == k,
+                    onSelected: (_) {
+                      setState(() {
+                        _kind = k;
+                        _page = 1;
+                      });
+                      _load();
+                    },
+                  ),
+              ]),
+              const SizedBox(height: 10),
               if (_rules.isEmpty)
                 Panel(
                     child: Text(
@@ -116,6 +163,11 @@ class _SecurityPageState extends State<SecurityPage> {
                                     fontSize: 11.5,
                                     color: context.colors.textSecondary),
                               ),
+                              const SizedBox(height: 4),
+                              Pill(_left(r),
+                                  color: r['until'] == null
+                                      ? Colors.red
+                                      : Colors.orange),
                             ]),
                       ),
                       IconButton(
@@ -126,6 +178,36 @@ class _SecurityPageState extends State<SecurityPage> {
                   ),
                 ),
             ],
+            if (widget.me.can('restrict') && _pages > 1)
+              Row(children: [
+                IconButton(
+                    tooltip: t('Sebelumnya', 'Previous'),
+                    onPressed: _page > 1
+                        ? () {
+                            setState(() => _page--);
+                            _load();
+                          }
+                        : null,
+                    icon: const Icon(Icons.chevron_left)),
+                Expanded(
+                  child: Text(
+                      t('Halaman $_page dari $_pages · $_total pembatasan',
+                          'Page $_page of $_pages · $_total restrictions'),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      style: TextStyle(
+                          fontSize: 12, color: context.colors.textSecondary)),
+                ),
+                IconButton(
+                    tooltip: t('Berikutnya', 'Next'),
+                    onPressed: _page < _pages
+                        ? () {
+                            setState(() => _page++);
+                            _load();
+                          }
+                        : null,
+                    icon: const Icon(Icons.chevron_right)),
+              ]),
             if (widget.me.can('trail')) ...[
               Section(t('LOG AKTIVITAS', 'ACTIVITY LOG')),
               if (_trail.isEmpty)
@@ -171,6 +253,26 @@ class _SecurityPageState extends State<SecurityPage> {
         ),
       ),
     );
+  }
+
+  /// "sisa 1 hari 2 jam" / "permanen", counted from when the list was fetched.
+  String _left(Json r) {
+    final base = numOf(r['remainingSeconds']);
+    if (base == null)
+      return t('Permanen (sampai dicabut)', 'Permanent (until lifted)');
+    final sec = base.toInt() - DateTime.now().difference(_fetchedAt).inSeconds;
+    if (sec <= 0) return t('Segera berakhir', 'Ending now');
+    final d = sec ~/ 86400;
+    final h = (sec % 86400) ~/ 3600;
+    final m = (sec % 3600) ~/ 60;
+    final text = d > 0
+        ? '$d ${t('hari', 'd')} $h ${t('jam', 'h')}'
+        : h > 0
+            ? '$h ${t('jam', 'h')} $m ${t('mnt', 'min')}'
+            : m > 0
+                ? '$m ${t('mnt', 'min')} ${sec % 60} ${t('dtk', 's')}'
+                : '$sec ${t('dtk', 's')}';
+    return t('Sisa $text', '$text left');
   }
 
   String _date(dynamic v) {

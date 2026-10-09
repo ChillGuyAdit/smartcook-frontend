@@ -19,7 +19,7 @@ class Pulse with WidgetsBindingObserver {
   Pulse._();
   static final Pulse instance = Pulse._();
 
-  static const int slow = 60;
+  static const int slow = 30;
   static const int minSeconds = 2;
   static const int maxSeconds = 300;
 

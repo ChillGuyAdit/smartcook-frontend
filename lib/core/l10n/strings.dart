@@ -281,6 +281,12 @@ abstract class Str {
   String get accountSuspendedTitle;
   String get accountSuspendedBody;
   String restrictionReason(String reason);
+  String restrictionDays(int n);
+  String get restrictionLeftLabel;
+  String get restrictionNoEnd;
+  String get accountSwitchHint;
+  String get ipSwitchHint;
+  String get checkForUpdate;
   String get soonestExpiry;
   String mergedIntoExisting(int n);
   String get unitLabel;
@@ -838,6 +844,20 @@ class StrId implements Str {
   String get accountSuspendedBody => 'Akun ini ditangguhkan.';
   @override
   String restrictionReason(String reason) => 'Alasan: $reason';
+  @override
+  String restrictionDays(int n) => '$n hari';
+  @override
+  String get restrictionLeftLabel => 'Sisa waktu sampai dibuka kembali';
+  @override
+  String get restrictionNoEnd => 'Berlaku sampai dicabut oleh pengelola layanan.';
+  @override
+  String get accountSwitchHint =>
+      'Hanya akun ini yang ditangguhkan. Kamu bisa keluar lalu masuk dengan akun lain.';
+  @override
+  String get ipSwitchHint =>
+      'Yang diblokir adalah alamat jaringanmu, jadi berganti akun tidak membantu. Coba jaringan lain, atau tunggu sampai blokir berakhir.';
+  @override
+  String get checkForUpdate => 'Periksa pembaruan aplikasi';
   @override
   String get soonestExpiry => 'Segera kadaluarsa';
   @override
@@ -1452,6 +1472,20 @@ class StrEn implements Str {
   String get accountSuspendedBody => 'This account has been suspended.';
   @override
   String restrictionReason(String reason) => 'Reason: $reason';
+  @override
+  String restrictionDays(int n) => n == 1 ? '1 day' : '$n days';
+  @override
+  String get restrictionLeftLabel => 'Time left until access is restored';
+  @override
+  String get restrictionNoEnd => 'Stays in place until the service owner lifts it.';
+  @override
+  String get accountSwitchHint =>
+      'Only this account is suspended. You can sign out and sign in with another account.';
+  @override
+  String get ipSwitchHint =>
+      'Your network address is blocked, so switching accounts will not help. Try another network, or wait until the block ends.';
+  @override
+  String get checkForUpdate => 'Check for app updates';
   @override
   String get soonestExpiry => 'Expiring soon';
   @override

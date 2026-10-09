@@ -98,7 +98,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('switching id -> en -> id through the dialog never blanks the screen',
+  testWidgets(
+      'switching id -> en -> id through the dialog never blanks the screen',
       (tester) async {
     await tester.pumpWidget(const _Harness(home: _Screen()));
     expect(find.text(const StrId().logout), findsOneWidget);
@@ -131,7 +132,8 @@ void main() {
     }
   });
 
-  testWidgets('switching while a dialog is still open does not crash', (tester) async {
+  testWidgets('switching while a dialog is still open does not crash',
+      (tester) async {
     await tester.pumpWidget(const _Harness(home: _Screen()));
     await tester.tap(find.byKey(const Key('open')));
     await tester.pumpAndSettle();

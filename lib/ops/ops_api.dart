@@ -46,6 +46,9 @@ abstract class OpsApi {
   Stream<Json> deviceFeed(String installId);
 
   Future<List<Json>> restrictions();
+
+  /// One page (10 rows) of live restrictions: items, total, page, pages.
+  Future<Json?> restrictionsPage({String? kind, int page = 1});
   Future<String?> restrict(
       {String? ip, String? email, String reason = '', DateTime? until});
   Future<bool> lift(String id);
@@ -127,6 +130,14 @@ class HttpOpsApi implements OpsApi {
 
   @override
   Future<List<Json>> restrictions() async => _list(await _get('/restrictions'));
+
+  @override
+  Future<Json?> restrictionsPage({String? kind, int page = 1}) async =>
+      _map(await _get('/restrictions', {
+        if (kind != null) 'kind': kind,
+        'page': '$page',
+        'pageSize': '10',
+      }));
 
   @override
   Future<String?> restrict(

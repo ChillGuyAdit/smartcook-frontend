@@ -23,11 +23,13 @@ void main() {
     SecureChannel.resetClock();
   });
 
-  test('exempt paths are not sealed: the fake transport sees the real request', () async {
+  test('exempt paths are not sealed: the fake transport sees the real request',
+      () async {
     final seen = <http.BaseRequest>[];
     final client = SecureHttpClient(MockClient.streaming((req, body) async {
       seen.add(req);
-      return http.StreamedResponse(Stream.value(utf8.encode('{"ok":true}')), 200,
+      return http.StreamedResponse(
+          Stream.value(utf8.encode('{"ok":true}')), 200,
           headers: {'content-type': 'application/json'});
     }));
 
@@ -35,11 +37,13 @@ void main() {
     await client.get(api.replace(path: '/api/health'));
     await client.post(api.replace(path: '/api/devlog/ingest'), body: '{}');
 
-    expect(seen.map((r) => r.url.path), ['/api/app/version', '/api/health', '/api/devlog/ingest']);
+    expect(seen.map((r) => r.url.path),
+        ['/api/app/version', '/api/health', '/api/devlog/ingest']);
     expect(seen.map((r) => r.method), ['GET', 'GET', 'POST']);
   });
 
-  test('every request tells the server which language the app is set to', () async {
+  test('every request tells the server which language the app is set to',
+      () async {
     final seen = <http.BaseRequest>[];
     final client = SecureHttpClient(MockClient.streaming((req, body) async {
       seen.add(req);
@@ -53,7 +57,9 @@ void main() {
     expect(seen.map((r) => r.headers['X-Smartcook-Locale']), ['en', 'id']);
   });
 
-  test('every other API call goes out as POST /api/secure with nothing readable', () async {
+  test(
+      'every other API call goes out as POST /api/secure with nothing readable',
+      () async {
     http.BaseRequest? seen;
     String? sent;
     final client = SecureHttpClient(MockClient((req) async {
@@ -65,20 +71,32 @@ void main() {
 
     await client.post(
       api.replace(path: '/api/auth/login'),
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer topsecret'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer topsecret'
+      },
       body: jsonEncode({'email': 'sultan@gmail.com', 'password': 'hunter2'}),
     );
 
     expect(seen!.method, 'POST');
     expect(seen!.url.path, '/api/secure');
     expect(seen!.url.hasQuery, isFalse);
-    for (final needle in ['login', 'sultan', 'gmail', 'hunter2', 'topsecret', 'Bearer', 'email']) {
+    for (final needle in [
+      'login',
+      'sultan',
+      'gmail',
+      'hunter2',
+      'topsecret',
+      'Bearer',
+      'email'
+    ]) {
       expect(sent!.contains(needle), isFalse, reason: 'wire leaks "$needle"');
     }
     expect(jsonDecode(sent!).keys.toSet(), {'v', 'kid', 'k', 'n', 'c'});
   });
 
-  test('a plain answer from the channel or a proxy is handed through untouched', () async {
+  test('a plain answer from the channel or a proxy is handed through untouched',
+      () async {
     final client = SecureHttpClient(MockClient((req) async => http.Response(
           '{"success":false,"code":"UPDATE_REQUIRED","message":"Perbarui aplikasi"}',
           426,
@@ -100,7 +118,8 @@ void main() {
     expect(r.body, contains('Bad Gateway'));
   });
 
-  test('a server that keeps reporting clock skew is retried exactly once', () async {
+  test('a server that keeps reporting clock skew is retried exactly once',
+      () async {
     var calls = 0;
     final client = SecureHttpClient(MockClient((req) async {
       calls++;
@@ -119,14 +138,18 @@ void main() {
     expect(r.statusCode, 400);
   });
 
-  test('a network failure surfaces as an exception, never as a silent plaintext retry', () async {
+  test(
+      'a network failure surfaces as an exception, never as a silent plaintext retry',
+      () async {
     final paths = <String>[];
     final client = SecureHttpClient(MockClient((req) async {
       paths.add(req.url.path);
       throw http.ClientException('connection reset');
     }));
-    await expectLater(client.get(api.replace(path: '/api/recipes')), throwsA(isA<http.ClientException>()));
-    expect(paths, ['/api/secure'], reason: 'the real path is never sent in the clear');
+    await expectLater(client.get(api.replace(path: '/api/recipes')),
+        throwsA(isA<http.ClientException>()));
+    expect(paths, ['/api/secure'],
+        reason: 'the real path is never sent in the clear');
   });
 
   test('requests to other hosts are not touched', () async {
@@ -139,16 +162,19 @@ void main() {
     expect(seen.toString(), 'https://example.org/api/recipes');
   });
 
-  test('every sealed request is different: fresh key, nonce and ciphertext', () async {
+  test('every sealed request is different: fresh key, nonce and ciphertext',
+      () async {
     final bodies = <String>[];
     final client = SecureHttpClient(MockClient((req) async {
       bodies.add(req.body);
-      return http.Response('{"code":"SECURE_BAD"}', 400, headers: {'content-type': 'application/json'});
+      return http.Response('{"code":"SECURE_BAD"}', 400,
+          headers: {'content-type': 'application/json'});
     }));
     for (var i = 0; i < 3; i++) {
       await client.get(api.replace(path: '/api/recipes'));
     }
-    final envs = bodies.map((b) => jsonDecode(b) as Map<String, dynamic>).toList();
+    final envs =
+        bodies.map((b) => jsonDecode(b) as Map<String, dynamic>).toList();
     expect(envs.map((e) => e['k']).toSet().length, 3);
     expect(envs.map((e) => e['n']).toSet().length, 3);
     expect(envs.map((e) => e['c']).toSet().length, 3);
