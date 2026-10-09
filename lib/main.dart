@@ -13,6 +13,7 @@ import 'package:smartcook/core/services/app_session.dart';
 import 'package:smartcook/core/services/app_update_checker.dart';
 import 'package:smartcook/core/services/dev_log.dart';
 import 'package:smartcook/core/services/screen_observer.dart';
+import 'package:smartcook/core/l10n/strings.dart';
 import 'package:smartcook/core/theme/app_colors.dart';
 import 'package:smartcook/core/theme/app_theme.dart';
 import 'package:smartcook/core/theme/language_controller.dart';
@@ -234,10 +235,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       final ctx = navigatorKey.currentContext;
       if (ctx != null) {
         ScaffoldMessenger.of(ctx).showSnackBar(
-          const SnackBar(
-            content: Text('Koneksi kembali online'),
+          SnackBar(
+            content: Text(currentStrings.backOnline),
             behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -309,8 +310,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Icon(
+                              children: [
+                                const Icon(
                                   Icons.wifi_off_rounded,
                                   color: Colors.white,
                                   size: 18,
@@ -318,7 +319,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                                 SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    'Anda sedang offline. Beberapa fitur mungkin terbatas.',
+                                    currentStrings.offlineBanner,
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 12,

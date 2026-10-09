@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smartcook/core/l10n/strings.dart';
 import 'package:smartcook/core/services/dev_log.dart';
 import 'package:smartcook/core/theme/app_theme.dart';
 import 'package:smartcook/core/theme/language_controller.dart';
@@ -65,6 +66,9 @@ void main() {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 2.75;
       addTearDown(tester.view.reset);
+      // a phone with a status bar / camera cut-out, like the real ones
+      tester.view.padding = const FakeViewPadding(top: 36 * 2.75);
+      tester.view.viewPadding = const FakeViewPadding(top: 36 * 2.75);
       await LanguageController.instance.set(Locale(lang));
       await tester.pumpWidget(_app(KulkasPage(loader: () async => _ok(items))));
       await _settle(tester);
@@ -79,6 +83,10 @@ void main() {
       expect(find.textContaining('1.0 liter'), findsNothing);
       // no invented expiry: the item without a date says so
       expect(find.text(lang == 'id' ? 'Tanpa tanggal kadaluarsa' : 'No expiry date'), findsOneWidget);
+      // The two-line intro must stay well inside the 170dp green header (it used to spill
+      // onto the page below in Indonesian).
+      final intro = tester.getRect(find.text(stringsFor(Locale(lang)).fridgeIntro));
+      expect(intro.bottom, lessThanOrEqualTo(150.0), reason: 'intro leaves the header: $intro');
       expect(tester.takeException(), isNull);
     });
   }

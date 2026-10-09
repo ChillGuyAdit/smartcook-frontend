@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/l10n/strings.dart';
+import '../service/offline_cache_service.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_theme_colors.dart';
 import '../service/api_service.dart';
@@ -129,6 +130,8 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
     if (res.success) {
       // Tokens are dead server-side; clear locally and let the caller log out.
       await TokenService.clearAll();
+      await OfflineCacheService.clearPendingOperations();
+      if (!mounted) return;
       Navigator.of(context).pop(true);
       return;
     }

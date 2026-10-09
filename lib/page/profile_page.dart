@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../core/l10n/strings.dart';
+import '../service/offline_cache_service.dart';
 import '../core/services/app_session.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_theme_colors.dart';
@@ -95,6 +96,7 @@ class _ProfilePageState extends State<ProfilePage> {
       debugPrint('[logout] revoke failed (ignored): $e');
     }
     await TokenService.clearAll();
+    await OfflineCacheService.clearPendingOperations();
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/signin', (route) => false);
   }

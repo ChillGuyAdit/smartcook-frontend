@@ -246,7 +246,9 @@ class _KulkasPageState extends State<KulkasPage> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.red.withValues(alpha: 0.18)
+                        : Colors.red.shade50,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.warning_rounded,
@@ -736,7 +738,10 @@ class _KulkasPageState extends State<KulkasPage> {
                           hintText: context.s.searchFridge,
                           hintStyle: TextStyle(
                               color: context.colors.textDisabled, fontSize: 14),
+                          filled: false,
                           border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
                           icon: Icon(Icons.search, color: _themeColors[0]),
                         ),
                       ),
@@ -839,17 +844,26 @@ class _KulkasPageState extends State<KulkasPage> {
     final exp = item['expiredDate'];
     final int? diffDays = exp is DateTime ? _getDaysDiff(exp) : null;
     final isExpired = diffDays != null && diffDays < 0;
+    // The expired tint must work on both themes: the old light pink card made
+    // the (light) name text invisible in dark mode.
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final expiredBg =
+        dark ? Colors.red.withValues(alpha: 0.14) : Colors.red.shade50;
+    final expiredBorder =
+        dark ? Colors.red.withValues(alpha: 0.45) : Colors.red.shade100;
+    final expiredIconBg =
+        dark ? Colors.red.withValues(alpha: 0.22) : Colors.red.shade100;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isExpired
-            ? Colors.red.shade50
+            ? expiredBg
             : context.colors.surface, // Berubah merah jika expired
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-            color: isExpired ? Colors.red.shade100 : context.colors.border),
+            color: isExpired ? expiredBorder : context.colors.border),
         boxShadow: context.softShadow,
       ),
       child: Row(
@@ -860,7 +874,7 @@ class _KulkasPageState extends State<KulkasPage> {
             width: 60,
             decoration: BoxDecoration(
               color: isExpired
-                  ? Colors.red.shade100
+                  ? expiredIconBg
                   : _themeColors[0].withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(15),
             ),
@@ -953,7 +967,9 @@ class _KulkasPageState extends State<KulkasPage> {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
+                    color: dark
+                        ? Colors.red.withValues(alpha: 0.18)
+                        : Colors.red.shade50,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.delete_outline_rounded,
@@ -1045,7 +1061,7 @@ class _KulkasHeaderDelegate extends SliverPersistentHeaderDelegate {
 
             // DIUBAH: Nilai "begin" dikurangi agar judul naik lebih dekat ke tombol Back
             // Sebelumnya (maxExtent - 85.0), sekarang diset fix safeArea + 65.0
-            top: Tween<double>(begin: safeArea + 65.0, end: safeArea + 10.0)
+            top: Tween<double>(begin: safeArea + 46.0, end: safeArea + 10.0)
                 .transform(percent),
 
             right: 16, // Membatasi lebar agar text tidak tembus layar kanan

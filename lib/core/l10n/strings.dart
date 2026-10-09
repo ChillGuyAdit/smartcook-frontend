@@ -275,6 +275,8 @@ abstract class Str {
   String get tomorrowLabel;
   String get ingredientUpdated;
   String get updateFailed;
+  String get backOnline;
+  String get offlineBanner;
   String get noExpiryDate;
   String get invalidQuantity;
   String get fridgeLoadFailed;
@@ -813,6 +815,10 @@ class StrId implements Str {
   @override
   String get updateFailed => 'Gagal memperbarui';
   @override
+  String get backOnline => 'Koneksi kembali online';
+  @override
+  String get offlineBanner => 'Anda sedang offline. Beberapa fitur mungkin terbatas.';
+  @override
   String get noExpiryDate => 'Tanpa tanggal kadaluarsa';
   @override
   String get invalidQuantity => 'Isi jumlah dengan angka, misalnya 2 atau 0,5.';
@@ -901,7 +907,7 @@ class StrId implements Str {
   @override
   String viewedByUsers(Object? n) => 'Sudah dilihat $n kali oleh pengguna.';
   @override
-  String daysLeft(Object? n) => '$n Hari lagi';
+  String daysLeft(Object? n) => '$n hari lagi';
   @override
   String couldNotOpen(String url) => 'Tidak bisa membuka $url';
   @override
@@ -1398,6 +1404,10 @@ class StrEn implements Str {
   String get ingredientUpdated => 'Ingredient updated!';
   @override
   String get updateFailed => 'Couldn\'t update';
+  @override
+  String get backOnline => 'Back online';
+  @override
+  String get offlineBanner => 'You are offline. Some features may be limited.';
   @override
   String get noExpiryDate => 'No expiry date';
   @override

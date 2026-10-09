@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -214,6 +215,25 @@ class OfflineCacheService {
     await _savePendingOps(ops);
   }
 
+  /// Forget every queued operation. Called on sign-out and account deletion:
+  /// the queue belongs to the account that made it and must never be replayed
+  /// into the next account that signs in on this phone.
+  static Future<void> clearPendingOperations() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kPendingOps);
+  }
+
+  /// A failed replay is worth keeping only when trying again can help: no
+  /// connection, an expired session, a timeout, throttling or a server error.
+  /// A 404 (item already gone), 400 or 409 will never succeed, and keeping it
+  /// made the same dead operation run on every start for ever.
+  @visibleForTesting
+  static bool worthRetrying(int? status) {
+    if (status == null) return true;
+    if (status >= 500) return true;
+    return status == 401 || status == 408 || status == 429;
+  }
+
   /// Coba jalankan semua operasi yang tertunda ketika sudah online.
   static Future<void> syncPendingOperations() async {
     var ops = await _getPendingOps();
@@ -243,7 +263,7 @@ class OfflineCacheService {
           default:
             continue;
         }
-        if (!res.success) {
+        if (!res.success && worthRetrying(res.statusCode)) {
           // Jika masih gagal (mungkin masih offline), simpan lagi
           remaining.add(op);
         }
