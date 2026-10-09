@@ -166,3 +166,114 @@ class _RestrictFormState extends State<_RestrictForm> {
     );
   }
 }
+
+/// Asks, then lifts one restriction. True when it was lifted.
+Future<bool> confirmLift(BuildContext context, OpsApi api, String id,
+    {required String what}) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: Text(t('Cabut pembatasan?', 'Lift this restriction?')),
+      content: Text(what),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: Text(t('Batal', 'Cancel'))),
+        FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: Text(t('Cabut', 'Lift'))),
+      ],
+    ),
+  );
+  if (ok != true) return false;
+  return api.lift(id);
+}
+
+/// The same block / lift control wherever a person or a device is shown:
+/// when a rule applies it shows the rule (reason, time left) with a button to
+/// lift it; otherwise a button to apply one. [onChanged] runs after either.
+class RestrictionControl extends StatelessWidget {
+  const RestrictionControl({
+    super.key,
+    required this.api,
+    required this.isIp,
+    required this.value,
+    required this.current,
+    required this.onChanged,
+  });
+
+  final OpsApi api;
+  final bool isIp;
+  final String value;
+
+  /// {id, reason, remainingSeconds} of the rule that applies, or null.
+  final Json? current;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = current;
+    if (c == null) {
+      return SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          icon: Icon(isIp ? Icons.block : Icons.person_off_outlined),
+          label: Text(isIp
+              ? t('Blokir IP ini', 'Block this IP')
+              : t('Suspend akun ini', 'Suspend this account')),
+          onPressed: () async {
+            if (await showRestrictSheet(context, api,
+                ip: isIp ? value : null, email: isIp ? null : value)) {
+              onChanged();
+            }
+          },
+        ),
+      );
+    }
+    final reason = '${c['reason'] ?? ''}'.trim();
+    return Panel(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(isIp ? Icons.block : Icons.person_off_outlined,
+              color: Colors.redAccent, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+                isIp
+                    ? t('IP ini sedang diblokir', 'This IP is blocked')
+                    : t('Akun ini sedang ditangguhkan',
+                        'This account is suspended'),
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ]),
+        const SizedBox(height: 6),
+        Pill(fmtLeft(numOf(c['remainingSeconds'])),
+            color: c['remainingSeconds'] == null ? Colors.red : Colors.orange),
+        if (reason.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text('${t('Alasan', 'Reason')}: $reason',
+              style: TextStyle(
+                  fontSize: 12.5, color: context.colors.textSecondary)),
+        ],
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.tonalIcon(
+            icon: const Icon(Icons.lock_open_rounded),
+            label: Text(isIp
+                ? t('Cabut blokir IP', 'Unblock this IP')
+                : t('Aktifkan kembali akun', 'Unsuspend this account')),
+            onPressed: c['id'] == null
+                ? null
+                : () async {
+                    if (await confirmLift(context, api, '${c['id']}',
+                        what: value)) {
+                      onChanged();
+                    }
+                  },
+          ),
+        ),
+      ]),
+    );
+  }
+}

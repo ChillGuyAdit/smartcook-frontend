@@ -67,23 +67,8 @@ class _SecurityPageState extends State<SecurityPage> {
   }
 
   Future<void> _lift(Json r) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: Text(t('Cabut pembatasan?', 'Lift this restriction?')),
-        content: Text('${r['value']}'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(c, false),
-              child: Text(t('Batal', 'Cancel'))),
-          FilledButton(
-              onPressed: () => Navigator.pop(c, true),
-              child: Text(t('Cabut', 'Lift'))),
-        ],
-      ),
-    );
-    if (ok == true) {
-      await widget.api.lift('${r['id']}');
+    if (await confirmLift(context, widget.api, '${r['id']}',
+        what: '${r['value']}')) {
       _load();
     }
   }
@@ -258,21 +243,9 @@ class _SecurityPageState extends State<SecurityPage> {
   /// "sisa 1 hari 2 jam" / "permanen", counted from when the list was fetched.
   String _left(Json r) {
     final base = numOf(r['remainingSeconds']);
-    if (base == null)
-      return t('Permanen (sampai dicabut)', 'Permanent (until lifted)');
-    final sec = base.toInt() - DateTime.now().difference(_fetchedAt).inSeconds;
-    if (sec <= 0) return t('Segera berakhir', 'Ending now');
-    final d = sec ~/ 86400;
-    final h = (sec % 86400) ~/ 3600;
-    final m = (sec % 3600) ~/ 60;
-    final text = d > 0
-        ? '$d ${t('hari', 'd')} $h ${t('jam', 'h')}'
-        : h > 0
-            ? '$h ${t('jam', 'h')} $m ${t('mnt', 'min')}'
-            : m > 0
-                ? '$m ${t('mnt', 'min')} ${sec % 60} ${t('dtk', 's')}'
-                : '$sec ${t('dtk', 's')}';
-    return t('Sisa $text', '$text left');
+    return fmtLeft(base == null
+        ? null
+        : base.toInt() - DateTime.now().difference(_fetchedAt).inSeconds);
   }
 
   String _date(dynamic v) {

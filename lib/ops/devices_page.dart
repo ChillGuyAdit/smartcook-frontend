@@ -425,30 +425,28 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     ),
                     if (widget.me.can('restrict')) ...[
                       const SizedBox(height: 12),
-                      Row(children: [
-                        if (dev['ip'] != null)
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              icon: const Icon(Icons.block),
-                              label: Text(t('Blokir IP', 'Block IP')),
-                              onPressed: () => showRestrictSheet(
-                                  context, widget.api,
-                                  ip: '${dev['ip']}'),
-                            ),
-                          ),
-                        if (dev['ip'] != null && dev['user'] is Map)
-                          const SizedBox(width: 10),
-                        if (dev['user'] is Map)
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              icon: const Icon(Icons.person_off_outlined),
-                              label: Text(t('Suspend akun', 'Suspend account')),
-                              onPressed: () => showRestrictSheet(
-                                  context, widget.api,
-                                  email: '${(dev['user'] as Map)['email']}'),
-                            ),
-                          ),
-                      ]),
+                      if (dev['ip'] != null)
+                        RestrictionControl(
+                          api: widget.api,
+                          isIp: true,
+                          value: '${dev['ip']}',
+                          current: dev['restriction'] is Map
+                              ? Json.from(dev['restriction'] as Map)
+                              : null,
+                          onChanged: _load,
+                        ),
+                      if (dev['ip'] != null && dev['user'] is Map)
+                        const SizedBox(height: 10),
+                      if (dev['user'] is Map)
+                        RestrictionControl(
+                          api: widget.api,
+                          isIp: false,
+                          value: '${(dev['user'] as Map)['email']}',
+                          current: dev['userRestriction'] is Map
+                              ? Json.from(dev['userRestriction'] as Map)
+                              : null,
+                          onChanged: _load,
+                        ),
                     ],
                     if (dev['hw'] is Map)
                       ..._hardware(context, Json.from(dev['hw'] as Map)),

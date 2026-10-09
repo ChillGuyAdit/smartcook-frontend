@@ -316,17 +316,16 @@ class _PersonPageState extends State<PersonPage> {
                                   : t('aktif', 'active')),
                         ]),
                       ),
-                      if (widget.me.can('restrict') &&
-                          u['suspended'] != true) ...[
+                      if (widget.me.can('restrict')) ...[
                         const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.person_off_outlined),
-                          label: Text(
-                              t('Suspend akun ini', 'Suspend this account')),
-                          onPressed: () async {
-                            if (await showRestrictSheet(context, widget.api,
-                                email: '${u['email']}')) _load();
-                          },
+                        RestrictionControl(
+                          api: widget.api,
+                          isIp: false,
+                          value: '${u['email']}',
+                          current: u['restriction'] is Map
+                              ? Json.from(u['restriction'] as Map)
+                              : null,
+                          onChanged: _load,
                         ),
                       ],
                       Section(t('PERANGKAT', 'DEVICES')),

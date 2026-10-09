@@ -323,7 +323,7 @@ void main() {
       await _settle(tester);
       expect(api.calls.any((c) => c.startsWith('deviceFeed')), isFalse);
       expect(find.text('LANGSUNG'), findsNothing);
-      expect(find.text('Blokir IP'), findsNothing, reason: 'no restrict right');
+      expect(find.text('Blokir IP ini'), findsNothing, reason: 'no restrict right');
     });
 
     testWidgets(
@@ -334,9 +334,9 @@ void main() {
       await tester.pumpWidget(_app(DeviceDetailPage(
           api: api, me: _owner, installId: 'install-aaaa-1111')));
       await _settle(tester);
-      await tester.scrollUntilVisible(find.text('Blokir IP'), 300,
+      await tester.scrollUntilVisible(find.text('Blokir IP ini'), 300,
           scrollable: find.byType(Scrollable).first);
-      await tester.tap(find.text('Blokir IP'));
+      await tester.tap(find.text('Blokir IP ini'));
       await tester.pumpAndSettle();
       expect(find.widgetWithText(TextField, '203.0.113.9'), findsOneWidget);
       await tester.tap(find.text('7 hari'));
@@ -736,6 +736,8 @@ void main() {
       expect(find.text('tidur'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('SPESIFIKASI PERANGKAT'), 300,
           scrollable: find.byType(Scrollable).first);
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+      await tester.pump();
       expect(find.text('Qualcomm SM8650'), findsOneWidget);
       expect(find.textContaining('Adreno'), findsOneWidget);
       expect(find.textContaining('120 Hz'), findsOneWidget);
@@ -813,6 +815,55 @@ void main() {
       expect(api.calls, contains('restrictionsPage:ip:1'));
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 31));
+    });
+  });
+
+  group('lifting from anywhere', () {
+    testWidgets(
+        'device detail: a blocked address shows reason and time left and can be unblocked right there',
+        (tester) async {
+      await _phone(tester);
+      final api = FakeOpsApi();
+      await tester.pumpWidget(_app(DeviceDetailPage(
+          api: api, me: _owner, installId: 'install-bbbb-2222')));
+      await _settle(tester);
+      await tester.scrollUntilVisible(find.text('IP ini sedang diblokir'), 300,
+          scrollable: find.byType(Scrollable).first);
+      expect(find.text('Sisa 2 jam 5 mnt'), findsOneWidget);
+      expect(find.textContaining('abuse'), findsWidgets);
+      await tester.tap(find.text('Cabut blokir IP'));
+      await _settle(tester);
+      await tester.tap(find.text('Cabut'));
+      await _settle(tester);
+      expect(api.calls, contains('lift:r1'));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('person page: a suspended account can be reactivated there',
+        (tester) async {
+      await _phone(tester);
+      final api = FakeOpsApi();
+      await tester.pumpWidget(_app(PersonPage(api: api, me: _owner, id: 'u2')));
+      await _settle(tester);
+      expect(find.text('Akun ini sedang ditangguhkan'), findsOneWidget);
+      expect(find.text('Permanen (sampai dicabut)'), findsOneWidget);
+      await tester.tap(find.text('Aktifkan kembali akun'));
+      await _settle(tester);
+      await tester.tap(find.text('Cabut'));
+      await _settle(tester);
+      expect(api.calls, contains('lift:r2'));
+    });
+
+    testWidgets(
+        'an account that is not restricted still gets the suspend button',
+        (tester) async {
+      await _phone(tester);
+      final api = FakeOpsApi();
+      await tester.pumpWidget(_app(PersonPage(api: api, me: _owner, id: 'u1')));
+      await _settle(tester);
+      expect(find.text('Suspend akun ini'), findsOneWidget);
+      expect(find.text('Aktifkan kembali akun'), findsNothing);
     });
   });
 }

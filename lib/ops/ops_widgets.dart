@@ -45,6 +45,26 @@ String fmtDuration(num? seconds) {
 }
 
 /// "5 s ago", "3 min ago"... for a timestamp (ISO string or epoch millis).
+/// "Sisa 2 jam 5 mnt" / "2 h 5 min left"; "Permanen" when there is no end.
+String fmtLeft(num? seconds) {
+  if (seconds == null) {
+    return t('Permanen (sampai dicabut)', 'Permanent (until lifted)');
+  }
+  final sec = seconds.toInt();
+  if (sec <= 0) return t('Segera berakhir', 'Ending now');
+  final d = sec ~/ 86400;
+  final h = (sec % 86400) ~/ 3600;
+  final m = (sec % 3600) ~/ 60;
+  final text = d > 0
+      ? '$d ${t('hari', 'd')} $h ${t('jam', 'h')}'
+      : h > 0
+          ? '$h ${t('jam', 'h')} $m ${t('mnt', 'min')}'
+          : m > 0
+              ? '$m ${t('mnt', 'min')} ${sec % 60} ${t('dtk', 's')}'
+              : '$sec ${t('dtk', 's')}';
+  return t('Sisa $text', '$text left');
+}
+
 String ago(dynamic when, {DateTime? now}) {
   DateTime? d;
   if (when is String) d = DateTime.tryParse(when)?.toLocal();

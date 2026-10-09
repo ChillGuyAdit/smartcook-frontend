@@ -196,6 +196,7 @@ class FakeOpsApi implements OpsApi {
       'country': 'US',
       'online': false,
       'restricted': true,
+      'restriction': {'id': 'r1', 'reason': 'abuse', 'remainingSeconds': 7500},
       'lastSeen':
           DateTime.now().subtract(const Duration(hours: 5)).toIso8601String(),
       'live': null,
@@ -385,6 +386,7 @@ class FakeOpsApi implements OpsApi {
         'provider': 'email',
         'devices': 0,
         'suspended': true,
+        'restriction': {'id': 'r2', 'reason': '', 'remainingSeconds': null},
         'verifiedWithGoogle': false,
         'createdAt': DateTime.now().toIso8601String()
       },
