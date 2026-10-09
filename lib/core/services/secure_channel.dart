@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../../config/api_config.dart';
+import '../theme/language_controller.dart';
 
 /// End-to-end encrypted API channel to the SmartCook server.
 ///
@@ -338,6 +339,15 @@ class SecureOutcome {
 
 /// Drop-in [http.Client] that seals every API request. Requests to other hosts
 /// and the exempt paths go straight through.
+/// The language the user picked; the server answers messages and e-mails in it.
+String get _appLang {
+  try {
+    return LanguageController.instance.locale.languageCode;
+  } catch (_) {
+    return 'id';
+  }
+}
+
 class SecureHttpClient extends http.BaseClient {
   SecureHttpClient([http.Client? inner]) : _inner = inner ?? http.Client();
 
@@ -348,6 +358,7 @@ class SecureHttpClient extends http.BaseClient {
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    request.headers['X-Smartcook-Locale'] = _appLang;
     if (!SecureChannel.shouldSeal(request.method, request.url)) {
       return _inner.send(request);
     }
@@ -382,6 +393,7 @@ class SecureDioInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
+    options.headers['X-Smartcook-Locale'] = _appLang;
     final uri = options.uri;
     if (!SecureChannel.shouldSeal(options.method, uri)) {
       return handler.next(options);

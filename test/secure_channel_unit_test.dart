@@ -1,9 +1,12 @@
 import 'dart:convert';
 
+import 'package:flutter/painting.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartcook/core/services/secure_channel.dart';
+import 'package:smartcook/core/theme/language_controller.dart';
 
 // Failure behaviour of the client side of the encrypted channel, with a fake
 // transport (no server). The happy paths against the real server code live in
@@ -13,6 +16,7 @@ void main() {
   final api = Uri.parse('https://api.himatif-encoder.com');
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     SecureChannel.originOverride = null;
     SecureChannel.testPublicKey = null;
     SecureChannel.testKeyId = null;
@@ -33,6 +37,20 @@ void main() {
 
     expect(seen.map((r) => r.url.path), ['/api/app/version', '/api/health', '/api/devlog/ingest']);
     expect(seen.map((r) => r.method), ['GET', 'GET', 'POST']);
+  });
+
+  test('every request tells the server which language the app is set to', () async {
+    final seen = <http.BaseRequest>[];
+    final client = SecureHttpClient(MockClient.streaming((req, body) async {
+      seen.add(req);
+      return http.StreamedResponse(Stream.value(utf8.encode('{}')), 200,
+          headers: {'content-type': 'application/json'});
+    }));
+    await LanguageController.instance.set(const Locale('en'));
+    await client.get(api.replace(path: '/api/health'));
+    await LanguageController.instance.set(const Locale('id'));
+    await client.get(api.replace(path: '/api/health'));
+    expect(seen.map((r) => r.headers['X-Smartcook-Locale']), ['en', 'id']);
   });
 
   test('every other API call goes out as POST /api/secure with nothing readable', () async {
