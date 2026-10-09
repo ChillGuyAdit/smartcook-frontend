@@ -103,8 +103,9 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _shakeAnimation =
-        Tween<double>(begin: 0, end: 12).chain(CurveTween(curve: Curves.elasticIn)).animate(_shakeController);
+    _shakeAnimation = Tween<double>(begin: 0, end: 12)
+        .chain(CurveTween(curve: Curves.elasticIn))
+        .animate(_shakeController);
   }
 
   Future<void> _handleAfterLogin(Map<String, dynamic>? user) async {
@@ -170,7 +171,8 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
       }
 
       // Jika kena rate limit login (5x salah / window 5 menit), baca retry_after_seconds
-      if (effectiveCode == 'LOGIN_RATE_LIMIT' && res.data is Map<String, dynamic>) {
+      if (effectiveCode == 'LOGIN_RATE_LIMIT' &&
+          res.data is Map<String, dynamic>) {
         final data = res.data as Map<String, dynamic>;
         final ra = data['retry_after_seconds'];
         if (ra is num && ra > 0) {
@@ -377,45 +379,49 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
           ),
           Padding(
             padding: EdgeInsets.only(bottom: screenheight * 0.04),
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text(context.s.noAccountYet,
-                    style: TextStyle(fontSize: 17 * scale)),
-                SizedBox(width: 6),
-                TextButton(
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                  ),
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      PageRouteBuilder(
-                        pageBuilder: (context, anim1, anim2) => signup(),
-                        transitionDuration: Duration.zero,
-                      ),
-                    );
-                  },
-                  child: Row(
-                    children: [
-                      Text(
-                        context.s.signUpLabel,
-                        style: TextStyle(
-                          color: AppColor().utama,
-                          fontSize: 17 * scale,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(context.s.noAccountYet,
+                      style: TextStyle(fontSize: 17 * scale)),
+                  SizedBox(width: 6),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                    ),
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        PageRouteBuilder(
+                          pageBuilder: (context, anim1, anim2) => signup(),
+                          transitionDuration: Duration.zero,
                         ),
-                      ),
-                      Image.asset(
-                        'image/starLogo.png',
-                        height: 30 * scale,
-                        width: 30 * scale,
-                      ),
-                    ],
+                      );
+                    },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          context.s.signUpLabel,
+                          style: TextStyle(
+                            color: AppColor().utama,
+                            fontSize: 17 * scale,
+                          ),
+                        ),
+                        Image.asset(
+                          'image/starLogo.png',
+                          height: 30 * scale,
+                          width: 30 * scale,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -574,9 +580,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
               if (userCredential == null) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(
-                            context.s.googleSignInFailed)),
+                    SnackBar(content: Text(context.s.googleSignInFailed)),
                   );
                 }
                 return;
@@ -586,12 +590,13 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
               final name = firebaseUser?.displayName;
               final uid = firebaseUser?.uid;
               final photoUrl = firebaseUser?.photoURL;
-              if (email == null || email.isEmpty || uid == null || uid.isEmpty) {
+              if (email == null ||
+                  email.isEmpty ||
+                  uid == null ||
+                  uid.isEmpty) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content:
-                            Text(context.s.googleSignInFailed)),
+                    SnackBar(content: Text(context.s.googleSignInFailed)),
                   );
                 }
                 return;
@@ -599,9 +604,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
               if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(
-                            context.s.googleSignInIncomplete)),
+                    SnackBar(content: Text(context.s.googleSignInIncomplete)),
                   );
                 }
                 return;
@@ -624,8 +627,8 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
                 if (!res.success) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                        content: Text(
-                            res.message ?? context.s.googleSignInFailed)),
+                        content:
+                            Text(res.message ?? context.s.googleSignInFailed)),
                   );
                   return;
                 }
@@ -640,7 +643,8 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
                   return;
                 }
                 await TokenService.saveToken(token);
-                if (backendUser != null) await TokenService.saveUser(backendUser);
+                if (backendUser != null)
+                  await TokenService.saveUser(backendUser);
 
                 if (!mounted) return;
                 if (needsPassword) {

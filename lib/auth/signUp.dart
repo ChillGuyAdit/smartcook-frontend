@@ -103,9 +103,7 @@ class _signupState extends State<signup> {
       if (data == null || data is! Map<String, dynamic>) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(
-                    context.s.invalidResponse)),
+            SnackBar(content: Text(context.s.invalidResponse)),
           );
         }
         return;
@@ -204,11 +202,23 @@ class _signupState extends State<signup> {
                                 scale,
                                 false),
                             SizedBox(height: 15 * scale),
-                            inputField(_kontrolEmail, _focusNode2, _focusNode3,
-                                Icons.mail, context.s.enterYourEmail, scale, false),
+                            inputField(
+                                _kontrolEmail,
+                                _focusNode2,
+                                _focusNode3,
+                                Icons.mail,
+                                context.s.enterYourEmail,
+                                scale,
+                                false),
                             SizedBox(height: 15 * scale),
-                            inputField(_kontrolPassword, _focusNode3, null,
-                                Icons.lock, context.s.enterYourPassword, scale, true),
+                            inputField(
+                                _kontrolPassword,
+                                _focusNode3,
+                                null,
+                                Icons.lock,
+                                context.s.enterYourPassword,
+                                scale,
+                                true),
                           ],
                         ),
                       ),
@@ -279,128 +289,130 @@ class _signupState extends State<signup> {
                        5. pushReplacement digunakan agar user tidak bisa kembali ke halaman signup menggunakan tombol back.
                     */
                     if (AuthService.isEnabled)
-                    InkWell(
-                      onTap: () async {
-                        if (_loading) return;
-                        try {
-                          GoogleSignInResult googleResult =
-                              await _authService.signinWithGoogle();
-                          final userCredential = googleResult.credential;
-                          final firebaseIdToken =
-                              googleResult.firebaseIdToken;
-                          if (userCredential == null) {
-                            if (mounted) {
+                      InkWell(
+                        onTap: () async {
+                          if (_loading) return;
+                          try {
+                            GoogleSignInResult googleResult =
+                                await _authService.signinWithGoogle();
+                            final userCredential = googleResult.credential;
+                            final firebaseIdToken =
+                                googleResult.firebaseIdToken;
+                            if (userCredential == null) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(
+                                          currentStrings.googleSignInFailed)),
+                                );
+                              }
+                              return;
+                            }
+                            final firebaseUser = userCredential.user;
+                            final email = firebaseUser?.email;
+                            final name = firebaseUser?.displayName;
+                            final uid = firebaseUser?.uid;
+                            final photoUrl = firebaseUser?.photoURL;
+                            if (email == null ||
+                                email.isEmpty ||
+                                uid == null ||
+                                uid.isEmpty) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(
+                                          currentStrings.googleSignInFailed)),
+                                );
+                              }
+                              return;
+                            }
+                            if (firebaseIdToken == null ||
+                                firebaseIdToken.isEmpty) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(currentStrings
+                                          .googleSignInIncomplete)),
+                                );
+                              }
+                              return;
+                            }
+                            setState(() => _loading = true);
+                            final res = await ApiService.post(
+                              '/api/auth/google',
+                              body: {
+                                'uid': uid,
+                                'email': email,
+                                'name': name,
+                                'photo_url': photoUrl,
+                                'idToken': firebaseIdToken,
+                              },
+                              useAuth: false,
+                            );
+                            if (!mounted) return;
+                            setState(() => _loading = false);
+                            if (!res.success) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                    content: Text(
+                                    content: Text(res.message ??
                                         currentStrings.googleSignInFailed)),
                               );
+                              return;
                             }
-                            return;
-                          }
-                          final firebaseUser = userCredential.user;
-                          final email = firebaseUser?.email;
-                          final name = firebaseUser?.displayName;
-                          final uid = firebaseUser?.uid;
-                          final photoUrl = firebaseUser?.photoURL;
-                          if (email == null ||
-                              email.isEmpty ||
-                              uid == null ||
-                              uid.isEmpty) {
-                            if (mounted) {
+                            final data = res.data;
+                            if (data == null || data is! Map<String, dynamic>) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                    content: Text(
-                                        currentStrings.googleSignInFailed)),
+                                    content:
+                                        Text(currentStrings.invalidResponse)),
                               );
+                              return;
                             }
-                            return;
-                          }
-                          if (firebaseIdToken == null ||
-                              firebaseIdToken.isEmpty) {
-                            if (mounted) {
+                            final token = data['token'] as String?;
+                            final backendUser =
+                                data['user'] as Map<String, dynamic>?;
+                            final needsPassword =
+                                data['needs_password'] == true;
+                            if (token == null || token.isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                    content: Text(
-                                        currentStrings.googleSignInIncomplete)),
+                                    content:
+                                        Text(currentStrings.sessionNotFound)),
                               );
+                              return;
                             }
-                            return;
-                          }
-                          setState(() => _loading = true);
-                          final res = await ApiService.post(
-                            '/api/auth/google',
-                            body: {
-                              'uid': uid,
-                              'email': email,
-                              'name': name,
-                              'photo_url': photoUrl,
-                              'idToken': firebaseIdToken,
-                            },
-                            useAuth: false,
-                          );
-                          if (!mounted) return;
-                          setState(() => _loading = false);
-                          if (!res.success) {
+                            await TokenService.saveToken(token);
+                            if (backendUser != null) {
+                              await TokenService.saveUser(backendUser);
+                            }
+                            if (!mounted) return;
+                            if (needsPassword) {
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                    builder: (context) => GoogleSetPasswordPage(
+                                          email:
+                                              backendUser?['email'] as String?,
+                                        )),
+                              );
+                            } else {
+                              await _handleAfterLogin(backendUser);
+                            }
+                          } catch (e) {
+                            if (!mounted) return;
+                            setState(() => _loading = false);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                  content: Text(res.message ??
-                                      currentStrings.googleSignInFailed)),
+                                  content: Text(currentStrings
+                                      .googleSignInFailedDetail(e.toString()))),
                             );
-                            return;
                           }
-                          final data = res.data;
-                          if (data == null || data is! Map<String, dynamic>) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text(currentStrings.invalidResponse)),
-                            );
-                            return;
-                          }
-                          final token = data['token'] as String?;
-                          final backendUser =
-                              data['user'] as Map<String, dynamic>?;
-                          final needsPassword =
-                              data['needs_password'] == true;
-                          if (token == null || token.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text(currentStrings.sessionNotFound)),
-                            );
-                            return;
-                          }
-                          await TokenService.saveToken(token);
-                          if (backendUser != null) {
-                            await TokenService.saveUser(backendUser);
-                          }
-                          if (!mounted) return;
-                          if (needsPassword) {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                  builder: (context) => GoogleSetPasswordPage(
-                                        email: backendUser?['email']
-                                            as String?,
-                                      )),
-                            );
-                          } else {
-                            await _handleAfterLogin(backendUser);
-                          }
-                        } catch (e) {
-                          if (!mounted) return;
-                          setState(() => _loading = false);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text(
-                                    currentStrings.googleSignInFailedDetail(e.toString()))),
-                          );
-                        }
-                      },
-                      child: Image(
-                        image: AssetImage('image/google.png'),
-                        width: 100 * scale,
-                        height: 100 * scale,
+                        },
+                        child: Image(
+                          image: AssetImage('image/google.png'),
+                          width: 100 * scale,
+                          height: 100 * scale,
+                        ),
                       ),
-                    ),
                     SizedBox(width: 50 * scale),
                     Image(
                       image: AssetImage('image/apple.png'),
@@ -410,48 +422,52 @@ class _signupState extends State<signup> {
                   ],
                 ),
                 SizedBox(height: 40 * scale),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(context.s.haveAccount,
-                        style: TextStyle(fontSize: 17 * scale)),
-                    SizedBox(width: 8 * scale),
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          PageRouteBuilder(
-                            pageBuilder: (context, anim1, anim2) => signin(),
-                            transitionDuration: Duration.zero,
-                            reverseTransitionDuration: Duration.zero,
-                          ),
-                        );
-                      },
-                      child: Row(
-                        children: [
-                          Text(
-                            context.s.signInLabel,
-                            style: TextStyle(
-                              color: AppColor().utama,
-                              fontSize: 17 * scale,
-                              fontWeight: FontWeight.bold,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(context.s.haveAccount,
+                          style: TextStyle(fontSize: 17 * scale)),
+                      SizedBox(width: 8 * scale),
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            PageRouteBuilder(
+                              pageBuilder: (context, anim1, anim2) => signin(),
+                              transitionDuration: Duration.zero,
+                              reverseTransitionDuration: Duration.zero,
                             ),
-                          ),
-                          Image.asset(
-                            'image/starLogo.png',
-                            height: 30 * scale,
-                            width: 30 * scale,
-                          ),
-                        ],
+                          );
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              context.s.signInLabel,
+                              style: TextStyle(
+                                color: AppColor().utama,
+                                fontSize: 17 * scale,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Image.asset(
+                              'image/starLogo.png',
+                              height: 30 * scale,
+                              width: 30 * scale,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 SizedBox(
                   height: 10 * scale,

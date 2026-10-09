@@ -10,6 +10,7 @@ import 'package:smartcook/auth/resetpassword.dart';
 import 'package:smartcook/auth/signIn.dart';
 import 'package:smartcook/auth/signUp.dart';
 import 'package:smartcook/auth/sukses.dart';
+import 'package:smartcook/core/l10n/strings.dart';
 import 'package:smartcook/core/services/dev_log.dart';
 import 'package:smartcook/core/theme/app_theme.dart';
 import 'package:smartcook/core/theme/language_controller.dart';
@@ -170,5 +171,30 @@ void main() {
       expect(tester.takeException(), isNull, reason: '${entry.key} back to id');
       expect(visibleCopy(tester).join('|'), id.join('|'), reason: '${entry.key}: round trip differs');
     });
+  }
+
+  // Regression: in English "Already have an account? Sign in" used to wrap and
+  // push "Sign in" to the far left edge of the next line.
+  for (final lang in ['id', 'en']) {
+    for (final c in [
+      ('sign up', () => const signup(), (Str s) => s.haveAccount, (Str s) => s.signInLabel),
+      ('sign in', () => const signin(), (Str s) => s.noAccountYet, (Str s) => s.signUpLabel),
+    ]) {
+      testWidgets('${c.$1} ($lang): the switch-screen link sits on the same line, centred', (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 2.75;
+        addTearDown(tester.view.reset);
+        await LanguageController.instance.set(Locale(lang));
+        await tester.pumpWidget(_App(c.$2()));
+        await tester.pump(const Duration(milliseconds: 500));
+        final s = stringsFor(Locale(lang));
+        final question = tester.getRect(find.text(c.$3(s)).last);
+        final link = tester.getRect(find.text(c.$4(s)).last);
+        expect((question.center.dy - link.center.dy).abs(), lessThan(10), reason: 'link wrapped to its own line');
+        final width = tester.view.physicalSize.width / tester.view.devicePixelRatio;
+        final group = question.expandToInclude(link);
+        expect((group.center.dx - width / 2).abs(), lessThan(width * 0.12), reason: 'not centred: $group');
+      });
+    }
   }
 }
