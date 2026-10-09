@@ -275,6 +275,11 @@ abstract class Str {
   String get tomorrowLabel;
   String get ingredientUpdated;
   String get updateFailed;
+  String get accessBlockedTitle;
+  String get accessBlockedBody;
+  String get accountSuspendedTitle;
+  String get accountSuspendedBody;
+  String restrictionReason(String reason);
   String get soonestExpiry;
   String mergedIntoExisting(int n);
   String get unitLabel;
@@ -820,6 +825,16 @@ class StrId implements Str {
   String get ingredientUpdated => 'Bahan berhasil diperbarui!';
   @override
   String get updateFailed => 'Gagal memperbarui';
+  @override
+  String get accessBlockedTitle => 'Akses diblokir';
+  @override
+  String get accessBlockedBody => 'Anda telah diblokir dari layanan ini.';
+  @override
+  String get accountSuspendedTitle => 'Akun ditangguhkan';
+  @override
+  String get accountSuspendedBody => 'Akun ini ditangguhkan.';
+  @override
+  String restrictionReason(String reason) => 'Alasan: $reason';
   @override
   String get soonestExpiry => 'Segera kadaluarsa';
   @override
@@ -1422,6 +1437,16 @@ class StrEn implements Str {
   String get ingredientUpdated => 'Ingredient updated!';
   @override
   String get updateFailed => 'Couldn\'t update';
+  @override
+  String get accessBlockedTitle => 'Access blocked';
+  @override
+  String get accessBlockedBody => 'You have been blocked from this service.';
+  @override
+  String get accountSuspendedTitle => 'Account suspended';
+  @override
+  String get accountSuspendedBody => 'This account has been suspended.';
+  @override
+  String restrictionReason(String reason) => 'Reason: $reason';
   @override
   String get soonestExpiry => 'Expiring soon';
   @override

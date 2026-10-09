@@ -42,6 +42,7 @@ class DevLog {
   static final List<Map<String, dynamic>> _queue = [];
   static Timer? _timer;
   static String? _installId;
+  static String? get installId => _installId;
   static bool _sending = false;
 
   // Wire keys. Short on purpose - see the obfuscation note above.

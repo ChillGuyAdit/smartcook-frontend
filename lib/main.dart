@@ -12,6 +12,9 @@ import 'package:smartcook/view/splashscreen.dart';
 import 'package:smartcook/core/services/app_session.dart';
 import 'package:smartcook/core/services/app_update_checker.dart';
 import 'package:smartcook/core/services/dev_log.dart';
+import 'package:smartcook/core/services/pulse.dart';
+import 'package:smartcook/core/services/restriction.dart';
+import 'package:smartcook/page/restricted_page.dart';
 import 'package:smartcook/core/services/screen_observer.dart';
 import 'package:smartcook/core/l10n/strings.dart';
 import 'package:smartcook/core/theme/app_colors.dart';
@@ -26,6 +29,31 @@ import 'firebase_options.dart';
 // changes and the observer keeps the last screen it saw.
 final ScreenObserver _screenObserver = ScreenObserver();
 
+/// Shows the blocked / suspended notice. Very early in start-up the navigator
+/// may not exist yet, so it tries again for a few seconds.
+void _showRestricted(String code, String message, String reason,
+    [int attempt = 0]) {
+  final nav = navigatorKey.currentState;
+  if (nav == null) {
+    if (attempt < 20) {
+      Future<void>.delayed(
+        const Duration(milliseconds: 500),
+        () => _showRestricted(code, message, reason, attempt + 1),
+      );
+    } else {
+      Restriction.clear();
+    }
+    return;
+  }
+  nav.pushAndRemoveUntil(
+    MaterialPageRoute<void>(
+      builder: (_) =>
+          RestrictedPage(code: code, message: message, reason: reason),
+    ),
+    (route) => false,
+  );
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -35,6 +63,9 @@ void main() async {
   // light mode then snaps to dark.
   await ThemeProvider.instance.load();
   await LanguageController.instance.load();
+
+  // A blocked address or suspended account replaces everything with one notice.
+  Restriction.handler = _showRestricted;
 
   ApiService.onUnauthorized = () {
     navigatorKey.currentState?.pushNamedAndRemoveUntil(
@@ -179,6 +210,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     OfflineManager.isOffline.addListener(_handleOfflineChange);
+    Pulse.instance.start();
     // Auto-update check now runs from the root widget, exactly like Kelilink.
     // It used to live on `homepage`, which only mounts after login - so a
     // logged-out user never got the dialog at all, even with a mandatory

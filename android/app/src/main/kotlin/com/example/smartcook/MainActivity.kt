@@ -3,6 +3,9 @@ package com.example.smartcook
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.PowerManager
+import android.os.SystemClock
 import android.content.pm.PackageManager
 import android.content.pm.Signature
 import android.net.Uri
@@ -37,6 +40,7 @@ class MainActivity : FlutterActivity() {
                     "versionCode" -> result.success(versionCode())
                     "versionName" -> result.success(versionName())
                     "deviceInfo" -> result.success(deviceInfo())
+                    "liveStats" -> result.success(liveStats())
                     "packageName" -> result.success(packageName)
                     "canRequestPackageInstalls" ->
                         result.success(canRequestPackageInstalls())
@@ -112,6 +116,72 @@ class MainActivity : FlutterActivity() {
      * Device facts for the developer debug log. Read from the platform rather
      * than scraped, so the values are the real ones Android reports.
      */
+    private var lastCpuTicks: Long = 0
+    private var lastCpuAt: Long = 0
+
+    /**
+     * A handful of cheap readings for the periodic pulse: nothing here
+     * identifies a person, and every part is optional (an unavailable value is
+     * simply left out).
+     */
+    private fun liveStats(): Map<String, Any?> {
+        val out = HashMap<String, Any?>()
+        // CPU used by this app, as a share of the phone's total capacity since
+        // the previous call (CLK_TCK is 100 on Android).
+        try {
+            val stat = java.io.File("/proc/self/stat").readText()
+            val tail = stat.substring(stat.lastIndexOf(')') + 2).split(" ")
+            val ticks = tail[11].toLong() + tail[12].toLong()
+            val now = SystemClock.elapsedRealtime()
+            val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
+            if (lastCpuAt > 0 && now > lastCpuAt) {
+                val busy = (ticks - lastCpuTicks) / 100.0
+                val wall = (now - lastCpuAt) / 1000.0
+                out["cpu"] = ((busy / wall) / cores * 100.0).coerceIn(0.0, 100.0)
+            }
+            lastCpuTicks = ticks
+            lastCpuAt = now
+        } catch (_: Throwable) {}
+        try {
+            val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            val mi = ActivityManager.MemoryInfo()
+            am.getMemoryInfo(mi)
+            out["memAvailMb"] = mi.availMem / 1048576
+            out["memTotalMb"] = mi.totalMem / 1048576
+            out["lowMem"] = mi.lowMemory
+            val dbg = android.os.Debug.MemoryInfo()
+            android.os.Debug.getMemoryInfo(dbg)
+            out["rssMb"] = dbg.totalPss / 1024
+        } catch (_: Throwable) {}
+        try {
+            val i = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            if (i != null) {
+                val level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
+                if (level >= 0 && scale > 0) out["battery"] = level * 100 / scale
+                val status = i.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                out["charging"] = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+                val temp = i.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
+                if (temp != Int.MIN_VALUE) out["tempC"] = temp / 10.0
+            }
+        } catch (_: Throwable) {}
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+                out["thermal"] = pm.currentThermalStatus
+            }
+        } catch (_: Throwable) {}
+        try {
+            val stat = StatFs(Environment.getDataDirectory().path)
+            out["storageFreeMb"] = stat.availableBytes / 1048576
+        } catch (_: Throwable) {}
+        try {
+            val tm = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+            out["net"] = tm.networkType
+        } catch (_: Throwable) {}
+        return out
+    }
+
     private fun deviceInfo(): Map<String, Any?> {
         val abi = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             Build.SUPPORTED_ABIS.firstOrNull()

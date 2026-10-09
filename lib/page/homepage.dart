@@ -1,3 +1,4 @@
+import 'reusable/notice_banner.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -287,6 +288,7 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const NoticeBanner(),
             // --- HEADER SECTION ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

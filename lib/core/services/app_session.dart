@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import '../../config/api_config.dart';
 import 'app_update_fetcher.dart';
 import 'secure_storage.dart';
+import 'restriction.dart';
 
 /// Why a session could not be established. The UI maps these to messages.
 enum SessionFailure {
@@ -162,7 +163,8 @@ class AppSession {
         '/api/auth/handshake',
         data: {
           if (build != null && build > 0) 'build': build,
-          'abi': defaultTargetPlatform == TargetPlatform.android ? 'arm64' : null,
+          'abi':
+              defaultTargetPlatform == TargetPlatform.android ? 'arm64' : null,
         },
         options: Options(headers: {'X-Smartcook-Cert': cert}),
       );
@@ -181,6 +183,12 @@ class AppSession {
 
       // Errors arrive as {success, code, message} at the root, not wrapped.
       final code = raw?['code']?.toString();
+      if (Restriction.isRestriction(code)) {
+        Restriction.report(code!, raw?['message']?.toString() ?? '',
+            raw?['reason']?.toString() ?? '');
+        _lastFailure = SessionFailure.network;
+        throw const SessionException(SessionFailure.network);
+      }
       if (code == 'FORBIDDEN_CLIENT' || res.statusCode == 403) {
         _lastFailure = SessionFailure.notOfficial;
         debugPrint(
@@ -220,7 +228,8 @@ class AppSession {
     DateTime expiry;
     final at = data['access_expires_at'];
     if (at is String) {
-      expiry = DateTime.tryParse(at) ?? DateTime.now().add(const Duration(hours: 24));
+      expiry = DateTime.tryParse(at) ??
+          DateTime.now().add(const Duration(hours: 24));
     } else {
       final ttl = data['access_expires_in'];
       final seconds = ttl is num ? ttl.toInt() : 86400;

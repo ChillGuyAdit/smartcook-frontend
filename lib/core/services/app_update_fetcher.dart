@@ -32,6 +32,18 @@ class AppInfoChannel {
     }
   }
 
+  /// A few cheap live readings (CPU share of this app, memory, battery,
+  /// temperature) for the periodic pulse. Null when the platform has none.
+  static Future<Map<String, dynamic>?> liveStats() async {
+    try {
+      final raw = await _channel.invokeMethod<Map<Object?, Object?>>('liveStats');
+      if (raw == null) return null;
+      return raw.map((k, v) => MapEntry(k.toString(), v));
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Device facts for the developer debug log: OS version, SDK level, model,
   /// manufacturer, ABI and the app version name. Read natively because the
   /// Dart equivalents are incomplete on Android.

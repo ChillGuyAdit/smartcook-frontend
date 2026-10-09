@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:smartcook/config/api_config.dart';
 import 'package:smartcook/core/services/app_session.dart';
 import 'package:smartcook/core/services/dev_log.dart';
+import 'package:smartcook/core/services/restriction.dart';
 import 'package:smartcook/core/services/secure_channel.dart';
 import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/service/token_service.dart';
@@ -99,13 +100,14 @@ class ApiService {
       call,
       requireAppSession: requireAppSession,
     );
-    DevLog.log(
-      'api_call',
-      action: 'api:$path',
-      statusCode: result.statusCode,
-      durationMs: sw.elapsedMilliseconds,
-      level: result.success ? 'info' : 'warn',
-    );
+    if (path != '/api/telemetry/beat')
+      DevLog.log(
+        'api_call',
+        action: 'api:$path',
+        statusCode: result.statusCode,
+        durationMs: sw.elapsedMilliseconds,
+        level: result.success ? 'info' : 'warn',
+      );
     return result;
   }
 
@@ -163,11 +165,28 @@ class ApiService {
       );
     }
 
+    // A blocked address or a suspended account: one full-screen notice, and the
+    // caller just sees a failed request.
+    if (res.statusCode == 403 &&
+        body is Map &&
+        Restriction.isRestriction(body['code']?.toString())) {
+      Restriction.report(
+        body['code'].toString(),
+        body['message']?.toString() ?? '',
+        body['reason']?.toString() ?? '',
+      );
+      return ApiResponse(
+        success: false,
+        message: body['message']?.toString(),
+        statusCode: 403,
+        code: body['code'].toString(),
+      );
+    }
+
     // 401 split into two very different situations.
     if (res.statusCode == 401) {
-      final code = body is Map && body['code'] != null
-          ? body['code'].toString()
-          : '';
+      final code =
+          body is Map && body['code'] != null ? body['code'].toString() : '';
 
       if (kAppTokenCodes.contains(code)) {
         // App session died and could not be renewed: nothing the user did.
@@ -234,9 +253,8 @@ class ApiService {
       data: body,
       message: message,
       statusCode: res.statusCode,
-      code: body is Map && body['code'] != null
-          ? body['code'].toString()
-          : null,
+      code:
+          body is Map && body['code'] != null ? body['code'].toString() : null,
     );
   }
 
