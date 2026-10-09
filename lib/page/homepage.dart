@@ -1,3 +1,4 @@
+import '../ops/ops_access.dart';
 import 'reusable/notice_banner.dart';
 import 'dart:async';
 
@@ -43,6 +44,9 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _bootstrapAndLoadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) OpsAccess.offer(context);
+    });
   }
 
   @override

@@ -361,6 +361,37 @@ class ApiService {
     }
   }
 
+  static Future<ApiResponse> patch(
+    String path, {
+    Map<String, dynamic>? body,
+    bool useAuth = true,
+    bool requireAppSession = true,
+  }) async {
+    try {
+      return await _withSessionRetry(
+        path,
+        (headers) async {
+          final uri = Uri.parse('$_baseUrl$path');
+          return _http
+              .patch(
+                uri,
+                headers: headers,
+                body: body != null ? jsonEncode(body) : null,
+              )
+              .timeout(const Duration(seconds: 30));
+        },
+        requireAppSession: requireAppSession,
+      );
+    } catch (e) {
+      return _failure(e);
+    }
+  }
+
+  /// The same credentials every request carries (for streaming calls that
+  /// build their own request).
+  static Future<Map<String, String>> requestHeaders({bool useAuth = true}) =>
+      _headers(useAuth: useAuth);
+
   static Future<ApiResponse> delete(
     String path, {
     Map<String, dynamic>? body,

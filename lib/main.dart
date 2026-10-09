@@ -13,6 +13,7 @@ import 'package:smartcook/core/services/app_session.dart';
 import 'package:smartcook/core/services/app_update_checker.dart';
 import 'package:smartcook/core/services/dev_log.dart';
 import 'package:smartcook/core/services/pulse.dart';
+import 'package:smartcook/ops/ops_access.dart';
 import 'package:smartcook/core/services/restriction.dart';
 import 'package:smartcook/page/restricted_page.dart';
 import 'package:smartcook/core/services/screen_observer.dart';
@@ -68,6 +69,7 @@ void main() async {
   Restriction.handler = _showRestricted;
 
   ApiService.onUnauthorized = () {
+    OpsAccess.reset();
     navigatorKey.currentState?.pushNamedAndRemoveUntil(
       '/signin',
       (route) => false,

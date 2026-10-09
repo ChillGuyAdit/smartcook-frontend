@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../core/l10n/strings.dart';
+import '../ops/ops_access.dart';
+import '../ops/ops_widgets.dart' show t;
 import '../service/offline_cache_service.dart';
 import '../core/services/app_session.dart';
 import '../core/theme/app_colors.dart';
@@ -97,6 +99,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
     await TokenService.clearAll();
     await OfflineCacheService.clearPendingOperations();
+    OpsAccess.reset();
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/signin', (route) => false);
   }
@@ -261,7 +264,6 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                   ),
-
                   const SizedBox(height: 28),
                   _SectionHeader(title: s.appearance),
                   _SettingTile(
@@ -276,7 +278,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     trailing: _languageLabel(s),
                     onTap: () => _showLanguagePicker(context),
                   ),
-
                   const SizedBox(height: 8),
                   _SectionHeader(title: s.editProfile),
                   _SettingTile(
@@ -320,7 +321,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       });
                     },
                   ),
-
                   const SizedBox(height: 8),
                   _SectionHeader(title: s.other),
                   _SettingTile(
@@ -332,11 +332,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     _SettingTile(
                       icon: Icons.info_outline_rounded,
                       label: s.version,
-                      trailing:
-                          '${_pkg!.version} (${_pkg!.buildNumber})',
+                      trailing: '${_pkg!.version} (${_pkg!.buildNumber})',
                       onTap: () => showVersionSheet(context, _pkg!),
                     ),
-
                   const SizedBox(height: 8),
                   _SectionHeader(title: s.danger),
                   _SettingTile(
@@ -355,7 +353,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       });
                     },
                   ),
-
+                  if (OpsAccess.current != null) ...[
+                    const SizedBox(height: 8),
+                    _SettingTile(
+                      icon: Icons.space_dashboard_outlined,
+                      label: t('Konsol', 'Console'),
+                      onTap: () => OpsAccess.open(context, OpsAccess.current!),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   _SettingTile(
                     icon: Icons.logout_rounded,
@@ -363,7 +368,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     destructive: true,
                     onTap: _logout,
                   ),
-
                   const SizedBox(height: 24),
                   Text(
                     'SmartCook · v${_pkg?.version ?? '-'} (${_pkg?.buildNumber ?? '-'})',
