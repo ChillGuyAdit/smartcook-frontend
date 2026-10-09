@@ -130,6 +130,22 @@ class FakeOpsApi implements OpsApi {
   }
 
   @override
+  Future<Json?> devicesPage(
+      {String? q, bool online = false, int page = 1}) async {
+    calls.add('devicesPage:q=${q ?? ''}:online=$online:page=$page');
+    final all = deviceRows.where((d) => !online || d['online'] == true).toList();
+    final pages = all.isEmpty ? 1 : (all.length / 10).ceil();
+    final p = page.clamp(1, pages);
+    return {
+      'items': all.skip((p - 1) * 10).take(10).toList(),
+      'total': all.length,
+      'page': p,
+      'pages': pages,
+      'pageSize': 10,
+    };
+  }
+
+  @override
   Future<Json?> deviceDetail(String installId) async {
     calls.add('deviceDetail:$installId');
     final d = deviceRows.where((r) => r['installId'] == installId);
@@ -266,9 +282,9 @@ class FakeOpsApi implements OpsApi {
   }
 
   @override
-  Future<String?> setNotice({String idText = '', String enText = '', bool active = false, DateTime? until}) async {
-    calls.add('setNotice:$active:$idText');
-    noticeValue = {'id_text': idText, 'en_text': enText, 'active': active};
+  Future<String?> setNotice({String idText = '', String enText = '', bool active = false, DateTime? until, String mode = 'always'}) async {
+    calls.add('setNotice:$active:$idText:$mode:${until != null}');
+    noticeValue = {'id_text': idText, 'en_text': enText, 'active': active, 'mode': mode};
     return null;
   }
 }

@@ -736,6 +736,18 @@ class _NoticeEditorPageState extends State<NoticeEditorPage> {
   bool _loading = true;
   bool _saving = false;
   String? _msg;
+  String _mode = 'always'; // once | always
+  int _minutes = 0; // 0 = until switched off
+  DateTime? _until;
+
+  static const _durations = <int, (String, String)>{
+    0: ('Sampai dimatikan', 'Until switched off'),
+    30: ('30 menit', '30 minutes'),
+    60: ('1 jam', '1 hour'),
+    360: ('6 jam', '6 hours'),
+    1440: ('24 jam', '24 hours'),
+    10080: ('7 hari', '7 days'),
+  };
 
   @override
   void initState() {
@@ -757,6 +769,8 @@ class _NoticeEditorPageState extends State<NoticeEditorPage> {
       _id.text = n?['id_text']?.toString() ?? '';
       _en.text = n?['en_text']?.toString() ?? '';
       _active = n?['active'] == true;
+      _mode = n?['mode']?.toString() == 'once' ? 'once' : 'always';
+      _until = DateTime.tryParse('${n?['until'] ?? ''}')?.toLocal();
       _loading = false;
     });
   }
@@ -766,12 +780,23 @@ class _NoticeEditorPageState extends State<NoticeEditorPage> {
       _saving = true;
       _msg = null;
     });
-    final err = await widget.api
-        .setNotice(idText: _id.text, enText: _en.text, active: _active);
+    final err = await widget.api.setNotice(
+        idText: _id.text,
+        enText: _en.text,
+        active: _active,
+        mode: _mode,
+        until: _minutes > 0
+            ? DateTime.now().add(Duration(minutes: _minutes))
+            : null);
     if (!mounted) return;
     setState(() {
       _saving = false;
       _msg = err == null ? t('Tersimpan.', 'Saved.') : err;
+      if (err == null) {
+        _until = _minutes > 0
+            ? DateTime.now().add(Duration(minutes: _minutes))
+            : null;
+      }
     });
   }
 
@@ -803,6 +828,56 @@ class _NoticeEditorPageState extends State<NoticeEditorPage> {
                       t('Tampilkan di beranda', 'Show on the home screen')),
                   value: _active,
                   onChanged: (v) => setState(() => _active = v)),
+              const SizedBox(height: 8),
+              Text(t('Berapa kali tampil', 'How often it shows'),
+                  style: TextStyle(
+                      fontSize: 12, color: context.colors.textSecondary)),
+              const SizedBox(height: 6),
+              RadioGroup<String>(
+                groupValue: _mode,
+                onChanged: (v) => setState(() => _mode = v ?? 'always'),
+                child: Column(children: [
+                  RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      value: 'once',
+                      title: Text(t('Sekali saja', 'Only once'))),
+                  RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      value: 'always',
+                      title: Text(t('Tiap buka aplikasi', 'Every launch'))),
+                ]),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                  _mode == 'once'
+                      ? t('Tiap perangkat hanya melihatnya satu kali, lalu hilang.',
+                          'Each device sees it a single time, then it is gone.')
+                      : t('Muncul setiap aplikasi dibuka sampai waktunya habis; tombol X hanya menutupnya sampai aplikasi dibuka lagi.',
+                          'Shown on every launch until it expires; the X only hides it until the app is opened again.'),
+                  style: TextStyle(
+                      fontSize: 12, color: context.colors.textSecondary)),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<int>(
+                isExpanded: true,
+                initialValue: _minutes,
+                decoration: InputDecoration(
+                    labelText: t('Berlaku selama', 'Valid for'),
+                    helperText: _until != null &&
+                            _until!.isAfter(DateTime.now())
+                        ? '${t('Sekarang berakhir', 'Currently ends')}: ${_until!.toLocal().toString().substring(0, 16)}'
+                        : t('Lewat batas ini pengumuman hilang sendiri.',
+                            'After this the announcement disappears by itself.'),
+                    border: const OutlineInputBorder()),
+                items: [
+                  for (final e in _durations.entries)
+                    DropdownMenuItem(
+                        value: e.key, child: Text(t(e.value.$1, e.value.$2))),
+                ],
+                onChanged: (v) => setState(() => _minutes = v ?? 0),
+              ),
+              const SizedBox(height: 12),
               if (_msg != null)
                 Padding(
                     padding: const EdgeInsets.only(bottom: 8),

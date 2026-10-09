@@ -28,6 +28,7 @@ class Pulse with WidgetsBindingObserver {
   bool _foreground = true;
   bool _started = false;
   bool _busy = false;
+  bool _hwSent = false;
 
   /// Seconds until the next reading, from the server's answer. Pure, so it can
   /// be tested: a bad value falls back to a minute, a low battery that is not
@@ -84,11 +85,15 @@ class Pulse with WidgetsBindingObserver {
     try {
       final stats =
           await AppInfoChannel.liveStats() ?? const <String, dynamic>{};
+      // Hardware facts travel once per launch, with the first reading that gets through.
+      final hw = _hwSent ? null : await AppInfoChannel.hardwareInfo();
       final res = await ApiService.post('/api/telemetry/beat', body: {
         'installId': id,
         ...stats,
         'fg': true,
+        if (hw != null) 'hw': hw,
       });
+      if (res.success && hw != null) _hwSent = true;
       final battery = (stats['battery'] as num?)?.toInt();
       next = nextDelay(res.success ? res.data : null,
           battery: battery, charging: stats['charging'] == true);

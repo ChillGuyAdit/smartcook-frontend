@@ -22,6 +22,7 @@ class _mailpasswordState extends State<mailpassword> {
       List.generate(4, (_) => TextEditingController());
 
   int _expirySeconds = 0;
+  bool _ready = false; // expiry known; until then never claim "expired"
   int _resendCooldownSeconds = 0;
   Timer? _timer;
 
@@ -45,6 +46,7 @@ class _mailpasswordState extends State<mailpassword> {
     if (mounted) setState(() {
       _expirySeconds = expiry;
       _resendCooldownSeconds = cooldown;
+      _ready = true;
     });
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
@@ -199,7 +201,12 @@ class _mailpasswordState extends State<mailpassword> {
                     ),
                   ],
                 ),
-              ] else ...[
+                Text(
+                  context.s.otpValidNote,
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ] else if (_ready) ...[
                 Text(
                   context.s.otpExpired,
                   style: TextStyle(fontSize: 12, color: Colors.red),

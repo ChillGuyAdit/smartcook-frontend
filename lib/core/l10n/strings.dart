@@ -130,6 +130,7 @@ abstract class Str {
   String get otpCodeField;
   String get enterOtp4;
   String get otpExpired;
+  String get otpValidNote;
   String get otpResent;
   String get checkYourEmail;
   String get verify;
@@ -535,6 +536,8 @@ class StrId implements Str {
   String get enterOtp4 => 'Masukkan 4 digit kode OTP';
   @override
   String get otpExpired => 'Kode OTP sudah expired. Kirim ulang OTP.';
+  @override
+  String get otpValidNote => 'Kode berlaku 10 menit sejak dikirim ke email';
   @override
   String get otpResent => 'Kode OTP baru telah dikirim';
   @override
@@ -1147,6 +1150,8 @@ class StrEn implements Str {
   String get enterOtp4 => 'Enter the 4-digit OTP code';
   @override
   String get otpExpired => 'The OTP code has expired. Please resend it.';
+  @override
+  String get otpValidNote => 'The code is valid for 10 minutes after it is e-mailed';
   @override
   String get otpResent => 'A new OTP code has been sent';
   @override

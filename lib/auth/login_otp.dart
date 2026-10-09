@@ -34,6 +34,7 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
   bool _obscureNewPassword = true;
   String? _errorMessage;
   int _expirySeconds = 0;
+  bool _ready = false; // expiry known; until then never claim "expired"
   int _resendCooldownSeconds = 0;
   Timer? _timer;
 
@@ -65,6 +66,7 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
     if (mounted) setState(() {
       _expirySeconds = expiry;
       _resendCooldownSeconds = cooldown;
+      _ready = true;
     });
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
@@ -274,7 +276,12 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
                     ),
                   ],
                 ),
-              ] else ...[
+                Text(
+                  context.s.otpValidNote,
+                  style: TextStyle(fontSize: 11 * scale, color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ] else if (_ready) ...[
                 Text(
                   context.s.otpExpired,
                   style: TextStyle(fontSize: 12, color: Colors.red),

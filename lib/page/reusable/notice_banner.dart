@@ -17,7 +17,9 @@ class NoticeBanner extends StatefulWidget {
 }
 
 class _NoticeBannerState extends State<NoticeBanner> {
-  static const _kDismissed = 'notice_dismissed_id';
+  static const _kSeen = 'notice_seen_id';
+  // Closed with the X during this app run (an "always" notice returns on the next launch).
+  static final Set<String> _closedThisRun = {};
   String? _id;
   String? _text;
 
@@ -37,12 +39,20 @@ class _NoticeBannerState extends State<NoticeBanner> {
       final id = data['id']?.toString();
       final text = data['text']?.toString().trim();
       if (id == null || text == null || text.isEmpty) return;
-      String? dismissed;
-      try {
-        dismissed =
-            (await SharedPreferences.getInstance()).getString(_kDismissed);
-      } catch (_) {}
-      if (dismissed == id || !mounted) return;
+      final once = data['mode']?.toString() == 'once';
+      if (_closedThisRun.contains(id)) return;
+      if (once) {
+        // "once": shown a single time per device, then never again.
+        String? seen;
+        try {
+          seen = (await SharedPreferences.getInstance()).getString(_kSeen);
+        } catch (_) {}
+        if (seen == id) return;
+        try {
+          await (await SharedPreferences.getInstance()).setString(_kSeen, id);
+        } catch (_) {}
+      }
+      if (!mounted) return;
       setState(() {
         _id = id;
         _text = text;
@@ -52,13 +62,10 @@ class _NoticeBannerState extends State<NoticeBanner> {
     }
   }
 
-  Future<void> _close() async {
+  void _close() {
     final id = _id;
     setState(() => _text = null);
-    if (id == null) return;
-    try {
-      (await SharedPreferences.getInstance()).setString(_kDismissed, id);
-    } catch (_) {}
+    if (id != null) _closedThisRun.add(id);
   }
 
   @override

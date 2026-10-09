@@ -44,6 +44,19 @@ class AppInfoChannel {
     }
   }
 
+  /// What the phone is made of (CPU, memory, screen, GPU, sensors), sent once
+  /// per launch with the first pulse. Null when the platform has none.
+  static Future<Map<String, dynamic>?> hardwareInfo() async {
+    try {
+      final raw =
+          await _channel.invokeMethod<Map<Object?, Object?>>('hardwareInfo');
+      if (raw == null) return null;
+      return raw.map((k, v) => MapEntry(k.toString(), v));
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Device facts for the developer debug log: OS version, SDK level, model,
   /// manufacturer, ABI and the app version name. Read natively because the
   /// Dart equivalents are incomplete on Android.

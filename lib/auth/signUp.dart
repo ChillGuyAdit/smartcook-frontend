@@ -209,7 +209,8 @@ class _signupState extends State<signup> {
                                 Icons.mail,
                                 context.s.enterYourEmail,
                                 scale,
-                                false),
+                                false,
+                                isEmail: true),
                             SizedBox(height: 15 * scale),
                             inputField(
                                 _kontrolPassword,
@@ -487,7 +488,8 @@ class _signupState extends State<signup> {
       IconData icon,
       String hint,
       double scale,
-      bool isPassword) {
+      bool isPassword,
+      {bool isEmail = false}) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 35 * scale),
       child: TextFormField(
@@ -505,12 +507,12 @@ class _signupState extends State<signup> {
         validator: (value) {
           if (value == null || value.isEmpty) return context.s.fieldRequired;
           if (isPassword) {
-            if (value.length < 6) return "Minimal 6 karakter";
+            if (value.length < 6) return context.s.passwordMin6;
             return null;
           }
-          // Email field: validate the shape, not the provider. Previously
-          // there was no email check at all, so a typo only surfaced as an
-          // opaque server error.
+          // Only the e-mail field is checked for an e-mail shape; the name
+          // field used to run through the same regex and rejected "test".
+          if (!isEmail) return null;
           final email = value.trim();
           final ok = RegExp(
             r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9]"

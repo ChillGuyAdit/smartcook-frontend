@@ -243,7 +243,7 @@ void main() {
       await tester
           .pumpWidget(_app(Scaffold(body: DevicesPage(api: api, me: _owner))));
       await _settle(tester);
-      expect(api.calls, contains('devices:q=:online=true'));
+      expect(api.calls, contains('devicesPage:q=:online=true:page=1'));
       expect(find.text('Xiaomi M2006C3MG'), findsOneWidget);
       expect(find.text('Google Pixel 8'), findsNothing,
           reason: 'offline phones are not in "connected"');
@@ -252,7 +252,7 @@ void main() {
       expect(find.textContaining('CPU 12%'), findsOneWidget,
           reason: 'live reading badge');
 
-      await tester.tap(find.text('Semua'));
+      await tester.tap(find.text('Riwayat'));
       await _settle(tester);
       expect(find.text('Google Pixel 8'), findsOneWidget);
       expect(find.text('diblokir'), findsOneWidget);
@@ -260,7 +260,8 @@ void main() {
 
       await tester.enterText(find.byType(TextField).first, 'xiaomi');
       await tester.pump(const Duration(milliseconds: 500));
-      expect(api.calls.any((c) => c.startsWith('devices:q=xiaomi')), isTrue);
+      expect(
+          api.calls.any((c) => c.startsWith('devicesPage:q=xiaomi')), isTrue);
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 12));
     });
@@ -295,7 +296,7 @@ void main() {
       expect(find.textContaining('tiap 2 detik'), findsOneWidget);
       expect(find.text('7.5%'), findsOneWidget);
       expect(find.text('64%'), findsOneWidget);
-      expect(find.text('moderate'), findsOneWidget);
+      expect(find.textContaining('moderate'), findsOneWidget);
 
       api.lastDevice.add({'type': 'stale', 'ageMs': 200000});
       await _settle(tester);
@@ -523,7 +524,7 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'Fitur baru');
     await tester.tap(find.text('Simpan'));
     await tester.pumpAndSettle();
-    expect(api.calls, contains('setNotice:true:Fitur baru'));
+    expect(api.calls, contains('setNotice:true:Fitur baru:always:false'));
     expect(find.text('Tersimpan.'), findsOneWidget);
   });
 
@@ -615,6 +616,151 @@ void main() {
     expect(numOf('x'), isNull);
     expect(loadColor(95), const Color(0xFFE53935));
     expect(loadColor(10), const Color(0xFF43A047));
+  });
+
+  // ------------------------------------------------------ paging + specs
+  group('devices paging and specs', () {
+    List<Json> many(int n) => [
+          for (var i = 0; i < n; i++)
+            {
+              'installId': 'install-many-${i.toString().padLeft(4, '0')}',
+              'deviceModel': 'Phone $i',
+              'manufacturer': 'Brand',
+              'online': true,
+              'lastSeen': DateTime.now().toIso8601String(),
+              'ip': '203.0.113.$i',
+              'place': 'Jakarta, Indonesia',
+              'live': null,
+            }
+        ];
+
+    testWidgets('more than 10 devices are paged, 10 per page', (tester) async {
+      await _phone(tester);
+      final api = FakeOpsApi()..deviceRows = many(23);
+      await tester
+          .pumpWidget(_app(Scaffold(body: DevicesPage(api: api, me: _owner))));
+      await _settle(tester);
+      expect(find.text('Brand Phone 0'), findsOneWidget);
+      expect(find.text('Brand Phone 10'), findsNothing);
+      await tester.scrollUntilVisible(find.byIcon(Icons.chevron_right), 300,
+          scrollable: find.byType(Scrollable).last);
+      expect(find.textContaining('Halaman 1 dari 3'), findsOneWidget);
+      await tester.ensureVisible(find.byIcon(Icons.chevron_right));
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.chevron_right), warnIfMissed: true);
+      await _settle(tester);
+      expect(api.calls, contains('devicesPage:q=:online=true:page=2'));
+      await tester.scrollUntilVisible(
+          find.textContaining('Halaman 2 dari 3'), 300,
+          scrollable: find.byType(Scrollable).last);
+      expect(find.textContaining('Halaman 2 dari 3'), findsOneWidget);
+      await tester.drag(find.byType(Scrollable).last, const Offset(0, 3000));
+      await _settle(tester);
+      expect(find.text('Brand Phone 10'), findsOneWidget);
+      expect(find.text('Brand Phone 0'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 11));
+    });
+
+    testWidgets('10 devices or fewer: no pager', (tester) async {
+      await _phone(tester);
+      final api = FakeOpsApi()..deviceRows = many(10);
+      await tester
+          .pumpWidget(_app(Scaffold(body: DevicesPage(api: api, me: _owner))));
+      await _settle(tester);
+      await tester.drag(find.byType(Scrollable).last, const Offset(0, -3000));
+      await _settle(tester);
+      expect(find.byIcon(Icons.chevron_right), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 11));
+    });
+
+    testWidgets(
+        'an offline phone in the history shows when it was last online and its last data',
+        (tester) async {
+      await _phone(tester);
+      final api = FakeOpsApi();
+      await tester
+          .pumpWidget(_app(Scaffold(body: DevicesPage(api: api, me: _owner))));
+      await _settle(tester);
+      await tester.tap(find.text('Riwayat'));
+      await _settle(tester);
+      expect(find.textContaining('Terakhir online'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 11));
+    });
+
+    testWidgets(
+        'detail: graphs for cpu, ram, network, storage, cores and the spec sheet',
+        (tester) async {
+      await _phone(tester);
+      final api = FakeOpsApi();
+      api.deviceRows[0]['hw'] = {
+        'soc': 'Qualcomm SM8650',
+        'cores': 2,
+        'coreMaxMhz': [2000, 3000],
+        'coreMinMhz': [300, 500],
+        'ramMb': 12288,
+        'storageMb': 262144,
+        'screen': '1080x2400',
+        'densityDpi': 420,
+        'refreshHz': 120,
+        'gpu': 'Adreno (TM) 750',
+        'sensors': ['Accelerometer', 'Gyroscope'],
+        'features': ['NFC', 'BLE'],
+      };
+      await tester.pumpWidget(_app(DeviceDetailPage(
+          api: api, me: _owner, installId: 'install-aaaa-1111')));
+      await _settle(tester);
+      api.lastDevice.add({
+        'type': 'reading',
+        'reading': {
+          'cpu': 20,
+          'memAvailMb': 8000,
+          'memTotalMb': 12000,
+          'rxBps': 2048,
+          'txBps': 512,
+          'battery': 50,
+          'voltageMv': 4000,
+          'storageFreeMb': 100000,
+          'storageTotalMb': 262144,
+          'freq': [1800, 0],
+          'at': 1
+        }
+      });
+      await _settle(tester);
+      expect(find.text('Jaringan masuk'), findsOneWidget);
+      expect(find.text('2.0 KB/s'), findsOneWidget);
+      expect(find.text('Core 0'), findsOneWidget);
+      expect(find.text('1800 MHz'), findsOneWidget);
+      expect(find.text('tidur'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('SPESIFIKASI PERANGKAT'), 300,
+          scrollable: find.byType(Scrollable).first);
+      expect(find.text('Qualcomm SM8650'), findsOneWidget);
+      expect(find.textContaining('Adreno'), findsOneWidget);
+      expect(find.textContaining('120 Hz'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 5));
+    });
+  });
+
+  testWidgets('announcement: choosing once + a duration is sent to the server',
+      (tester) async {
+    await _phone(tester);
+    final api = FakeOpsApi();
+    await tester.pumpWidget(_app(NoticeEditorPage(api: api)));
+    await _settle(tester);
+    await tester.tap(find.text('Sekali saja'));
+    await _settle(tester);
+    await tester.tap(find.byType(DropdownButtonFormField<int>));
+    await _settle(tester);
+    await tester.tap(find.text('1 jam').last);
+    await _settle(tester);
+    await tester.tap(find.text('Simpan'));
+    await _settle(tester);
+    expect(api.calls.any((c) => c.endsWith(':once:true')), isTrue,
+        reason: api.calls.toString());
   });
 }
 

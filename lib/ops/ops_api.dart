@@ -39,6 +39,9 @@ abstract class OpsApi {
   Future<Json?> overview();
 
   Future<List<Json>> devices({String? q, bool online = false});
+
+  /// One page (10 rows) of the device registry: items, total, page, pages.
+  Future<Json?> devicesPage({String? q, bool online = false, int page = 1});
   Future<Json?> deviceDetail(String installId);
   Stream<Json> deviceFeed(String installId);
 
@@ -63,7 +66,8 @@ abstract class OpsApi {
       {String idText = '',
       String enText = '',
       bool active = false,
-      DateTime? until});
+      DateTime? until,
+      String mode = 'always'});
 }
 
 /// The real thing. Every call is a normal API call (sealed like all others);
@@ -105,6 +109,16 @@ class HttpOpsApi implements OpsApi {
         if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
         if (online) 'online': '1',
         'limit': '50',
+      }));
+
+  @override
+  Future<Json?> devicesPage(
+          {String? q, bool online = false, int page = 1}) async =>
+      _map(await _get('/devices', {
+        if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
+        if (online) 'online': '1',
+        'page': '$page',
+        'pageSize': '10',
       }));
 
   @override
@@ -188,11 +202,13 @@ class HttpOpsApi implements OpsApi {
       {String idText = '',
       String enText = '',
       bool active = false,
-      DateTime? until}) async {
+      DateTime? until,
+      String mode = 'always'}) async {
     final r = await ApiService.put('$_base/notice', body: {
       'idText': idText,
       'enText': enText,
       'active': active,
+      'mode': mode,
       if (until != null) 'until': until.toUtc().toIso8601String(),
     });
     return r.success ? null : (r.message ?? 'error');

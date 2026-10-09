@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:smartcook/auth/mailpassoword.dart';
 import 'package:smartcook/helper/color.dart';
 import 'package:smartcook/service/api_service.dart';
+import 'package:smartcook/service/otp_cooldown_service.dart';
 import '../core/l10n/strings.dart';
 
 class forgotpassowrd extends StatefulWidget {
@@ -81,8 +82,17 @@ class _forgotpassowrdState extends State<forgotpassowrd> {
       return;
     }
 
-    // Sukses kirim OTP: mulai cooldown 60 detik
+    // Sukses kirim OTP: mulai cooldown 60 detik dan catat masa berlakunya,
+    // supaya halaman kode langsung menampilkan hitung mundur yang benar.
     _startOtpCooldown(60);
+    var expirySec = 600;
+    if (res.data is Map<String, dynamic>) {
+      final v = (res.data as Map<String, dynamic>)['expires_in_seconds'];
+      if (v is num && v > 0) expirySec = v.toInt();
+    }
+    await OtpCooldownService.setExpiry('forgot:$email', expirySec);
+    await OtpCooldownService.setCooldown('forgot:$email', 60);
+    if (!mounted) return;
 
     Navigator.push(
       context,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -6,6 +7,10 @@ import '../core/theme/app_theme_colors.dart';
 import 'ops_api.dart';
 import 'ops_widgets.dart';
 import 'restrict_sheet.dart';
+
+/// How long ago a reading was taken, from its age in milliseconds.
+String _agoMs(dynamic ageMs) => ago(DateTime.fromMillisecondsSinceEpoch(
+    DateTime.now().millisecondsSinceEpoch - (numOf(ageMs) ?? 0).toInt()));
 
 /// Phones that connect to the service: who is on now, and everyone seen lately.
 class DevicesPage extends StatefulWidget {
@@ -20,6 +25,9 @@ class DevicesPage extends StatefulWidget {
 class _DevicesPageState extends State<DevicesPage> {
   final _search = TextEditingController();
   List<Json> _items = const [];
+  int _page = 1;
+  int _pages = 1;
+  int _total = 0;
   bool _onlineOnly = true;
   bool _loading = true;
   Timer? _debounce;
@@ -43,10 +51,20 @@ class _DevicesPageState extends State<DevicesPage> {
 
   Future<void> _load({bool silent = false}) async {
     if (!silent && mounted) setState(() => _loading = true);
-    final rows = await widget.api.devices(q: _search.text, online: _onlineOnly);
+    final res = await widget.api
+        .devicesPage(q: _search.text, online: _onlineOnly, page: _page);
     if (!mounted) return;
+    final rows = res?['items'];
     setState(() {
-      _items = rows;
+      _items = rows is List
+          ? [
+              for (final e in rows)
+                if (e is Map) Json.from(e)
+            ]
+          : const [];
+      _page = (numOf(res?['page']) ?? 1).toInt();
+      _pages = (numOf(res?['pages']) ?? 1).toInt();
+      _total = (numOf(res?['total']) ?? 0).toInt();
       _loading = false;
     });
   }
@@ -63,7 +81,10 @@ class _DevicesPageState extends State<DevicesPage> {
                 controller: _search,
                 onChanged: (_) {
                   _debounce?.cancel();
-                  _debounce = Timer(const Duration(milliseconds: 400), _load);
+                  _debounce = Timer(const Duration(milliseconds: 400), () {
+                    _page = 1;
+                    _load();
+                  });
                 },
                 decoration: InputDecoration(
                   hintText: t(
@@ -82,11 +103,15 @@ class _DevicesPageState extends State<DevicesPage> {
                   segments: [
                     ButtonSegment(
                         value: true, label: Text(t('Terhubung', 'Connected'))),
-                    ButtonSegment(value: false, label: Text(t('Semua', 'All'))),
+                    ButtonSegment(
+                        value: false, label: Text(t('Riwayat', 'History'))),
                   ],
                   selected: {_onlineOnly},
                   onSelectionChanged: (v) {
-                    setState(() => _onlineOnly = v.first);
+                    setState(() {
+                      _onlineOnly = v.first;
+                      _page = 1;
+                    });
                     _load();
                   },
                 ),
@@ -111,15 +136,45 @@ class _DevicesPageState extends State<DevicesPage> {
                       ])
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                        itemCount: _items.length,
+                        itemCount: _items.length + (_pages > 1 ? 1 : 0),
                         separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, i) => _tile(context, _items[i]),
+                        itemBuilder: (_, i) => i < _items.length
+                            ? _tile(context, _items[i])
+                            : _pager(context),
                       ),
           ),
         ),
       ],
     );
   }
+
+  void _goto(int page) {
+    setState(() => _page = page);
+    _load();
+  }
+
+  Widget _pager(BuildContext context) => Row(
+        children: [
+          IconButton(
+              tooltip: t('Sebelumnya', 'Previous'),
+              onPressed: _page > 1 ? () => _goto(_page - 1) : null,
+              icon: const Icon(Icons.chevron_left)),
+          Expanded(
+            child: Text(
+                t('Halaman $_page dari $_pages · $_total perangkat',
+                    'Page $_page of $_pages · $_total devices'),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 12, color: context.colors.textSecondary)),
+          ),
+          IconButton(
+              tooltip: t('Berikutnya', 'Next'),
+              onPressed: _page < _pages ? () => _goto(_page + 1) : null,
+              icon: const Icon(Icons.chevron_right)),
+        ],
+      );
 
   Widget _tile(BuildContext context, Json d) {
     final online = d['online'] == true;
@@ -169,13 +224,22 @@ class _DevicesPageState extends State<DevicesPage> {
           Text(
             [
               d['ip'],
-              d['country'],
+              d['place'] ?? d['country'],
               if (d['appBuild'] != null) 'build ${d['appBuild']}',
               d['osVersion'] != null ? 'Android ${d['osVersion']}' : null
             ].where((e) => e != null && '$e'.isNotEmpty).join(' · '),
             style: TextStyle(fontSize: 12, color: context.colors.textSecondary),
           ),
-          if (live != null && live['stale'] != true) ...[
+          if (!online)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                  '${t('Terakhir online', 'Last online')}: ${ago(d['lastSeen'])}'
+                  '${live != null ? ' · ${t('data terakhir', 'last data')} ${_agoMs(live['ageMs'])}' : ''}',
+                  style: TextStyle(
+                      fontSize: 12, color: context.colors.textSecondary)),
+            ),
+          if (live != null) ...[
             const SizedBox(height: 8),
             Wrap(spacing: 6, runSpacing: 4, children: [
               if (numOf(live['cpu']) != null)
@@ -217,6 +281,10 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   String _feed = 'idle'; // idle | waiting | live | stale
   final _cpu = Rolling(60);
   final _bat = Rolling(60);
+  final _ram = Rolling(60);
+  final _rx = Rolling(60);
+  final _tx = Rolling(60);
+  final _temp = Rolling(60);
   bool _disposed = false;
 
   @override
@@ -246,6 +314,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           if (r is Map) {
             _cpu.add(numOf(r['cpu']));
             _bat.add(numOf(r['battery']));
+            final total = numOf(r['memTotalMb']);
+            final avail = numOf(r['memAvailMb']);
+            _ram.add(total != null && avail != null && total > 0
+                ? (total - avail) / total * 100
+                : null);
+            _rx.add(numOf(r['rxBps']));
+            _tx.add(numOf(r['txBps']));
+            _temp.add(numOf(r['tempC']));
             setState(() {
               _reading = Json.from(r);
               _feed = 'live';
@@ -303,7 +379,15 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                   children: [
-                    if (widget.me.can('live')) ..._liveSection(context),
+                    if (widget.me.can('live'))
+                      ..._liveSection(
+                          context,
+                          d?['live'] is Map
+                              ? Json.from(d!['live'] as Map)
+                              : null,
+                          dev['hw'] is Map
+                              ? Json.from(dev['hw'] as Map)
+                              : null),
                     Section(t('INFORMASI', 'DETAILS')),
                     Panel(
                       child: Column(children: [
@@ -318,10 +402,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                         _kv(context, 'IP', '${dev['ip'] ?? '-'}'),
                         _kv(
                             context,
-                            t('Negara / zona waktu', 'Country / time zone'),
-                            '${dev['country'] ?? '-'} · ${dev['timezone'] ?? '-'}'),
-                        _kv(context, t('Operator', 'Carrier'),
-                            '${dev['carrier'] ?? '-'}'),
+                            t('Lokasi (dari IP)', 'Location (from IP)'),
+                            '${dev['place'] ?? dev['country'] ?? '-'}'),
+                        _kv(context, t('Zona waktu', 'Time zone'),
+                            '${dev['timezone'] ?? '-'}'),
+                        _kv(
+                            context,
+                            t('Penyedia internet', 'Internet provider'),
+                            '${dev['isp'] ?? dev['carrier'] ?? '-'}'),
                         _kv(context, 'Android', '${dev['osVersion'] ?? '-'}'),
                         _kv(context, t('Versi aplikasi', 'App version'),
                             '${dev['appVersion'] ?? '-'} (${dev['appBuild'] ?? '-'})'),
@@ -362,6 +450,8 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                           ),
                       ]),
                     ],
+                    if (dev['hw'] is Map)
+                      ..._hardware(context, Json.from(dev['hw'] as Map)),
                     Section(t('RIWAYAT MASUK', 'SIGN-IN HISTORY')),
                     _logins(
                         context,
@@ -377,8 +467,10 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     );
   }
 
-  List<Widget> _liveSection(BuildContext context) {
-    final r = _reading;
+  /// Live graphs while the phone reports; the last stored reading when it is quiet.
+  List<Widget> _liveSection(BuildContext context, Json? stored, Json? hw) {
+    final r = _reading ?? stored;
+    final isLast = _reading == null && stored != null;
     final status = switch (_feed) {
       'live' => t('Langsung · tiap 2 detik', 'Live · every 2 s'),
       'stale' => t('Perangkat berhenti mengirim (aplikasi ditutup?)',
@@ -387,79 +479,225 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           'Waiting for the device... (up to a minute)'),
       _ => '',
     };
+    final lastNote = isLast
+        ? '${t('Data terakhir', 'Last data')}: ${_agoMs(stored['ageMs'])}'
+        : '';
     return [
       Section(t('LANGSUNG', 'LIVE')),
       Panel(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Container(
-                  width: 9,
-                  height: 9,
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _feed == 'live'
-                          ? const Color(0xFF43A047)
-                          : Colors.orange)),
-              const SizedBox(width: 8),
-              Expanded(
-                  child: Text(status,
-                      style: TextStyle(
-                          fontSize: 12, color: context.colors.textSecondary))),
-            ]),
-            if (r != null) ...[
-              const SizedBox(height: 12),
-              Wrap(spacing: 18, runSpacing: 12, children: [
-                _stat(context, t('CPU aplikasi', 'App CPU'),
-                    fmtPct(numOf(r['cpu']), digits: 1)),
-                _stat(context, 'RSS', '${numOf(r['rssMb']) ?? '-'} MB'),
-                _stat(context, 'RAM',
-                    '${numOf(r['memAvailMb']) ?? '-'} / ${numOf(r['memTotalMb']) ?? '-'} MB'),
-                _stat(context, t('Baterai', 'Battery'),
-                    '${numOf(r['battery']) ?? '-'}%${r['charging'] == true ? ' ⚡' : ''}'),
-                _stat(context, t('Suhu', 'Temp'),
-                    numOf(r['tempC']) == null ? '-' : '${numOf(r['tempC'])}°C'),
-                _stat(context, t('Termal', 'Thermal'), () {
-                  final i = numOf(r['thermal'])?.toInt();
-                  return i == null || i < 0 || i >= _thermal.length
-                      ? '-'
-                      : _thermal[i];
-                }()),
-                _stat(context, t('Sisa penyimpanan', 'Free storage'),
-                    '${numOf(r['storageFreeMb']) ?? '-'} MB'),
-                if (r['lowMem'] == true)
-                  _stat(context, t('Memori', 'Memory'), t('rendah', 'low')),
-              ]),
-              if (_cpu.values.length > 1) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                    height: 44,
-                    width: double.infinity,
-                    child: Sparkline(
-                        values: _cpu.values,
-                        color: loadColor(numOf(r['cpu'])),
-                        max: 100)),
-              ],
-            ],
-          ],
-        ),
+        child: Row(children: [
+          Container(
+              width: 9,
+              height: 9,
+              decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _feed == 'live'
+                      ? const Color(0xFF43A047)
+                      : Colors.orange)),
+          const SizedBox(width: 8),
+          Expanded(
+              child: Text(
+                  [status, lastNote].where((e) => e.isNotEmpty).join('\n'),
+                  style: TextStyle(
+                      fontSize: 12, color: context.colors.textSecondary))),
+        ]),
       ),
+      if (r != null) ..._graphs(context, r, hw),
     ];
   }
 
-  Widget _stat(BuildContext context, String k, String v) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(k,
+  List<Widget> _graphs(BuildContext context, Json r, Json? hw) {
+    final total = numOf(r['memTotalMb']);
+    final avail = numOf(r['memAvailMb']);
+    final used = total != null && avail != null ? total - avail : null;
+    final storTotal = numOf(r['storageTotalMb']) ?? numOf(hw?['storageMb']);
+    final storFree = numOf(r['storageFreeMb']);
+    final storUsed =
+        storTotal != null && storFree != null ? storTotal - storFree : null;
+    final thermalIdx = numOf(r['thermal'])?.toInt();
+    final freq = r['freq'] is List
+        ? [for (final f in r['freq'] as List) numOf(f) ?? 0]
+        : const <num>[];
+    final maxMhz = hw?['coreMaxMhz'] is List
+        ? [for (final f in hw!['coreMaxMhz'] as List) numOf(f) ?? 0]
+        : const <num>[];
+    return [
+      const SizedBox(height: 10),
+      LayoutBuilder(builder: (context, c) {
+        final w = (c.maxWidth - 10) / 2;
+        Widget half(Widget child) => SizedBox(width: w, child: child);
+        return Wrap(spacing: 10, runSpacing: 10, children: [
+          half(Metric(
+              label: t('CPU aplikasi', 'App CPU'),
+              value: fmtPct(numOf(r['cpu']), digits: 1),
+              sub: 'RSS ${numOf(r['rssMb']) ?? '-'} MB',
+              series: _cpu.values,
+              seriesMax: 100,
+              color: loadColor(numOf(r['cpu'])))),
+          half(Metric(
+              label: 'RAM',
+              value: used == null ? '-' : '${used.round()} MB',
+              sub: total == null
+                  ? null
+                  : '${t('dari', 'of')} ${total.round()} MB${r['lowMem'] == true ? ' · ${t('rendah', 'low')}' : ''}',
+              series: _ram.values,
+              seriesMax: 100,
+              color: used != null && total != null && total > 0
+                  ? loadColor(used / total * 100)
+                  : null)),
+          half(Metric(
+              label: t('Jaringan masuk', 'Network in'),
+              value: fmtRate(numOf(r['rxBps'])),
+              series: _rx.values,
+              color: const Color(0xFF1E88E5))),
+          half(Metric(
+              label: t('Jaringan keluar', 'Network out'),
+              value: fmtRate(numOf(r['txBps'])),
+              series: _tx.values,
+              color: const Color(0xFF8E24AA))),
+          half(Metric(
+              label: t('Baterai', 'Battery'),
+              value:
+                  '${numOf(r['battery'])?.toInt() ?? '-'}%${r['charging'] == true ? ' ⚡' : ''}',
+              sub: numOf(r['voltageMv']) == null
+                  ? null
+                  : '${(numOf(r['voltageMv'])! / 1000).toStringAsFixed(2)} V',
+              series: _bat.values,
+              seriesMax: 100,
+              color: const Color(0xFF43A047))),
+          half(Metric(
+              label: t('Suhu', 'Temperature'),
+              value: numOf(r['tempC']) == null ? '-' : '${numOf(r['tempC'])}°C',
+              sub:
+                  '${t('Termal', 'Thermal')}: ${thermalIdx == null || thermalIdx < 0 || thermalIdx >= _thermal.length ? '-' : _thermal[thermalIdx]}',
+              series: _temp.values,
+              color: Colors.orange)),
+        ]);
+      }),
+      const SizedBox(height: 10),
+      Panel(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(t('Penyimpanan', 'Storage'),
               style:
-                  TextStyle(fontSize: 11, color: context.colors.textSecondary)),
-          Text(v,
+                  TextStyle(fontSize: 12, color: context.colors.textSecondary)),
+          const SizedBox(height: 4),
+          Text(
+              storUsed == null || storTotal == null
+                  ? '${storFree ?? '-'} MB ${t('kosong', 'free')}'
+                  : '${(storUsed / 1024).toStringAsFixed(1)} / ${(storTotal / 1024).toStringAsFixed(1)} GB',
               style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-        ],
-      );
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          if (storUsed != null && storTotal != null && storTotal > 0) ...[
+            const SizedBox(height: 8),
+            BarMeter(fraction: storUsed / storTotal),
+          ],
+        ]),
+      ),
+      if (freq.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        Panel(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('${t('Inti CPU', 'CPU cores')} (${freq.length})',
+                style: TextStyle(
+                    fontSize: 12, color: context.colors.textSecondary)),
+            const SizedBox(height: 8),
+            for (var i = 0; i < freq.length; i++)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(children: [
+                  SizedBox(
+                      width: 52,
+                      child: Text('Core $i',
+                          style: const TextStyle(fontSize: 12))),
+                  Expanded(
+                      child: BarMeter(
+                          fraction: i < maxMhz.length && maxMhz[i] > 0
+                              ? freq[i] / maxMhz[i]
+                              : freq[i] / 3000,
+                          height: 7)),
+                  SizedBox(
+                      width: 78,
+                      child: Text(
+                          freq[i] <= 0
+                              ? t('tidur', 'idle')
+                              : '${freq[i].round()} MHz',
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w700))),
+                ]),
+              ),
+          ]),
+        ),
+      ],
+    ];
+  }
+
+  /// CPU-Z style description of the phone, sent once per launch.
+  List<Widget> _hardware(BuildContext context, Json hw) {
+    String j(dynamic v) => v is List ? v.join(', ') : '${v ?? '-'}';
+    final maxMhz = hw['coreMaxMhz'] is List
+        ? [for (final f in hw['coreMaxMhz'] as List) numOf(f) ?? 0]
+        : const <num>[];
+    final minMhz = hw['coreMinMhz'] is List
+        ? [for (final f in hw['coreMinMhz'] as List) numOf(f) ?? 0]
+        : const <num>[];
+    final cpu = [
+      if (hw['cores'] != null) '${hw['cores']} ${t('inti', 'cores')}',
+      if (maxMhz.isNotEmpty)
+        '${minMhz.isEmpty ? 0 : minMhz.reduce(math.min).round()}-${maxMhz.reduce(math.max).round()} MHz',
+    ].join(' · ');
+    final sensors = hw['sensors'] is List ? hw['sensors'] as List : const [];
+    final rows = <(String, String)>[
+      (t('Chipset (SoC)', 'Chipset (SoC)'), j(hw['soc'])),
+      (
+        t('Platform', 'Platform'),
+        '${hw['hardware'] ?? '-'} · ${hw['board'] ?? '-'}'
+      ),
+      ('CPU', cpu.isEmpty ? '-' : cpu),
+      (t('Governor', 'Governor'), j(hw['governor'])),
+      ('ABI', j(hw['abis'])),
+      (
+        t('RAM total', 'Total RAM'),
+        hw['ramMb'] == null
+            ? '-'
+            : '${(numOf(hw['ramMb'])! / 1024).toStringAsFixed(1)} GB'
+      ),
+      (
+        t('Penyimpanan', 'Storage'),
+        hw['storageMb'] == null
+            ? '-'
+            : '${(numOf(hw['storageMb'])! / 1024).toStringAsFixed(0)} GB'
+      ),
+      (
+        t('Layar', 'Display'),
+        '${hw['screen'] ?? '-'} · ${hw['densityDpi'] ?? '-'} dpi · ${numOf(hw['refreshHz'])?.round() ?? '-'} Hz'
+      ),
+      ('GPU', j(hw['gpu'])),
+      (t('Vendor GPU', 'GPU vendor'), j(hw['gpuVendor'])),
+      ('OpenGL ES', j(hw['glVersion'])),
+      ('Android', '${hw['android'] ?? '-'} (SDK ${hw['sdk'] ?? '-'})'),
+      (t('Patch keamanan', 'Security patch'), j(hw['patch'])),
+      ('Kernel', j(hw['kernel'])),
+      (
+        t('Baterai', 'Battery'),
+        '${hw['batteryTech'] ?? '-'} · ${hw['batteryHealth'] ?? '-'}'
+      ),
+      (t('Fitur', 'Features'), j(hw['features'])),
+      (
+        t('Sensor', 'Sensors') + ' (${sensors.length})',
+        sensors.isEmpty ? '-' : sensors.join('\n')
+      ),
+    ];
+    return [
+      Section(t('SPESIFIKASI PERANGKAT', 'DEVICE SPECS')),
+      Panel(
+        child: Column(children: [
+          for (final (k, v) in rows) _kv(context, k, v),
+        ]),
+      ),
+    ];
+  }
 
   Widget _logins(BuildContext context, List<Map> rows) {
     if (rows.isEmpty)
