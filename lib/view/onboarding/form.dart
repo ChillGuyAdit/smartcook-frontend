@@ -31,7 +31,10 @@ class _formState extends State<form> {
   static List<String> _parseStringList(dynamic value) {
     if (value == null) return [];
     if (value is List) {
-      return value.map((e) => e?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+      return value
+          .map((e) => e?.toString() ?? '')
+          .where((s) => s.isNotEmpty)
+          .toList();
     }
     return [];
   }
@@ -114,7 +117,8 @@ class _formState extends State<form> {
                       final res = await ApiService.put(
                         '/api/user/onboarding',
                         body: {
-                          'name': _nameController.text.trim(),
+                          if (widget.editFromProfile)
+                            'name': _nameController.text.trim(),
                           'age_range': usiaTerpilih,
                           'gender': genderTerpilih,
                           'allergies': alergiTerpilih,
@@ -172,23 +176,27 @@ class _formState extends State<form> {
           children: [
             Image.asset('image/personalInformation.png'),
             Text('Personal Information',
-                style: TextStyle(
-                    fontSize: 25, color: context.colors.textPrimary)),
+                style:
+                    TextStyle(fontSize: 25, color: context.colors.textPrimary)),
             SizedBox(height: 24),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 35),
-              child: TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15)),
-                  prefixIcon: Icon(Icons.person),
-                  hintText: 'Masukkan Namamu...',
-                  contentPadding: EdgeInsets.symmetric(vertical: 20),
+            // The name is asked at sign-up (or on the Google password step);
+            // asking again here only makes sense when editing from the profile.
+            if (widget.editFromProfile) ...[
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 35),
+                child: TextFormField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15)),
+                    prefixIcon: Icon(Icons.person),
+                    hintText: 'Masukkan Namamu...',
+                    contentPadding: EdgeInsets.symmetric(vertical: 20),
+                  ),
                 ),
               ),
-            ),
-            SizedBox(height: 15),
+              SizedBox(height: 15),
+            ],
             labelForm(sw, 'Berapa Usiamu?'),
             SizedBox(height: 14),
             Row(
@@ -466,8 +474,8 @@ class _formState extends State<form> {
       child: Padding(
           padding: EdgeInsets.only(left: sw * 0.09),
           child: Text(text,
-              style: TextStyle(
-                  fontSize: 15, color: context.colors.textPrimary))),
+              style:
+                  TextStyle(fontSize: 15, color: context.colors.textPrimary))),
     );
   }
 
@@ -505,12 +513,11 @@ class _formState extends State<form> {
           border: Border.all(color: AppColor().utama),
         ),
         child: Center(
-            child: Text(label,
-                style: TextStyle(
-                    fontSize: 15,
-                    color: isSelected
-                        ? Colors.white
-                        : context.colors.textPrimary)),
+          child: Text(label,
+              style: TextStyle(
+                  fontSize: 15,
+                  color:
+                      isSelected ? Colors.white : context.colors.textPrimary)),
         ),
       ),
     );
@@ -529,9 +536,8 @@ class _formState extends State<form> {
               : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color: isSelected
-                  ? borderColor
-                  : borderColor.withValues(alpha: 0.3),
+              color:
+                  isSelected ? borderColor : borderColor.withValues(alpha: 0.3),
               width: isSelected ? 3 : 1),
           image: DecorationImage(image: AssetImage(imagePath)),
         ),
@@ -553,12 +559,11 @@ class _formState extends State<form> {
           border: Border.all(color: AppColor().utama),
         ),
         child: Center(
-            child: Text(label,
-                style: TextStyle(
-                    fontSize: 15,
-                    color: isSelected
-                        ? Colors.white
-                        : context.colors.textPrimary)),
+          child: Text(label,
+              style: TextStyle(
+                  fontSize: 15,
+                  color:
+                      isSelected ? Colors.white : context.colors.textPrimary)),
         ),
       ),
     );

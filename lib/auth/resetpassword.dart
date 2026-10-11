@@ -51,7 +51,8 @@ class _resetpasswordState extends State<resetpassword> {
     Navigator.push(
       context,
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => animasisukses(),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            animasisukses(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },
@@ -136,13 +137,13 @@ class _resetpasswordState extends State<resetpassword> {
                             ),
                           )
                         : Text(
-                      context.s.resetPassword,
-                      style: TextStyle(
-                        color: AppColor().putih,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 25,
-                      ),
-                    ),
+                            context.s.resetPassword,
+                            style: TextStyle(
+                              color: AppColor().putih,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 25,
+                            ),
+                          ),
                   ),
                   SizedBox(height: 20),
                 ],

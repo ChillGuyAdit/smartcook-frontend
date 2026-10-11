@@ -653,6 +653,7 @@ class _signinState extends State<signin> with SingleTickerProviderStateMixin {
                     MaterialPageRoute(
                         builder: (context) => GoogleSetPasswordPage(
                               email: backendUser?['email'] as String?,
+                              name: backendUser?['name'] as String?,
                             )),
                   );
                 } else {

@@ -43,11 +43,12 @@ class _mailpasswordState extends State<mailpassword> {
     final key = 'forgot:${widget.email}';
     final expiry = await OtpCooldownService.getRemainingExpiry(key);
     final cooldown = await OtpCooldownService.getRemainingCooldown(key);
-    if (mounted) setState(() {
-      _expirySeconds = expiry;
-      _resendCooldownSeconds = cooldown;
-      _ready = true;
-    });
+    if (mounted)
+      setState(() {
+        _expirySeconds = expiry;
+        _resendCooldownSeconds = cooldown;
+        _ready = true;
+      });
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
@@ -105,7 +106,8 @@ class _mailpasswordState extends State<mailpassword> {
     if (!res.success) {
       // Jika kena rate limit, gunakan retry_after_seconds
       int? retryAfter;
-      if (res.code == 'OTP_SEND_RATE_LIMIT' && res.data is Map<String, dynamic>) {
+      if (res.code == 'OTP_SEND_RATE_LIMIT' &&
+          res.data is Map<String, dynamic>) {
         final data = res.data as Map<String, dynamic>;
         final ra = data['retry_after_seconds'];
         if (ra is num && ra > 0) {
@@ -135,10 +137,11 @@ class _mailpasswordState extends State<mailpassword> {
     final key = 'forgot:${widget.email}';
     await OtpCooldownService.setCooldown(key, 60);
     await OtpCooldownService.setExpiry(key, expirySec);
-    if (mounted) setState(() {
-      _resendCooldownSeconds = 60;
-      _expirySeconds = expirySec;
-    });
+    if (mounted)
+      setState(() {
+        _resendCooldownSeconds = 60;
+        _expirySeconds = expirySec;
+      });
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(currentStrings.otpResent)),
@@ -196,7 +199,8 @@ class _mailpasswordState extends State<mailpassword> {
                   children: [
                     const Text('⏰ '),
                     Text(
-                      context.s.otpExpiresIn(OtpCooldownService.formatSeconds(_expirySeconds)),
+                      context.s.otpExpiresIn(
+                          OtpCooldownService.formatSeconds(_expirySeconds)),
                       style: const TextStyle(fontSize: 12),
                     ),
                   ],
@@ -257,8 +261,9 @@ class _mailpasswordState extends State<mailpassword> {
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed:
-                    _isLoading || _resendCooldownSeconds > 0 ? null : _resendOtp,
+                onPressed: _isLoading || _resendCooldownSeconds > 0
+                    ? null
+                    : _resendOtp,
                 child: Text(
                   _resendCooldownSeconds > 0
                       ? context.s.resendOtpIn(_resendCooldownSeconds)

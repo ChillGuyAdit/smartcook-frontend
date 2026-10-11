@@ -65,7 +65,8 @@ class _forgotpassowrdState extends State<forgotpassowrd> {
     if (!res.success) {
       // Jika kena rate limit kirim OTP, gunakan retry_after_seconds untuk cooldown
       int? retryAfter;
-      if (res.code == 'OTP_SEND_RATE_LIMIT' && res.data is Map<String, dynamic>) {
+      if (res.code == 'OTP_SEND_RATE_LIMIT' &&
+          res.data is Map<String, dynamic>) {
         final data = res.data as Map<String, dynamic>;
         final v = data['retry_after_seconds'];
         if (v is num && v > 0) {

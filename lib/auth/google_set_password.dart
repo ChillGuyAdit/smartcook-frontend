@@ -9,7 +9,10 @@ import '../core/l10n/strings.dart';
 class GoogleSetPasswordPage extends StatefulWidget {
   final String? email;
 
-  const GoogleSetPasswordPage({super.key, this.email});
+  /// The name Google gave; the person confirms or changes it on this step.
+  final String? name;
+
+  const GoogleSetPasswordPage({super.key, this.email, this.name});
 
   @override
   State<GoogleSetPasswordPage> createState() => _GoogleSetPasswordPageState();
@@ -18,6 +21,7 @@ class GoogleSetPasswordPage extends StatefulWidget {
 class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
 
@@ -30,9 +34,11 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
   void initState() {
     super.initState();
     // Jika email sudah dikirim lewat navigator, pakai itu dulu
+    if (widget.name != null) _nameController.text = widget.name!;
     if (widget.email != null && widget.email!.isNotEmpty) {
       _email = widget.email;
       _emailController.text = widget.email!;
+      if (_nameController.text.isEmpty) _loadUserEmail();
     } else {
       _loadUserEmail();
     }
@@ -46,12 +52,16 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
       if (_email != null && _email!.isNotEmpty) {
         _emailController.text = _email!;
       }
+      if (_nameController.text.isEmpty) {
+        _nameController.text = user?['name']?.toString() ?? '';
+      }
     });
   }
 
   @override
   void dispose() {
     _emailController.dispose();
+    _nameController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
@@ -64,6 +74,7 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
     final res = await ApiService.post(
       '/api/auth/google/set-password',
       body: {
+        'name': _nameController.text.trim(),
         'new_password': _passwordController.text,
         'confirm_password': _confirmController.text,
       },
@@ -168,6 +179,25 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
                   ),
                   SizedBox(height: 20 * scale),
                   TextFormField(
+                    controller: _nameController,
+                    textCapitalization: TextCapitalization.words,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? context.s.fieldRequired
+                        : null,
+                    decoration: InputDecoration(
+                      labelText: context.s.name,
+                      hintText: context.s.enterYourName,
+                      prefixIcon: const Icon(Icons.person),
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12 * scale),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 20 * scale),
+                  TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -176,7 +206,7 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
                         return context.s.passwordRequired;
                       }
                       if (value.length < 6) {
-                        return 'Minimal 6 karakter';
+                        return context.s.passwordMin6;
                       }
                       return null;
                     },
@@ -278,4 +308,3 @@ class _GoogleSetPasswordPageState extends State<GoogleSetPasswordPage> {
     );
   }
 }
-

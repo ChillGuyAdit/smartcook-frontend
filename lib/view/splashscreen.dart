@@ -3,11 +3,24 @@ import 'package:smartcook/auth/signIn.dart';
 import 'package:smartcook/auth/signUp.dart';
 import 'package:smartcook/core/theme/app_theme_colors.dart';
 import 'package:smartcook/helper/color.dart';
+import 'package:smartcook/auth/google_set_password.dart';
 import 'package:smartcook/page/homepage.dart';
 import 'package:smartcook/service/api_service.dart';
 import 'package:smartcook/service/offline_manager.dart';
 import 'package:smartcook/service/token_service.dart';
 import 'package:smartcook/view/onboarding/mainBoarding.dart';
+
+enum SplashRoute { setPassword, home, onboarding }
+
+/// Where a signed-in person goes after the profile is read. A Google account
+/// that never chose a password always goes back to that step first (it used to
+/// be asked only at the moment of Google login, so reopening the app skipped it).
+SplashRoute splashRouteFor(Map<String, dynamic>? profile) {
+  if (profile?['needs_password'] == true) return SplashRoute.setPassword;
+  return profile?['onboarding_completed'] == true
+      ? SplashRoute.home
+      : SplashRoute.onboarding;
+}
 
 class splashscreen extends StatefulWidget {
   const splashscreen({super.key});
@@ -135,15 +148,23 @@ class _splashscreenState extends State<splashscreen> {
     }
     OfflineManager.setOffline(false);
     final data = res.data as Map<String, dynamic>?;
-    final onboardingCompleted = data?['onboarding_completed'] == true;
     if (!mounted) return;
-    if (onboardingCompleted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => homepage()),
-      );
-    } else {
-      _go(onboarding());
+    switch (splashRouteFor(data)) {
+      case SplashRoute.setPassword:
+        _go(GoogleSetPasswordPage(
+          email: data?['email']?.toString(),
+          name: data?['name']?.toString(),
+        ));
+        return;
+      case SplashRoute.home:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => homepage()),
+        );
+        return;
+      case SplashRoute.onboarding:
+        _go(onboarding());
+        return;
     }
   }
 

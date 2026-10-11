@@ -393,6 +393,7 @@ class _signupState extends State<signup> {
                                     builder: (context) => GoogleSetPasswordPage(
                                           email:
                                               backendUser?['email'] as String?,
+                                          name: backendUser?['name'] as String?,
                                         )),
                               );
                             } else {

@@ -63,11 +63,12 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
       await OtpCooldownService.setExpiry(key, expiry);
     }
     final cooldown = await OtpCooldownService.getRemainingCooldown(key);
-    if (mounted) setState(() {
-      _expirySeconds = expiry;
-      _resendCooldownSeconds = cooldown;
-      _ready = true;
-    });
+    if (mounted)
+      setState(() {
+        _expirySeconds = expiry;
+        _resendCooldownSeconds = cooldown;
+        _ready = true;
+      });
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
@@ -150,10 +151,11 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
     }
 
     if (mustChangePassword && !_showNewPassword) {
-      if (mounted) setState(() {
-        _showNewPassword = true;
-        _errorMessage = context.s.otpVerifiedNewPassword;
-      });
+      if (mounted)
+        setState(() {
+          _showNewPassword = true;
+          _errorMessage = context.s.otpVerifiedNewPassword;
+        });
       return;
     }
 
@@ -178,7 +180,8 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
 
     if (!res.success) {
       int? retryAfter;
-      if (res.code == 'OTP_SEND_RATE_LIMIT' && res.data is Map<String, dynamic>) {
+      if (res.code == 'OTP_SEND_RATE_LIMIT' &&
+          res.data is Map<String, dynamic>) {
         final data = res.data as Map<String, dynamic>;
         final ra = data['retry_after_seconds'];
         if (ra is num && ra > 0) {
@@ -190,9 +193,10 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
         await OtpCooldownService.setCooldown(key, retryAfter);
         if (mounted) setState(() => _resendCooldownSeconds = retryAfter!);
       }
-      if (mounted) setState(() {
-        _errorMessage = res.message ?? context.s.resendOtpFailed;
-      });
+      if (mounted)
+        setState(() {
+          _errorMessage = res.message ?? context.s.resendOtpFailed;
+        });
       return;
     }
 
@@ -209,11 +213,12 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
     await OtpCooldownService.setCooldown(key, 60);
     await OtpCooldownService.setExpiry(key, expirySec);
 
-    if (mounted) setState(() {
-      _resendCooldownSeconds = 60;
-      _expirySeconds = expirySec;
-      _errorMessage = context.s.otpResent;
-    });
+    if (mounted)
+      setState(() {
+        _resendCooldownSeconds = 60;
+        _expirySeconds = expirySec;
+        _errorMessage = context.s.otpResent;
+      });
   }
 
   @override
@@ -271,7 +276,8 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
                   children: [
                     const Text('⏰ '),
                     Text(
-                      context.s.otpExpiresIn(OtpCooldownService.formatSeconds(_expirySeconds)),
+                      context.s.otpExpiresIn(
+                          OtpCooldownService.formatSeconds(_expirySeconds)),
                       style: TextStyle(fontSize: 12 * scale),
                     ),
                   ],
@@ -359,8 +365,8 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
                 onPressed: _loading ? null : _submit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColor().utama,
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 110 * scale, vertical: 12),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 110 * scale, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -447,4 +453,3 @@ class _LoginOtpPageState extends State<LoginOtpPage> {
     );
   }
 }
-

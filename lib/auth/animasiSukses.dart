@@ -22,8 +22,8 @@ class _animasisuksesState extends State<animasisukses> {
             pageBuilder: (context, animation, secondaryAnimation) => sukses(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
+              return FadeTransition(opacity: animation, child: child);
+            },
             transitionDuration: Duration(milliseconds: 600),
           ),
         );
