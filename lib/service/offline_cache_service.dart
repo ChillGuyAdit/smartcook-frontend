@@ -210,6 +210,13 @@ class OfflineCacheService {
   static Future<void> clearPendingOperations() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kPendingOps);
+    await prefs.remove(_kFavoriteIds);
+    // Leftovers of the pre-SQLite cache (recipe_by_id_v1:<id>, recipe_list_v1:<key>).
+    for (final k in prefs.getKeys().toList()) {
+      if (k.startsWith('recipe_by_id_v1:') || k.startsWith('recipe_list_v1:')) {
+        await prefs.remove(k);
+      }
+    }
     try {
       await LocalDatabase.clearAll();
     } catch (_) {}

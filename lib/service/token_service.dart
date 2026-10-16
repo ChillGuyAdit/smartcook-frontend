@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smartcook/service/offline_cache_service.dart';
 
 class TokenService {
   static const String _keyToken = 'auth_token';
@@ -35,5 +36,9 @@ class TokenService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyToken);
     await prefs.remove(_keyUser);
+    // Every way of losing the session (sign-out, expired token, restriction)
+    // ends here, so the cached recipes/fridge and the offline queue of the
+    // previous account can never be shown to or replayed into the next one.
+    await OfflineCacheService.clearPendingOperations();
   }
 }

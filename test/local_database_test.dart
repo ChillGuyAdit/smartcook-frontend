@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartcook/service/local_database.dart';
 import 'package:smartcook/service/offline_cache_service.dart';
+import 'package:smartcook/service/token_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Map<String, dynamic> recipe(String id, String title) =>
@@ -78,5 +79,23 @@ void main() {
 
     expect(await OfflineCacheService.getRecipeById('1'), isNull);
     expect(await OfflineCacheService.getFridge(), isEmpty);
+  });
+  test('losing the session wipes the previous account cache', () async {
+    SharedPreferences.setMockInitialValues({
+      'recipe_by_id_v1:9': '{}',
+      'local_favorites_ids_v1': ['1'],
+      'pending_operations_v1': ['x'],
+    });
+    await OfflineCacheService.saveRecipe(recipe('1', 'A'));
+    await OfflineCacheService.saveFridge([
+      {'_id': 'f1', 'name': 'Telur'}
+    ]);
+    await TokenService.clearAll();
+    expect(await OfflineCacheService.getRecipeById('1'), isNull);
+    expect(await OfflineCacheService.getFridge(), isEmpty);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.containsKey('recipe_by_id_v1:9'), isFalse);
+    expect(prefs.containsKey('local_favorites_ids_v1'), isFalse);
+    expect(prefs.containsKey('pending_operations_v1'), isFalse);
   });
 }
