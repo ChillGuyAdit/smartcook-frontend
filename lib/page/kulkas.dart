@@ -61,7 +61,15 @@ class _KulkasPageState extends State<KulkasPage> {
     // A failed request must not look like an empty fridge: keep what was on
     // screen and say that loading failed.
     if (!res.success) {
+      // Offline: show the last copy saved in SQLite when nothing is on screen.
+      List<Map<String, dynamic>>? cached;
+      if (_fridgeItems.isEmpty) {
+        final raw = await OfflineCacheService.getFridge();
+        if (raw.isNotEmpty) cached = _parseFridge(raw);
+      }
+      if (!mounted) return;
       setState(() {
+        if (cached != null) _fridgeItems = cached;
         _loadFailed = true;
         _loading = false;
       });
@@ -72,25 +80,13 @@ class _KulkasPageState extends State<KulkasPage> {
     List<Map<String, dynamic>> list = [];
     final data = res.data;
     if (data is List) {
-      for (final e in data) {
-        if (e is! Map) continue;
-        final item = Map<String, dynamic>.from(e);
-        // No expiry date means "not set", not "a week from now".
-        DateTime? exp;
-        try {
-          final ed = item['expired_date']?.toString();
-          if (ed != null && ed.isNotEmpty) exp = DateTime.parse(ed).toLocal();
-        } catch (_) {}
-        list.add({
-          'id': item['_id']?.toString(),
-          'name': item['ingredient_name'] ??
-              item['name'] ??
-              currentStrings.ingredientWord,
-          'qty': item['quantity'] ?? item['qty'] ?? 0,
-          'expiredDate': exp,
-          'unit': item['unit'],
-        });
-      }
+      final raw = [
+        for (final e in data)
+          if (e is Map) Map<String, dynamic>.from(e)
+      ];
+      list = _parseFridge(raw);
+      await OfflineCacheService.saveFridge(raw);
+      if (!mounted) return;
     }
 
     setState(() {
@@ -99,6 +95,28 @@ class _KulkasPageState extends State<KulkasPage> {
       _loading = false;
     });
     _applyFilters();
+  }
+
+  List<Map<String, dynamic>> _parseFridge(List<Map<String, dynamic>> raw) {
+    final list = <Map<String, dynamic>>[];
+    for (final item in raw) {
+      // No expiry date means "not set", not "a week from now".
+      DateTime? exp;
+      try {
+        final ed = item['expired_date']?.toString();
+        if (ed != null && ed.isNotEmpty) exp = DateTime.parse(ed).toLocal();
+      } catch (_) {}
+      list.add({
+        'id': item['_id']?.toString(),
+        'name': item['ingredient_name'] ??
+            item['name'] ??
+            currentStrings.ingredientWord,
+        'qty': item['quantity'] ?? item['qty'] ?? 0,
+        'expiredDate': exp,
+        'unit': item['unit'],
+      });
+    }
+    return list;
   }
 
   /// Quantity as a number; the server may send an int, a double or a string.

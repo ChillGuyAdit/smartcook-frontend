@@ -3,11 +3,10 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartcook/service/api_service.dart';
+import 'package:smartcook/service/local_database.dart';
 
 class OfflineCacheService {
   static const _kRecentQueries = 'recent_recipe_queries_v1';
-  static const _kRecipeById = 'recipe_by_id_v1:'; // + id
-  static const _kListByKey = 'recipe_list_v1:'; // + key
   static const _kPendingOps = 'pending_operations_v1';
   static const _kFavoriteIds = 'local_favorites_ids_v1';
   static const _kGlobalIngredients = 'global_ingredients_v1';
@@ -35,18 +34,14 @@ class OfflineCacheService {
   }
 
   static Future<void> saveRecipe(Map<String, dynamic> recipe) async {
-    final id = recipe['_id']?.toString();
-    if (id == null || id.isEmpty) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('$_kRecipeById$id', jsonEncode(recipe));
+    try {
+      await LocalDatabase.upsertRecipe(recipe);
+    } catch (_) {}
   }
 
   static Future<Map<String, dynamic>?> getRecipeById(String id) async {
-    final prefs = await SharedPreferences.getInstance();
-    final s = prefs.getString('$_kRecipeById$id');
-    if (s == null) return null;
     try {
-      return Map<String, dynamic>.from(jsonDecode(s) as Map);
+      return await LocalDatabase.recipeById(id);
     } catch (_) {
       return null;
     }
@@ -54,26 +49,33 @@ class OfflineCacheService {
 
   static Future<void> saveRecipeList(
       String key, List<Map<String, dynamic>> recipes) async {
-    final prefs = await SharedPreferences.getInstance();
-    final ids = <String>[];
-    for (final r in recipes) {
-      final id = r['_id']?.toString();
-      if (id == null || id.isEmpty) continue;
-      ids.add(id);
-      await saveRecipe(r);
-    }
-    await prefs.setStringList('$_kListByKey$key', ids);
+    try {
+      await LocalDatabase.replaceRecipeList(key, recipes);
+    } catch (_) {}
   }
 
   static Future<List<Map<String, dynamic>>> getRecipeList(String key) async {
-    final prefs = await SharedPreferences.getInstance();
-    final ids = prefs.getStringList('$_kListByKey$key') ?? <String>[];
-    final out = <Map<String, dynamic>>[];
-    for (final id in ids) {
-      final r = await getRecipeById(id);
-      if (r != null) out.add(r);
+    try {
+      return await LocalDatabase.recipeList(key);
+    } catch (_) {
+      return [];
     }
-    return out;
+  }
+
+  // ============ Fridge (SQLite) ============
+
+  static Future<void> saveFridge(List<Map<String, dynamic>> items) async {
+    try {
+      await LocalDatabase.replaceFridge(items);
+    } catch (_) {}
+  }
+
+  static Future<List<Map<String, dynamic>>> getFridge() async {
+    try {
+      return await LocalDatabase.fridge();
+    } catch (_) {
+      return [];
+    }
   }
 
   static Future<void> saveGlobalIngredients(
@@ -121,23 +123,11 @@ class OfflineCacheService {
       String query) async {
     final q = _norm(query);
     if (q.isEmpty) return [];
-    final recents = await getRecentQueries(limit: 30);
-    final seen = <String>{};
-    final results = <Map<String, dynamic>>[];
-    for (final r in recents) {
-      final key = 'search_${_norm(r)}';
-      final list = await getRecipeList(key);
-      for (final item in list) {
-        final id = item['_id']?.toString() ?? '';
-        if (id.isEmpty || seen.contains(id)) continue;
-        final title = (item['title'] ?? '').toString().toLowerCase();
-        if (title.contains(q)) {
-          seen.add(id);
-          results.add(item);
-        }
-      }
+    try {
+      return await LocalDatabase.searchRecipes(q);
+    } catch (_) {
+      return [];
     }
-    return results;
   }
 
   // ============ Local Favorites ============
@@ -169,12 +159,11 @@ class OfflineCacheService {
   /// Ambil daftar resep favorit dari cache berdasarkan id yang tersimpan.
   static Future<List<Map<String, dynamic>>> getLocalFavoriteRecipes() async {
     final ids = await _getFavoriteIds();
-    final out = <Map<String, dynamic>>[];
-    for (final id in ids) {
-      final r = await getRecipeById(id);
-      if (r != null) out.add(r);
+    try {
+      return await LocalDatabase.recipesByIds(ids);
+    } catch (_) {
+      return [];
     }
-    return out;
   }
 
   // ============ Pending Operations (untuk sync offline) ============
@@ -221,6 +210,9 @@ class OfflineCacheService {
   static Future<void> clearPendingOperations() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kPendingOps);
+    try {
+      await LocalDatabase.clearAll();
+    } catch (_) {}
   }
 
   /// A failed replay is worth keeping only when trying again can help: no

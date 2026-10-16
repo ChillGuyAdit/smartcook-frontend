@@ -196,12 +196,21 @@ class _homepageState extends State<homepage> with WidgetsBindingObserver {
         ? dinnerOnline
         : await OfflineCacheService.getRecipeList('by_meal_dinner');
 
+    // Kulkas: simpan salinan SQLite saat request berhasil, pakai salinan itu
+    // hanya kalau request gagal (kulkas kosong yang sah tetap tampil kosong).
+    List<Map<String, dynamic>> fridge;
+    if (fridgeRes.success) {
+      fridge = fridgeOnline;
+      await OfflineCacheService.saveFridge(fridgeOnline);
+    } else {
+      fridge = await OfflineCacheService.getFridge();
+    }
+
     if (mounted)
       setState(() {
         OfflineManager.setOffline(maybeOffline);
         _favorites = favorites;
-        _fridgePreview =
-            fridgeOnline; // untuk kulkas, belum dicache (lebih dinamis)
+        _fridgePreview = fridge;
         _recommendations = recs;
         _popularRecipes = popular;
         _byMeal['breakfast'] = breakfast;
