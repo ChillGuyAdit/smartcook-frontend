@@ -178,7 +178,8 @@ smartcook-frontend/
 ### State Management & Storage
 - **StatefulWidget**: State management utama
 - **ValueNotifier**: Untuk status offline/online global
-- **Shared Preferences**: ^2.2.2 - Local storage untuk caching dan offline data
+- **Shared Preferences**: ^2.2.2 - Penyimpanan key-value untuk sesi, tema, bahasa, riwayat pencarian, dan antrean operasi offline
+- **SQLite (sqflite)**: ^2.4.4 - Database lokal untuk cache resep dan isi kulkas agar tetap bisa dibuka tanpa internet
 
 ### Networking & API
 - **HTTP**: ^1.2.0 - HTTP client untuk API calls
@@ -381,7 +382,7 @@ Pastikan untuk tidak meng-commit file-file sensitif ini ke repository publik!
 ## 🏗 Architecture Highlights
 
 ### Offline-First Design
-- Data resep di-cache secara lokal menggunakan SharedPreferences
+- Data resep dan isi kulkas di-cache secara lokal di SQLite (sqflite), sedangkan pengaturan, sesi, dan antrean operasi disimpan di SharedPreferences
 - Operasi yang dilakukan saat offline akan diantri dan di-sync saat online kembali
 - Banner notifikasi otomatis menampilkan status koneksi
 
