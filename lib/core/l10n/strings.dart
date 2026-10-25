@@ -174,6 +174,7 @@ abstract class Str {
   String get apply;
   String get searchRecipes;
   String get recipesNotFound;
+  String get recipesLoadFailed;
   String get globalModeNote;
   String get recentSearches;
   String get searchFavorites;
@@ -630,6 +631,8 @@ class StrId implements Str {
   String get searchRecipes => 'Cari resep...';
   @override
   String get recipesNotFound => 'Resep tidak ditemukan 😥\nCoba ubah filter atau pencarianmu.';
+  @override
+  String get recipesLoadFailed => 'Resep belum bisa dimuat.\nPeriksa koneksi lalu coba lagi.';
   @override
   String get globalModeNote => 'Mode global: menampilkan resep yang sudah ada di database dari semua user (tetap disesuaikan alergi dan preferensimu).';
   @override
@@ -1258,6 +1261,8 @@ class StrEn implements Str {
   String get searchRecipes => 'Search recipes...';
   @override
   String get recipesNotFound => 'No recipes found 😥\nTry changing the filter or your search.';
+  @override
+  String get recipesLoadFailed => 'Couldn\'t load the recipes.\nCheck your connection and try again.';
   @override
   String get globalModeNote => 'Global mode: shows recipes from all users in the database (still adjusted to your allergies and preferences).';
   @override

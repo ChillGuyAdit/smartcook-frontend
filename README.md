@@ -2,6 +2,15 @@
 
 Aplikasi mobile berbasis Flutter untuk menemukan dan mengelola resep masakan dengan fitur AI chatbot, manajemen kulkas, dan rekomendasi resep yang disesuaikan dengan preferensi pengguna.
 
+## 🔎 Ringkasan Proyek
+
+- **Nama aplikasi**: SmartCook
+- **Deskripsi**: aplikasi resep masakan yang menyarankan resep dari bahan di kulkas, waktu makan, dan alergi pengguna. Data resep, kulkas, dan favorit diambil dari REST API.
+- **Cara kerja data**: `lib/service/api_service.dart` mengirim permintaan HTTP, `lib/service/recipe_repository.dart` membaca respons, dan `lib/models/recipe.dart` mengubah JSON menjadi objek Dart. Proses asinkron memakai `Future`, `async`/`await`, dan `FutureBuilder` (loading, success, error).
+- **Penyimpanan lokal**: Shared Preferences untuk pengaturan dan data kecil, SQLite (`sqflite`) untuk cache resep dan isi kulkas.
+- **Package utama**: `http`, `dio`, `shared_preferences`, `sqflite`, `cached_network_image`, `flutter_markdown`, `firebase_auth`, `google_sign_in`.
+- **Menjalankan**: lihat bagian *Instalasi & Setup* di bawah. Pengujian: `flutter test`.
+
 ## 📱 Tentang Aplikasi
 
 SmartCook adalah aplikasi resep masakan yang membantu pengguna menemukan resep berdasarkan bahan yang tersedia di kulkas mereka, preferensi kesehatan (alergi), dan waktu makan. Aplikasi ini dilengkapi dengan AI chatbot untuk interaksi yang lebih interaktif dalam mencari resep, serta fitur offline-first untuk pengalaman yang lebih baik bahkan tanpa koneksi internet.
@@ -295,31 +304,13 @@ Tim **SmartCook** yang membangun proyek ini:
    flutter pub get
    ```
 
-3. **Setup Firebase**
-   - Buat Firebase project di [Firebase Console](https://console.firebase.google.com/)
-   - Download `google-services.json` untuk Android dan `GoogleService-Info.plist` untuk iOS
-   - Letakkan file-file tersebut di direktori yang sesuai:
-     - `android/app/google-services.json`
-     - `ios/Runner/GoogleService-Info.plist`
-   - Install FlutterFire CLI (jika belum):
-     ```bash
-     dart pub global activate flutterfire_cli
-     ```
-   - Generate `firebase_options.dart` menggunakan FlutterFire CLI:
-     ```bash
-     flutterfire configure
-     ```
-   - **PENTING**: File `firebase_options.dart` sudah di-ignore oleh git karena berisi informasi sensitif
+3. **Konfigurasi Firebase dan API**
+   - Berkas `android/app/google-services.json` dan `lib/firebase_options.dart` sudah ada di repositori, jadi tidak perlu dibuat ulang.
+   - Alamat API ada di `lib/config/api_config.dart` (`baseUrl`, default `https://api.himatif-encoder.com`). Tidak ada API key statis; akses diberikan lewat sesi aplikasi.
 
-4. **Konfigurasi API**
-   - Copy file contoh konfigurasi:
-     ```bash
-     cp lib/config/api_config.example.dart lib/config/api_config.dart
-     ```
-   - Edit file `lib/config/api_config.dart` dan isi dengan:
-     - `baseUrl`: URL backend API Anda
-     - `apiKey`: API key yang sesuai
-   - **PENTING**: File `api_config.dart` sudah di-ignore oleh git karena berisi API key yang sensitif. Jangan commit file ini ke repository!
+4. **Catatan akses API**
+   - Server hanya memberi sesi kepada APK resmi yang tertanda tangan. Menjalankan dari kode sumber dengan `flutter run` akan menampilkan antarmuka, tetapi data resep dan kulkas dari server tidak akan dimuat.
+   - Untuk mencoba aplikasi dengan data lengkap, pasang APK resmi dari halaman rilis: https://github.com/ChillGuyAdit/smartcook-frontend/releases/tag/v1.4.0
 
 5. **Run aplikasi**
    ```bash

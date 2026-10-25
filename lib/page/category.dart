@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:smartcook/service/api_service.dart';
+import 'package:smartcook/models/recipe.dart';
+import 'package:smartcook/service/recipe_repository.dart';
 
 import '../core/theme/app_theme_colors.dart';
 import '../core/theme/shadows.dart';
@@ -11,12 +12,14 @@ class CategoryPage extends StatefulWidget {
   final String categoryName;
   final List<Color> themeColors;
   final String headerImagePath;
+  final Future<List<Recipe>> Function()? loader;
 
   const CategoryPage({
     super.key,
     required this.categoryName,
     required this.themeColors,
     required this.headerImagePath,
+    this.loader,
   });
 
   @override
@@ -24,17 +27,24 @@ class CategoryPage extends StatefulWidget {
 }
 
 class _CategoryPageState extends State<CategoryPage> {
-  List<Map<String, dynamic>> _allFoodList = [];
-  List<Map<String, dynamic>> _filteredFoodList = [];
+  late Future<List<Recipe>> _future;
   String _searchQuery = "";
   int _maxCalories = 500;
   int _maxTime = 45;
-  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadRecipes();
+    _future = _fetch();
+  }
+
+  Future<List<Recipe>> _fetch() => (widget.loader ??
+      () => RecipeRepository.fetchByCategory(_categoryToParam()))();
+
+  void _reload() {
+    setState(() {
+      _future = _fetch();
+    });
   }
 
   String _categoryToParam() {
@@ -60,51 +70,18 @@ class _CategoryPageState extends State<CategoryPage> {
     }
   }
 
-  Future<void> _loadRecipes() async {
-    setState(() => _loading = true);
-    final category = _categoryToParam();
-    final params = <String, String>{'page': '1', 'limit': '50'};
-    if (category.isNotEmpty) params['category'] = category;
-    final res = await ApiService.get('/api/recipes', queryParameters: params);
-    if (!mounted) return;
-    List<Map<String, dynamic>> list = [];
-    if (res.success && res.data != null) {
-      final data = res.data;
-      if (data is List) {
-        list = data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      } else if (data is Map && data['recipes'] is List) {
-        list = (data['recipes'] as List)
-            .map((e) => Map<String, dynamic>.from(e as Map))
-            .toList();
-      }
-    }
-    setState(() {
-      _allFoodList = list;
-      _filteredFoodList = List.from(_allFoodList);
-      _loading = false;
-    });
-    _applyFilters();
+  void _applyFilters() {
+    setState(() {});
   }
 
-  void _applyFilters() {
-    setState(() {
-      _filteredFoodList = _allFoodList.where((food) {
-        final title = food["title"]?.toString().toLowerCase() ?? '';
-        final matchSearch =
-            _searchQuery.isEmpty || title.contains(_searchQuery.toLowerCase());
-        final calVal = food["nutrition_info"] is Map
-            ? (food["nutrition_info"] as Map)["calories"]
-            : food["cal"];
-        final foodCal =
-            calVal != null ? int.tryParse(calVal.toString()) ?? 0 : 0;
-        final matchCal = foodCal <= _maxCalories;
-        final prep = food["prep_time"] ?? 0;
-        final cook = food["cook_time"] ?? 0;
-        final totalTime = (prep is int ? prep : 0) + (cook is int ? cook : 0);
-        final matchTime = totalTime <= _maxTime;
-        return matchSearch && matchCal && matchTime;
-      }).toList();
-    });
+  List<Recipe> _filter(List<Recipe> all) {
+    final query = _searchQuery.toLowerCase();
+    return all.where((r) {
+      final matchSearch = query.isEmpty || r.title.toLowerCase().contains(query);
+      return matchSearch &&
+          r.calories <= _maxCalories &&
+          r.totalMinutes <= _maxTime;
+    }).toList();
   }
 
   // Fungsi untuk memunculkan Pop Up Filter di bawah Icon
@@ -414,60 +391,82 @@ class _CategoryPageState extends State<CategoryPage> {
           // --- LIST MAKANAN ---
           SliverPadding(
             padding: const EdgeInsets.all(20),
-            sliver: _loading
-                ? const SliverToBoxAdapter(
+            sliver: FutureBuilder<List<Recipe>>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const SliverToBoxAdapter(
                     child: Center(
                       child: Padding(
                         padding: EdgeInsets.only(top: 50),
                         child: CircularProgressIndicator(),
                       ),
                     ),
-                  )
-                : _filteredFoodList.isEmpty
-                    ? SliverToBoxAdapter(
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 50),
-                            child: Text(
-                              context.s.recipesNotFound,
+                  );
+                }
+                if (snapshot.hasError) {
+                  return SliverToBoxAdapter(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 50),
+                        child: Column(
+                          children: [
+                            Text(
+                              context.s.recipesLoadFailed,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                   color: context.colors.textSecondary),
                             ),
-                          ),
-                        ),
-                      )
-                    : SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final food = _filteredFoodList[index];
-                            return _buildFoodListItem(food);
-                          },
-                          childCount: _filteredFoodList.length,
+                            const SizedBox(height: 12),
+                            OutlinedButton(
+                              onPressed: _reload,
+                              child: Text(context.s.updateRetry),
+                            ),
+                          ],
                         ),
                       ),
+                    ),
+                  );
+                }
+                final foods = _filter(snapshot.data ?? const <Recipe>[]);
+                if (foods.isEmpty) {
+                  return SliverToBoxAdapter(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 50),
+                        child: Text(
+                          context.s.recipesNotFound,
+                          textAlign: TextAlign.center,
+                          style:
+                              TextStyle(color: context.colors.textSecondary),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildFoodListItem(foods[index]),
+                    childCount: foods.length,
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFoodListItem(Map<String, dynamic> food) {
-    final recipeId = food["_id"]?.toString();
-    final title = food["title"]?.toString() ?? "Resep";
-    final imageUrl = food["image_url"]?.toString();
-    final foodImage = food["image"]?.toString();
-    final calVal = food["nutrition_info"] is Map
-        ? (food["nutrition_info"] as Map)["calories"]
-        : food["cal"];
-    final cal = calVal?.toString() ?? "0";
-    final prep = food["prep_time"] ?? 0;
-    final cook = food["cook_time"] ?? 0;
-    final timeStr = food["time"] ??
-        "${(prep is int ? prep : 0) + (cook is int ? cook : 0)}m";
+  Widget _buildFoodListItem(Recipe food) {
+    final recipeId = food.id;
+    final title = food.title;
+    final imageUrl = food.imageUrl;
+    final cal = food.calories.toString();
+    final timeStr = "${food.totalMinutes}m";
     return GestureDetector(
       onTap: () {
-        if (recipeId != null) {
+        if (recipeId.isNotEmpty) {
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -495,14 +494,12 @@ class _CategoryPageState extends State<CategoryPage> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(15),
-                child: imageUrl != null && imageUrl.isNotEmpty
+                child: imageUrl.isNotEmpty
                     ? NetImage(imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Icon(Icons.restaurant,
                             color: widget.themeColors[1]))
-                    : (foodImage != null && foodImage.isNotEmpty
-                        ? Image.asset(foodImage, fit: BoxFit.cover)
-                        : Icon(Icons.restaurant, color: widget.themeColors[1])),
+                    : Icon(Icons.restaurant, color: widget.themeColors[1]),
               ),
             ),
             const SizedBox(width: 16),
@@ -532,7 +529,7 @@ class _CategoryPageState extends State<CategoryPage> {
                       const Icon(Icons.access_time_rounded,
                           size: 16, color: Colors.blueGrey),
                       const SizedBox(width: 4),
-                      Text(timeStr.toString(),
+                      Text(timeStr,
                           style: TextStyle(
                               fontSize: 13,
                               color: context.colors.textSecondary)),
